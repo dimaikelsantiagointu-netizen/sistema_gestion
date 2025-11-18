@@ -327,7 +327,7 @@ class NombreAppConfig(AppConfig):
 ## 🏗️ Módulos del Sistema
 
 ### Módulos Planificados
-- **✅ Clientes** - Gestión de información de clientes
+- **🔲 Clientes** - Gestión de información de clientes
 - **🔲 Sellos Dorados** - Generación y gestión de sellos
 - **🔲 Contratos** - Creación y seguimiento de contratos
 - **🔲 Pagos** - Registro y control de pagos
