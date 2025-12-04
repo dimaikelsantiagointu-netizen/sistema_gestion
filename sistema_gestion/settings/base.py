@@ -54,8 +54,12 @@ WSGI_APPLICATION = 'sistema_gestion.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'recibo_de_pago_db',         
+        'USER': 'postgres',          
+        'PASSWORD': '123456',    
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -77,11 +81,16 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'es-ve'
 TIME_ZONE = 'America/Caracas'
 USE_I18N = True
+USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+LOGIN_URL = 'login' # URL donde se encuentra el formulario de login
+LOGIN_REDIRECT_URL = 'upload_file'#Redirección después del login exitoso
+LOGOUT_REDIRECT_URL = 'login'  # Redirección después del logout
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
