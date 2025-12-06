@@ -1,273 +1,470 @@
-{% extends "recibos/base.html" %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Sistema de Gestión de Recibos</title>
 
-{% block page_title %}Dashboard{% endblock %}
-{% block sub_title %}
-<p class="text-sm text-gray-500">Bienvenido, <span class="font-semibold text-indigo-700">{{ user.first_name|default:user.username }}</span>. Tu rol es: <span class="font-semibold text-indigo-700">{{ user.rol|capfirst }}</span>.</p>
-{% endblock %}
-
-{% block content %}
-<div class="space-y-8">
-    <!-- SECCIÓN 1: Tarjetas de Resumen (Django Context) -->
-    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        
-        <!-- Card 1: Recibos Totales -->
-        <div class="bg-white overflow-hidden shadow-lg rounded-xl border-l-4 border-indigo-500 hover:shadow-2xl transition duration-300">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-indigo-500 rounded-full p-3 shadow-md">
-                        <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Total de Recibos</dt>
-                            <dd>
-                                <div class="text-3xl font-extrabold text-gray-900">{{ total_recibos|default:0 }}</div>
-                            </dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-gray-50 px-5 py-3">
-                <div class="text-sm">
-                    <a href="{% url 'receipts_list' %}" class="font-medium text-indigo-600 hover:text-indigo-900 transition duration-150 flex items-center">
-                        Ver todos los recibos
-                        <svg class="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 2: Recibos Válidos (Pendientes de Anulación) -->
-        <div class="bg-white overflow-hidden shadow-lg rounded-xl border-l-4 border-green-500 hover:shadow-2xl transition duration-300">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-green-500 rounded-full p-3 shadow-md">
-                        <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.276A1.89 1.89 0 0118.9 4.382h-13.8a1.89 1.89 0 01-1.718-1.528A1.89 1.89 0 012.382 7.098v9.804c0 .857.694 1.551 1.551 1.551h14.134c.857 0 1.551-.694 1.551-1.551V7.098a1.89 1.89 0 01-.295-.876z" />
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Recibos Válidos</dt>
-                            <dd>
-                                <div class="text-3xl font-extrabold text-gray-900">{{ recibos_pendientes|default:0 }}</div>
-                            </dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-gray-50 px-5 py-3">
-                <div class="text-sm">
-                    <a href="{% url 'upload_data' %}" class="font-medium text-green-600 hover:text-green-900 transition duration-150 flex items-center">
-                        Cargar más datos
-                        <svg class="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 3: Recibos Anulados -->
-        <div class="bg-white overflow-hidden shadow-lg rounded-xl border-l-4 border-red-500 hover:shadow-2xl transition duration-300">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-red-500 rounded-full p-3 shadow-md">
-                        <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Recibos Anulados</dt>
-                            <dd>
-                                <div class="text-3xl font-extrabold text-gray-900">{{ recibos_anulados|default:0 }}</div>
-                            </dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-gray-50 px-5 py-3">
-                <div class="text-sm">
-                    <a href="{% url 'receipts_list' %}?anulado=True" class="font-medium text-red-600 hover:text-red-900 transition duration-150 flex items-center">
-                        Revisar anulaciones
-                        <svg class="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SECCIÓN 2: Recibos Recientes (Cargados por Firestore) -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Panel de Gráfico (Simulación) -->
-        <div class="bg-white shadow-lg rounded-xl p-6">
-            <h3 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Gasto Mensual (Simulado)</h3>
-            <!-- Aquí iría un gráfico real, usamos un placeholder SVG por simplicidad -->
-            <div class="flex justify-center items-center h-48 bg-gray-50 rounded-lg">
-                <svg viewBox="0 0 100 50" class="w-full h-40">
-                    <polyline fill="none" stroke="#4F46E5" stroke-width="2" points="0,40 25,10 50,35 75,20 100,45" />
-                    <circle cx="25" cy="10" r="2" fill="#4F46E5" />
-                    <circle cx="75" cy="20" r="2" fill="#4F46E5" />
-                    <text x="2" y="48" class="text-xs text-gray-500">Ene</text>
-                    <text x="27" y="48" class="text-xs text-gray-500">Feb</text>
-                    <text x="52" y="48" class="text-xs text-gray-500">Mar</text>
-                    <text x="77" y="48" class="text-xs text-gray-500">Abr</text>
-                    <text x="98" y="48" class="text-xs text-gray-500">Hoy</text>
-                </svg>
-            </div>
-            <p class="text-sm text-gray-500 mt-4 text-center">Simulación del flujo de gastos de los últimos 5 meses.</p>
-        </div>
-
-        <!-- Panel de Lista de Recibos Recientes -->
-        <div class="bg-white shadow-lg rounded-xl p-6">
-            <h3 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4 flex justify-between items-center">
-                Recibos Recientes (Tiempo Real)
-                <span id="receipt-count" class="text-sm font-normal text-indigo-500">Cargando...</span>
-            </h3>
-            
-            <div id="recent-receipts-list" class="space-y-4 h-64 overflow-y-auto pr-2">
-                <!-- Los recibos se inyectarán aquí por JavaScript (Firestore) -->
-                <div id="loading-indicator" class="text-center py-10 text-gray-500">
-                    <svg class="animate-spin mx-auto h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Cargando datos en tiempo real...
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block content_footer %}
-<script type="module">
-    // Definición de las variables globales que se inyectan en el entorno
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-    // Importaciones de Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, query, limit, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    let app, db, auth, userId;
-    let isAuthReady = false;
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+z3qfM+M3T9gq8Jj0L/g/L8E2hI2w/h5x+4o2Q3+r3dF6/M/0k8+N/v/Q==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    if (firebaseConfig) {
-        setLogLevel('Debug');
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
+    <style>
+        /* Estilos para asegurar que el cuerpo use toda la altura y el layout sea flexible */
+        body {
+            background-color: #f4f7f9;
+            min-height: 100vh;
+            display: flex; /* Habilitar Flexbox */
+            flex-direction: column; /* Organizar contenido en columna */
+            padding: 0; /* Quitamos el padding del body, lo agregamos al contenido principal */
+        }
+        /* Estilo para el modal */
+        #confirmation-modal.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="bg-indigo-700 shadow-lg sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+            
+            <a href="[URL_DASHBOARD]" class="flex items-center text-white text-xl font-extrabold tracking-wider">
+                <i class="fas fa-receipt mr-3 text-indigo-300"></i>
+                App Recibos
+            </a>
+            
+            <nav class="flex items-center space-x-4">
+                <span class="text-sm text-indigo-300 hidden sm:inline">Hola, [NOMBRE_USUARIO]</span>
+                
+                <a href="[URL_LOGOUT]" class="flex items-center px-3 py-1.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
+                    <i class="fas fa-door-open mr-2"></i> Salir
+                </a>
+            </nav>
+        </div>
+    </header>
+    <main class="flex-grow p-4 sm:p-6 lg:p-8">
         
-        // Autenticación y obtención de userId
-        onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch (error) {
-                    console.error("Error en la autenticación de Firebase:", error);
-                    return;
-                }
+        <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 bg-white/80 rounded-2xl shadow-xl">
+            <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">Dashboard de Recibos</h1>
+
+            <div class="flex flex-col lg:flex-row gap-6">
+
+                <aside class="w-full lg:w-1/4 space-y-6">
+                    
+                    <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100">
+                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i class="fas fa-file-upload mr-2 text-indigo-600"></i> Carga de Archivos</h2>
+                        <form method="post" enctype="multipart/form-data" action="[URL_UPLOAD_EXCEL]" id="upload-form" class="space-y-4">
+                            [CSRF_TOKEN]
+                            <label class="block">
+                                <span class="sr-only">Seleccionar Archivo Excel</span>
+                                <input type="file" name="excel_file" accept=".xlsx" required
+                                             class="block w-full text-sm text-gray-500
+                                                     file:mr-4 file:py-2 file:px-4
+                                                     file:rounded-lg file:border-0
+                                                     file:text-sm file:font-semibold
+                                                     file:bg-indigo-50 file:text-indigo-700
+                                                     hover:file:bg-indigo-100 transition duration-150"
+                                >
+                            </label>
+                            <button type="submit" id="upload-button" class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150 disabled:opacity-50" disabled>
+                                <i class="fas fa-upload mr-2"></i> Cargar Datos
+                            </button>
+                        </form>
+                        <p id="upload-status" class="mt-2 text-xs text-gray-500 text-center italic">
+                            Ningún archivo seleccionado.
+                        </p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100">
+                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i class="fas fa-magic mr-2 text-green-600"></i> Generación de Recibos</h2>
+                        <form method="post" action="[URL_GENERATE_RECEIPTS]">
+                            [CSRF_TOKEN]
+                            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition duration-150">
+                                <i class="fas fa-receipt mr-2"></i> Generar Recibos (desde Excel)
+                            </button>
+                        </form>
+                        <p id="generation-status" class="mt-2 text-xs text-gray-500 text-center italic">
+                            Esperando para generar recibos...
+                        </p>
+                    </div>
+                    
+                    <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100 h-96 flex flex-col">
+                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i class="fas fa-clipboard-list mr-2 text-blue-600"></i> Procesos y Logs</h2>
+                        <div id="log-display" class="flex-grow overflow-y-auto bg-gray-50 p-3 rounded-lg text-xs font-mono border border-gray-200">
+                            <p class="text-gray-500">
+                                Aquí se cargarán los registros de procesos (Logs).
+                            </p>
+                            <p class="mb-1 text-gray-700">
+                                [08:00:00] <span class="text-green-600">✅</span> Proceso de inicio del Dashboard.
+                            </p>
+                            <p class="mb-1 text-gray-700">
+                                [08:01:15] <span class="text-yellow-600">⚠️</span> Advertencia: Filtro de fecha no aplicado.
+                            </p>
+                            <p class="mb-1 text-gray-700">
+                                [08:02:40] <span class="text-red-600">❌</span> Error de conexión con el reporte externo.
+                            </p>
+                            </div>
+                    </div>
+
+                </aside>
+
+                <section class="w-full lg:w-3/4 space-y-6">
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-filter mr-2 text-purple-600"></i> Módulo de Reportes y Filtrado</h2>
+                        <form method="get" action="[URL_DASHBOARD_FILTRO]" class="space-y-4">
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label for="fecha_inicial" class="block text-sm font-medium text-gray-700">Fecha Inicial</label>
+                                    <input type="date" name="fecha_inicial" id="fecha_inicial" value="[VALOR_FECHA_INICIAL]" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                </div>
+                                <div>
+                                    <label for="fecha_final" class="block text-sm font-medium text-gray-700">Fecha Final</label>
+                                    <input type="date" name="fecha_final" id="fecha_final" value="[VALOR_FECHA_FINAL]" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label for="estado" class="block text-sm font-medium text-gray-700">Filtrar por Estado</label>
+                                    <select id="estado" name="estado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                        <option value="" selected>[OPCION_TODOS]</option>
+                                        <option value="active">[OPCION_ACTIVOS]</option>
+                                        <option value="annulled">[OPCION_ANULADOS]</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <fieldset class="mt-4 pt-4 border-t border-gray-200">
+                                <legend class="text-base font-medium text-gray-900 mb-2">Filtro por Conceptos / Categorías</legend>
+                                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                    <div class="flex items-center">
+                                        <input id="cat-1" name="categories" type="checkbox" value="Categoria 1" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <label for="cat-1" class="ml-2 block text-sm text-gray-700">Categoría 1</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input id="cat-2" name="categories" type="checkbox" value="Categoria 2" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                        <label for="cat-2" class="ml-2 block text-sm text-gray-700">Categoría 2</label>
+                                    </div>
+                                    </div>
+                            </fieldset>
+                            
+                            <div class="flex space-x-4 pt-4 border-t border-gray-200">
+                                <button type="submit" name="action" value="filter" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition duration-150">
+                                    <i class="fas fa-search mr-2"></i> Aplicar Filtros
+                                </button>
+                                <button type="submit" name="action" value="excel" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition duration-150">
+                                    <i class="fas fa-file-excel mr-2"></i> Generar Reporte Excel
+                                </button>
+                                <button type="submit" name="action" value="pdf" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
+                                    <i class="fas fa-file-pdf mr-2"></i> Generar Reporte PDF
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                        <h1 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-table mr-2 text-indigo-600"></i> Resultados y Gestión de Recibos</h1>
+
+                        <form method="get" action="[URL_DASHBOARD_BUSQUEDA]" class="flex space-x-2 mb-4">
+                            <input type="hidden" name="filter_key_1" value="filter_value_1">
+                            <input type="hidden" name="filter_key_2" value="filter_value_2">
+                            <input type="text" name="quick_search" placeholder="Buscar por N°, Nombre, Cédula/RIF, Transferencia..." 
+                                     class="flex-grow rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                     value="[VALOR_BUSQUEDA_RAPIDA]">
+                            <button type="submit" class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                        </form>
+
+                        <div class="overflow-x-auto border rounded-lg">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Recibo</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cédula/RIF</th>
+                                        <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto (Bs.)</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                        <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                        <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr class="hover:bg-gray-50 transition duration-100">
+                                        <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500">1</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">R-0001</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">Cliente Ejemplo Activo</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">V-12345678</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm font-bold text-right text-indigo-600">125.50</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">01/01/2025</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-center">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Activo</span>
+                                        </td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-center">
+                                            <a href="[URL_RECEIPT_DETAIL_1]" class="text-indigo-600 hover:text-indigo-900 mr-2" title="Ver Detalle"><i class="fas fa-eye"></i></a>
+                                            <a href="[URL_RECEIPT_UPDATE_1]" class="text-yellow-600 hover:text-yellow-900 mr-2" title="Editar"><i class="fas fa-edit"></i></a>
+                                            <button type="button" 
+                                                    data-action-url="[URL_RECEIPT_ANULAR_1]" 
+                                                    data-message="¿Estás seguro que deseas **ANULAR** el recibo N° **R-0001**? Esta acción es irreversible."
+                                                    data-confirm-text="Sí, Anular"
+                                                    data-color="red"
+                                                    class="text-red-600 hover:text-red-900 anular-recibo-button" 
+                                                    title="Anular Recibo">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-red-50/50 text-gray-400 transition duration-100">
+                                        <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500">2</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">R-0002</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">Cliente Ejemplo Anulado</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">J-20000000</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm font-bold text-right text-indigo-600">50.00</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">02/01/2025</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-center">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Anulado</span>
+                                        </td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-center">
+                                            <a href="[URL_RECEIPT_DETAIL_2]" class="text-indigo-600 hover:text-indigo-900 mr-2" title="Ver Detalle"><i class="fas fa-eye"></i></a>
+                                            <a href="[URL_RECEIPT_UPDATE_2]" class="text-yellow-600 hover:text-yellow-900 mr-2" title="Editar"><i class="fas fa-edit"></i></a>
+                                            <button type="button" 
+                                                    data-action-url="[URL_RECEIPT_ANULAR_2]" 
+                                                    data-message="¿Estás seguro que deseas **ANULAR** el recibo N° **R-0002**? Esta acción es irreversible."
+                                                    data-confirm-text="Sí, Anular"
+                                                    data-color="red"
+                                                    class="text-red-600 hover:text-red-900 anular-recibo-button opacity-50 cursor-not-allowed" 
+                                                    title="Anular Recibo" 
+                                                    disabled>
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4 flex justify-between items-center text-sm text-gray-600">
+                            <span>Página [NUMERO_PAGINA] de [TOTAL_PAGINAS]</span>
+                            <div class="flex space-x-2">
+                                <a href="[URL_PAGINA_ANTERIOR]" class="px-3 py-1 rounded-lg border hover:bg-gray-100">Anterior</a>
+                                <a href="[URL_PAGINA_SIGUIENTE]" class="px-3 py-1 rounded-lg border hover:bg-gray-100">Siguiente</a>
+                            </div>
+                        </div>
+                        <div class="hidden text-center p-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                            <i class="fas fa-search-minus text-6xl text-gray-400 mb-4"></i>
+                            <p class="text-xl font-medium text-gray-600">No se encontraron recibos que coincidan con los filtros o la búsqueda.</p>
+                            <p class="text-gray-500 mt-2">Intenta ajustar tus criterios de búsqueda o filtros.</p>
+                        </div>
+                        </div>
+
+                    <div class="flex justify-start mt-6 pt-4 border-t border-gray-200">
+                        <button type="button" 
+                                data-action-url="[URL_CLEAR_LOGS]" 
+                                data-message="¿Estás seguro que deseas **LIMPIAR todos los registros de Logs**? Esta acción no se puede deshacer."
+                                data-confirm-text="Sí, Limpiar Logs"
+                                data-color="gray"
+                                id="clear-logs-button"
+                                class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 transition duration-150">
+                            <i class="fas fa-eraser mr-2"></i> Limpiar Logs
+                        </button>
+                        <form method="post" action="[URL_CLEAR_LOGS]" id="clear-logs-form" class="hidden">[CSRF_TOKEN]</form>
+                    </div>
+                    
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white p-4">
+        <div class="max-w-7xl mx-auto text-center text-sm">
+            Sistema de Gestión de Recibos &copy; [AÑO_ACTUAL]
+        </div>
+    </footer>
+    <div id="confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 z-50 hidden transition-opacity duration-300" style="opacity: 0;">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
+                <h3 class="text-xl font-bold text-gray-800 border-b pb-2 mb-4" id="modal-title">Confirmar Acción</h3>
+                <div class="text-gray-700 mb-6">
+                    <p id="modal-message"></p>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="hideModal()" class="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition duration-150">
+                        Cancelar
+                    </button>
+                    <button type="button" id="confirm-action-button" class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
+                        Aceptar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Variables globales para el modal
+        let currentFormToSubmit = null;
+        const modal = document.getElementById('confirmation-modal');
+        const modalContent = document.getElementById('modal-content');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const confirmButton = document.getElementById('confirm-action-button');
+
+        function showModal(title, messageHtml, confirmText, confirmColor) {
+            // Establecer contenido
+            modalTitle.textContent = title;
+            // Reemplazar **texto** con <strong>texto</strong>
+            const formattedMessage = messageHtml.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            modalMessage.innerHTML = formattedMessage; 
+            confirmButton.textContent = confirmText;
+            
+            // Configurar estilos del botón de confirmación
+            // Limpiar clases de color previas y aplicar las nuevas
+            confirmButton.className = 'px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white transition duration-150';
+            if (confirmColor === 'red') {
+                confirmButton.classList.add('bg-red-600', 'hover:bg-red-700');
+            } else if (confirmColor === 'gray') {
+                confirmButton.classList.add('bg-gray-600', 'hover:bg-gray-700');
+            } else {
+                confirmButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
             }
-            userId = auth.currentUser ? auth.currentUser.uid : 'anonymous-user';
-            isAuthReady = true;
-            fetchRecentReceipts();
-        });
-    }
 
-    const receiptsList = document.getElementById('recent-receipts-list');
-    const receiptCount = document.getElementById('receipt-count');
-    const loadingIndicator = document.getElementById('loading-indicator');
+            // Mostrar el modal con animación
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.style.opacity = '1';
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10); // Pequeño retraso para que CSS capte el 'display: block'
 
-    // Función principal para obtener los datos de Firestore en tiempo real
-    function fetchRecentReceipts() {
-        if (!isAuthReady || !userId || !db) {
-            console.warn("Firestore no está listo para la consulta.");
-            return;
+            // Manejar el clic fuera del modal para cerrarlo
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    hideModal();
+                }
+            };
         }
 
-        // Ruta de la colección: /artifacts/{appId}/users/{userId}/receipts
-        const receiptsPath = `artifacts/${appId}/users/${userId}/receipts`;
-        const receiptsCol = collection(db, receiptsPath);
+        function hideModal() {
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                currentFormToSubmit = null; // Limpiar la referencia del formulario
+            }, 300);
+        }
+        
+        // Función para manejar el clic en el botón de confirmación del modal
+        confirmButton.addEventListener('click', function() {
+            if (currentFormToSubmit) {
+                console.log(`[ACCIÓN CONFIRMADA] Formulario a enviar: ${currentFormToSubmit.id || 'temporal'}`);
+                currentFormToSubmit.submit();
+                // Nota: El formulario temporal (para anular) debe ser limpiado por el backend
+            }
+            hideModal();
+        });
 
-        // Consulta: Obtener los últimos 5 recibos subidos
-        // NOTA: Para obtener los 'últimos' deberíamos usar orderBy('uploadDate', 'desc'),
-        // pero la directiva es evitar orderBy. En su lugar, obtendremos todos (o limitados)
-        // y los ordenaremos en el cliente para evitar problemas de índice.
-        const q = query(receiptsCol, limit(5)); // Limitar para no cargar demasiado
 
-        console.log(`Escuchando recibos para el usuario: ${userId} en ${receiptsPath}`);
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.querySelector('input[type="file"]');
+            const statusElement = document.getElementById('upload-status');
+            const uploadButton = document.getElementById('upload-button');
 
-        // Establecer el listener de tiempo real (onSnapshot)
-        onSnapshot(q, (snapshot) => {
-            const receipts = [];
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                receipts.push(data);
+            // 1. Script para habilitar el botón de carga de archivos
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    if (e.target.files.length > 0) {
+                        statusElement.textContent = 'Archivo seleccionado: ' + e.target.files[0].name;
+                        statusElement.classList.remove('text-gray-500');
+                        statusElement.classList.add('text-indigo-600', 'font-semibold');
+                        uploadButton.disabled = false;
+                        uploadButton.classList.remove('disabled:opacity-50');
+                        uploadButton.classList.add('hover:bg-indigo-700');
+                    } else {
+                        statusElement.textContent = 'Ningún archivo seleccionado.';
+                        statusElement.classList.remove('text-indigo-600', 'font-semibold');
+                        statusElement.classList.add('text-gray-500');
+                        uploadButton.disabled = true;
+                        uploadButton.classList.add('disabled:opacity-50');
+                        uploadButton.classList.remove('hover:bg-indigo-700');
+                    }
+                });
+            }
+            
+            // 2. Manejo de la anulación de recibos usando el modal
+            document.querySelectorAll('.anular-recibo-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const actionUrl = this.dataset.actionUrl;
+                    const message = this.dataset.message;
+                    const confirmText = this.dataset.confirmText;
+                    const color = this.dataset.color;
+                    
+                    // Usamos un formulario temporal
+                    const tempForm = document.createElement('form');
+                    tempForm.method = 'POST';
+                    tempForm.action = actionUrl;
+                    tempForm.id = 'temp-anular-form-' + Math.random().toString(36).substring(2, 9); // ID temporal
+
+                    // Asumimos que el token CSRF estará disponible globalmente en una variable JS 
+                    // o se obtendrá de un campo oculto, pero por ahora lo dejamos como comentario.
+                    // const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value; 
+                    // if (csrfToken) {
+                    //     const csrfInput = document.createElement('input');
+                    //     csrfInput.type = 'hidden';
+                    //     csrfInput.name = 'csrfmiddlewaretoken';
+                    //     csrfInput.value = csrfToken;
+                    //     tempForm.appendChild(csrfInput);
+                    // }
+
+                    // Clonar el botón para obtener los datos
+                    const actionInput = document.createElement('input');
+                    actionInput.type = 'hidden';
+                    actionInput.name = 'action';
+                    actionInput.value = 'anular'; // Asumimos que la vista esperará una acción
+                    tempForm.appendChild(actionInput);
+
+                    // Añadir el formulario al DOM (oculto)
+                    document.body.appendChild(tempForm);
+                    
+                    // Asignar el formulario a la variable global
+                    currentFormToSubmit = tempForm;
+                    
+                    // Mostrar el modal
+                    showModal('Confirmación de Anulación', message, confirmText, color);
+                });
             });
-            
-            // Ordenar los recibos por la fecha de subida (simulada) en el cliente
-            receipts.sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
 
-            renderReceipts(receipts);
-
-        }, (error) => {
-            console.error("Error al escuchar los recibos:", error);
-            receiptsList.innerHTML = `<p class="text-center py-10 text-red-500">Error al cargar datos: ${error.message}</p>`;
-            receiptCount.textContent = "Error";
+            // 3. Manejo del botón de Limpiar Logs
+            document.getElementById('clear-logs-button').addEventListener('click', function() {
+                const actionUrl = this.dataset.actionUrl;
+                const message = this.dataset.message;
+                const confirmText = this.dataset.confirmText;
+                const color = this.dataset.color;
+                
+                // Usar el formulario oculto existente
+                const clearLogsForm = document.getElementById('clear-logs-form');
+                if (clearLogsForm) {
+                    currentFormToSubmit = clearLogsForm;
+                    showModal('Confirmación de Limpieza', message, confirmText, color);
+                }
+            });
         });
-    }
+    </script>
+    <div class="hidden">
+        [CSRF_TOKEN_GLOBAL]
+    </div>
 
-    // Función para renderizar los recibos en la UI
-    function renderReceipts(receipts) {
-        loadingIndicator.classList.add('hidden');
-        receiptsList.innerHTML = '';
-        receiptCount.textContent = `(${receipts.length} recientes)`;
-
-        if (receipts.length === 0) {
-            receiptsList.innerHTML = `
-                <div class="text-center py-10 text-gray-500 bg-gray-50 rounded-lg p-4">
-                    <p class="font-medium">¡No hay recibos recientes!</p>
-                    <p class="text-sm mt-1">Sube el primero desde <a href="{% url 'upload_data' %}" class="text-indigo-600 hover:text-indigo-800">aquí</a>.</p>
-                </div>
-            `;
-            return;
-        }
-
-        receipts.forEach(receipt => {
-            // Formatear la fecha
-            const date = new Date(receipt.uploadDate);
-            const dateString = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-            const timeString = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-
-            const item = document.createElement('div');
-            item.className = 'flex justify-between items-center p-4 bg-white rounded-lg shadow-md hover:bg-gray-50 transition duration-150 border-l-4 border-indigo-400';
-            
-            // Usamos los datos simulados guardados en upload_data.html
-            const total = receipt.dataExtracted?.simulatedTotal || 'N/A';
-            const vendor = receipt.dataExtracted?.simulatedVendor || receipt.fileName;
-
-            item.innerHTML = `
-                <div class="flex-1 min-w-0">
-                    <p class="text-base font-semibold text-gray-800 truncate" title="${vendor}">${vendor}</p>
-                    <p class="text-xs text-gray-500 mt-1 truncate">${receipt.fileName}</p>
-                </div>
-                <div class="text-right ml-4">
-                    <p class="text-lg font-bold text-green-600">${parseFloat(total).toFixed(2)} €</p>
-                    <p class="text-xs text-gray-400">${dateString} ${timeString}</p>
-                </div>
-            `;
-            receiptsList.appendChild(item);
-        });
-    }
-
-    // Nota: La lógica de `fetchRecentReceipts` se ejecuta una vez que onAuthStateChanged ha completado su ciclo.
-</script>
-{% endblock %}
+</body>
+</html>

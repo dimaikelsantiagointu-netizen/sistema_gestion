@@ -30,11 +30,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # NUESTRA APP:
-    # Usamos la clase de configuración, que es la forma más segura cuando 
-    # la app está en un subdirectorio como 'apps/'.
-    'apps.recibos.apps.RecibosConfig', 
+    # NUEVAS APPS: Añade aquí las nuevas apps que vayas creando
+    'apps.recibos.apps.RecibosConfig',
 ]
 
 MIDDLEWARE = [
@@ -56,7 +53,7 @@ TEMPLATES = [
         # en la carpeta raíz del proyecto (SISTEMA_GESTION-MAIN/templates/)
         'DIRS': [BASE_DIR / 'templates'], 
         
-        # APP_DIRS: Busca plantillas específicas de la aplicación (apps/recibos/templates/recibos/...)
+        # APP_DIRS: Busca plantillas específicas de la aplicación (apps/nombre_app/templates/nombre_app/...)
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -81,7 +78,8 @@ DATABASES = {
         
         # Lectura de variables de entorno. 
         # Si la variable no existe en el .env, usa el valor por defecto ('fallback_...')
-        'NAME': os.environ.get('DB_NAME', 'recibo_pago_bd'), # Nombre de la DB
+        # Se ha cambiado el valor por defecto de NAME a un nombre genérico
+        'NAME': os.environ.get('DB_NAME', 'django_default_db'), 
         'USER': os.environ.get('DB_USER', 'postgres'),  
         'PASSWORD': os.environ.get('DB_PASSWORD', '123456'), 
         
@@ -95,18 +93,14 @@ DATABASES = {
 # 3. AUTENTICACIÓN Y LOCALIZACIÓN
 # -----------------------------------------------------------------
 
-AUTH_USER_MODEL = 'recibos.CustomUser' 
-
 # Configuración de URLs de autenticación
+# Se usan los valores predeterminados de Django
+LOGIN_URL = '/accounts/login/' 
 
-# CORRECCIÓN 1: Apuntamos explícitamente a la RUTA '/login/', liberando la ruta raíz '/'
-# Esto asegura que la vista del menú público se cargue primero si el usuario no está logueado.
-LOGIN_URL = '/login/' 
+# Se usan los valores predeterminados de Django
+LOGIN_REDIRECT_URL = '/accounts/profile/'
 
-# Esto es correcto: después de iniciar sesión, vamos a la lista de recibos.
-LOGIN_REDIRECT_URL = '/recibos/'
-
-# CORRECCIÓN 2: Después de cerrar sesión, volvemos a la página de menú público (la ruta raíz).
+# Se usan los valores predeterminados de Django
 LOGOUT_REDIRECT_URL = '/' 
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -120,7 +114,7 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'es-ve'
 TIME_ZONE = 'America/Caracas'
 USE_I18N = True
-USE_L10N = True # Aunque USE_L10N está obsoleto, lo mantengo para compatibilidad.
+USE_L10N = True
 USE_TZ = True
 
 # -----------------------------------------------------------------

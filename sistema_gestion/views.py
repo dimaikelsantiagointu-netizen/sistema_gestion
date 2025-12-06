@@ -1,12 +1,9 @@
 from django.shortcuts import render
 
-# La única vista que pertenece al proyecto principal (no a una app específica).
-
-def landing_page_view(request):
+def home_view(request):
     """
-    Renderiza la página principal del sistema, que ahora contiene 
-    directamente el menú de aplicaciones, ya que base.html es la única plantilla usada.
+    Vista que renderiza la plantilla base.html.
+    Esto cumple con el requisito de cargar el layout principal al inicio.
     """
-    # Renderiza 'base.html'. Dado que base.html contiene todo el menú, 
-    # esta es la vista de la página de inicio.
-    return render(request, 'base.html')
+    # La función render busca 'base.html' en la carpeta 'templates' del proyecto
+    return render(request, 'base.html', {})
