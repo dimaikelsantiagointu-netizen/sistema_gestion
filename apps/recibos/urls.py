@@ -1,21 +1,29 @@
-# recibos/urls.py
+# apps/recibos/urls.py
 
 from django.urls import path
-from . import views # Asume que tus vistas están en recibos/views.py
+from . import views
+
+# Definición del 'namespace' para la aplicación
+app_name = 'recibos' 
 
 urlpatterns = [
-    # 1. Rutas Principales de CRUD
-    path('', views.dashboard_view, name='dashboard'), # Dashboard/Listado principal
-    path('crear/', views.recibo_create_view, name='recibo_create'),
-    # Usa <int:pk> para identificar el recibo en la URL
-    path('<int:pk>/', views.recibo_detail_view, name='recibo_detail'),
+    # 1. Dashboard / Listado Principal
+    # Soluciona el AttributeError usando ReciboListView
+    path('', views.ReciboListView.as_view(), name='recibo_list'), # Renombrado a 'recibo_list'
     
-    # 2. Rutas de Documentos Individuales
-    # Esta URL usa el ID del recibo para generar el PDF.
-    path('<int:pk>/pdf/', views.recibo_pdf_view, name='recibo_pdf'), 
-
-    # 3. Rutas de Procesamiento y Reportes Masivos
-    path('cargar/excel/', views.cargar_excel_view, name='cargar_excel'),
-    path('reportes/excel/', views.reporte_excel_view, name='reporte_excel'),
-    path('reportes/pdf/', views.reporte_pdf_view, name='reporte_pdf'),
+    
+    # 3. Edición/Actualización de Recibo (Requiere PK)
+    path('<int:pk>/editar/', views.ReciboUpdateView.as_view(), name='recibo_edit'),
+    
+    # 4. Anulación de Recibo (Requiere PK)
+    path('<int:pk>/anular/', views.AnularReciboView.as_view(), name='recibo_anular'),
+    
+    # 5. Generación de PDF individual (Requiere PK)
+    path('<int:pk>/pdf/', views.GenerarPdfView.as_view(), name='recibo_pdf'),
+    
+    # 6. Carga Masiva de Excel (Requiere permisos de Admin)
+    path('upload/', views.ExcelUploadView.as_view(), name='excel_upload'),
+    
+    # 7. Generación de Reportes (Filtros, Excel/PDF)
+    path('reportes/', views.ReporteGeneracionView.as_view(), name='reporte_generacion'),
 ]

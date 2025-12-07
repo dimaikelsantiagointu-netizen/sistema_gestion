@@ -1,25 +1,15 @@
 from django.contrib import admin
 from django.urls import path, include
-
-# *****************************************************************
-# IMPORTACIÓN DE LA NUEVA VISTA DE INICIO
-# Se asume que esta vista está en el views.py del proyecto principal.
-# *****************************************************************
-from .views import home_view # Asegúrate de que este archivo exista
+from django.views.generic import TemplateView # 👈 Importa TemplateView
 
 urlpatterns = [
-    # *****************************************************************
-    # 1. RUTA RAÍZ: CARGA LA VISTA HOME_VIEW (que renderizará base.html)
-    # *****************************************************************
-    path('', home_view, name='home'), 
+    # URLs de Administración de Django
     path('admin/', admin.site.urls),
-    path('', include('django.contrib.auth.urls')),
     
-   
-    # -----------------------------------------------------------------
-    path('recibos/', include('apps.recibos.urls',)), 
-    path('', include('django.contrib.auth.urls')),
-    # *****************************************************************
-
+    # URL de la Aplicación Recibos (Namespace: 'recibos')
+    path('recibos/', include('apps.recibos.urls')), 
     
+    # 🎯 NUEVA URL RAÍZ: Servir directamente el base.html
+    # Asume que tu archivo está en: /templates/base.html (si esa es la ubicación registrada en settings.py)
+    path('', TemplateView.as_view(template_name='base.html'), name='home'),
 ]

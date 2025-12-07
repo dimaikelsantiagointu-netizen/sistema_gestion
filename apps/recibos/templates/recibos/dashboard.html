@@ -148,7 +148,6 @@
                                     <legend class="text-base font-medium text-gray-900 mb-2">Filtro por Conceptos / Categorías</legend>
                                 
                                     <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                                        {# CORRECCIÓN CRÍTICA APLICADA: request.GET.getlist 'categories' #}
                                         {% for cat in categories %}
                                             <div class="flex items-center">
                                                 <input id="{{ cat }}" 
@@ -171,7 +170,6 @@
                                     <button type="submit" name="action" value="filter" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition duration-150">
                                         <i class="fas fa-search mr-2"></i> Aplicar Filtros
                                     </button>
-                                    {# La acción de generar reportes puede apuntar a una vista específica si lo deseas, pero con el 'name="action"' se maneja bien en la vista principal #}
                                     <button type="submit" name="action" value="excel" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition duration-150">
                                         <i class="fas fa-file-excel mr-2"></i> Generar Reporte Excel
                                     </button>
@@ -187,7 +185,6 @@
 
 
                             <form method="get" action="{% url 'recibos:dashboard' %}" class="flex space-x-2 mb-4">
-                                {# Mantiene TODOS los filtros existentes al usar la búsqueda rápida #}
                                 {% for key, value in request.GET.items %}
                                     {% if key != 'quick_search' and key != 'page' %}
                                         <input type="hidden" name="{{ key }}" value="{{ value }}">
@@ -263,7 +260,6 @@
                                 </table>
                             </div>
 
-                            {# LÓGICA DE PAGINACIÓN CORREGIDA #}
                             {% if recibos.has_other_pages %}
                                 <div class="mt-4 flex justify-between items-center text-sm text-gray-600">
                                     <span>Página {{ recibos.number }} de {{ recibos.paginator.num_pages }}</span>
@@ -309,7 +305,6 @@
         </div>
     </footer>
 
-    {# MODAL DE CONFIRMACIÓN - Código JS y HTML sin cambios #}
     <div id="confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 z-50 hidden transition-opacity duration-300" style="opacity: 0;">
         <div class="flex items-center justify-center min-h-screen p-4">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
@@ -329,7 +324,6 @@
         </div>
     </div>
     
-    {# SCRIPTS JS (Lógica de Modal, Carga de Archivos) - Sin cambios funcionales #}
     <script>
         let currentFormToSubmit = null;
         const modal = document.getElementById('confirmation-modal');
@@ -375,7 +369,6 @@
                 }
             };
         }
-
         function hideModal() {
             modalContent.classList.remove('scale-100', 'opacity-100');
             modalContent.classList.add('scale-95', 'opacity-0');
@@ -389,7 +382,6 @@
                 currentFormToSubmit = null; 
             }, 300);
         }
-        
         confirmButton.addEventListener('click', function() {
             if (currentFormToSubmit && !this.disabled) {
                 console.log(`[ACCIÓN CONFIRMADA] Enviando formulario: ${currentFormToSubmit.id || 'temporal'}`);
@@ -397,13 +389,11 @@
             }
         });
 
-
         document.addEventListener('DOMContentLoaded', function() {
             const fileInput = document.querySelector('input[type="file"]');
             const statusElement = document.getElementById('upload-status');
             const uploadButton = document.getElementById('upload-button');
             const csrfToken = getCsrfToken(); 
-
             if (fileInput) {
                 fileInput.addEventListener('change', function(e) {
                     if (e.target.files.length > 0) {
@@ -423,21 +413,17 @@
                     }
                 });
             }
-        
             document.querySelectorAll('.anular-recibo-button').forEach(button => {
                 button.addEventListener('click', function() {
                     if (this.disabled) return; 
-                    
                     const actionUrl = this.dataset.actionUrl;
                     const message = this.dataset.message;
                     const confirmText = this.dataset.confirmText;
                     const color = this.dataset.color;
-                    
                     const tempForm = document.createElement('form');
                     tempForm.method = 'POST';
                     tempForm.action = actionUrl;
                     tempForm.id = 'temp-anular-form-' + Math.random().toString(36).substring(2, 9); 
-
                     if (csrfToken) {
                         const csrfInput = document.createElement('input');
                         csrfInput.type = 'hidden';

@@ -1,15 +1,7 @@
-# recibos/models.py
 from django.db import models
-from django.contrib.auth import get_user_model
+from django.db.models import Max
 from django.utils.translation import gettext_lazy as _
 
-# Obtener el modelo de usuario activo (usualmente User de django.contrib.auth)
-User = get_user_model()
-
-# --- Mapeo de Categorías (Constantes de Lógica de Negocio) ---
-
-# Esto mapea las 10 columnas booleanas a los nombres descriptivos, 
-# esencial para la UI, los reportes y la auditoría.
 MAPEO_CATEGORIAS = {
     1: _("Título de Tierra Urbana - Adjudicación en Propiedad"),
     2: _("Título de Tierra Urbana - Adjudicación más Vivienda"),
@@ -26,10 +18,8 @@ MAPEO_CATEGORIAS = {
 # --- Modelo Principal ---
 
 class Recibo(models.Model):
-    # --- Campos de Identificación y Estado (Claves de la BD) ---
     id = models.AutoField(primary_key=True)
-    numero_recibo = models.CharField(
-        max_length=50, 
+    numero_recibo = models.IntegerField(
         unique=True, 
         verbose_name="Número de Recibo",
         help_text="Número consecutivo asignado al recibo."
@@ -86,21 +76,16 @@ class Recibo(models.Model):
     anulado = models.BooleanField(default=False, verbose_name="Anulado")
 
     # --- Campos de Auditoría (Reemplazando campos de usuario directo) ---
-    usuario_creador = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        related_name='recibos_creados',
+    usuario_creador = models.CharField(
+      max_length=150, 
         verbose_name="Usuario Creador"
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha Creación")
     
-    usuario_anulo = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
+    usuario_anulo = models.CharField(
+       max_length=150, 
         null=True, 
         blank=True,
-        related_name='recibos_anulados',
         verbose_name="Usuario que Anuló"
     )
     fecha_anulacion = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Anulación")
@@ -108,16 +93,27 @@ class Recibo(models.Model):
     class Meta:
         verbose_name = "Recibo de Pago"
         verbose_name_plural = "Recibos de Pago"
+        db_table = 'recibos_pago'
         ordering = ['-fecha', '-numero_recibo'] # Ordenar por fecha más reciente
 
     def __str__(self):
         return f"Recibo N° {self.numero_recibo} - {self.nombre}"
 
-    def get_categorias_marcadas(self):
+    def save(self, *args, **kwargs):
+        if not self.id and not self.numero_recibo:
+            max_recibo = Recibo.objects.all().aggregate(Max('numero_recibo'))['numero_recibo__max']           
+            self.numero_recibo = (max_recibo if max_recibo is not None else 0) + 1
+            
+        super().save(*args, **kwargs)
+        
+    def get_categorias_marcadas_list(self): 
         """Devuelve una lista de los nombres de las categorías marcadas."""
         categorias = []
         for i in range(1, 11):
             campo = f'categoria{i}'
             if getattr(self, campo):
                 categorias.append(MAPEO_CATEGORIAS.get(i))
-        return ", ".join(categorias)
+        # El template recibo_detail usa una lista, aquí devolvemos la lista.
+        return categorias
+    
+    

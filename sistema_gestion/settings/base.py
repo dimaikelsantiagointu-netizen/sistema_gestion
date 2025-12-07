@@ -3,23 +3,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-# Cargar las variables de entorno del archivo .env (debe estar en el BASE_DIR)
 load_dotenv()
 
-# Construye rutas dentro del proyecto como esta: BASE_DIR / 'sub_path'
-# Nota: Asumiendo que settings.py está en sistema_gestion/, y la raíz del proyecto es dos niveles arriba.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
-# -----------------------------------------------------------------
-# 1. SEGURIDAD Y DEBUG
-# -----------------------------------------------------------------
-# Lee la clave secreta desde el .env
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-clave-temporal-cambiar-en-produccion')
 
-# DEBUG: Aseguramos que se lea como booleano si la variable existe
 DEBUG = os.getenv('DEBUG', 'False') == 'True' # 'True' o 'False' se convierte a bool.
 
-# ALLOWED_HOSTS: Debe configurarse si DEBUG=False
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost'] # Añadimos hosts comunes
 
 INSTALLED_APPS = [
@@ -50,11 +40,7 @@ ROOT_URLCONF = 'sistema_gestion.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        # DIRS: Busca plantillas globales (base.html, landing_page.html, registration/login.html)
-        # en la carpeta raíz del proyecto (SISTEMA_GESTION-MAIN/templates/)
-        'DIRS': [BASE_DIR / 'templates'], 
-        
-        # APP_DIRS: Busca plantillas específicas de la aplicación (apps/nombre_app/templates/nombre_app/...)
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],        
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -62,6 +48,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                
             ],
         },
     },
@@ -69,22 +56,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'sistema_gestion.wsgi.application'
 
-# -----------------------------------------------------------------
-# 2. CONFIGURACIÓN DE LA BASE DE DATOS POSTGRESQL (LEÍDA DESDE .ENV)
-# -----------------------------------------------------------------
 DATABASES = {
     'default': {
         # Motor PostgreSQL. Esta configuración SOBREESCRIBE la de base.py/default.
         'ENGINE': 'django.db.backends.postgresql', 
         
-        # Lectura de variables de entorno. 
-        # Si la variable no existe en el .env, usa el valor por defecto ('fallback_...')
-        # Se ha cambiado el valor por defecto de NAME a un nombre genérico
         'NAME': os.environ.get('DB_NAME', 'django_default_db'), 
         'USER': os.environ.get('DB_USER', 'postgres'),  
         'PASSWORD': os.environ.get('DB_PASSWORD', '123456'), 
         
-        # Host y Puerto
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }

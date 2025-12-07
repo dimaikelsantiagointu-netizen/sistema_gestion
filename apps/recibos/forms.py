@@ -1,7 +1,6 @@
 from django import forms
 from .models import Recibo, MAPEO_CATEGORIAS
 
-# --- 1. Formulario para la Carga de Excel (Ya Definido) ---
 
 class ExcelUploadForm(forms.Form):
     """
@@ -17,7 +16,6 @@ class ExcelUploadForm(forms.Form):
         })
     )
 
-# --- 2. ModelForm para Creación y Edición de Recibos ---
 
 class ReciboModelForm(forms.ModelForm):
     """
@@ -25,7 +23,6 @@ class ReciboModelForm(forms.ModelForm):
     Utilizado en ReciboCreateView y ReciboUpdateView.
     """
     
-    # Campo personalizado para manejar la anulación
     anular_recibo = forms.BooleanField(
         label='Marcar como Anulado', 
         required=False,
@@ -36,8 +33,6 @@ class ReciboModelForm(forms.ModelForm):
     class Meta:
         model = Recibo
         
-        # Incluye todos los campos excepto los automáticos (ID, creador, fecha_creacion)
-        # Excluimos 'anulado' para manejarlo con el campo 'anular_recibo' o en la vista de anulación.
         fields = [
             'numero_recibo', 'fecha', 'estado', 'nombre', 'rif_cedula_identidad', 
             'direccion_inmueble', 'ente_liquidado', 'gastos_administrativos', 
@@ -45,10 +40,9 @@ class ReciboModelForm(forms.ModelForm):
             'concepto', 
             'categoria1', 'categoria2', 'categoria3', 'categoria4', 'categoria5', 
             'categoria6', 'categoria7', 'categoria8', 'categoria9', 'categoria10',
-            'anular_recibo', # Agregamos el campo custom
+            'anular_recibo', 
         ]
         
-        # Definición de etiquetas personalizadas y widgets de Bootstrap/Tailwind
         widgets = {
             'numero_recibo': forms.TextInput(attrs={'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500'}),
             'fecha': forms.DateInput(attrs={'type': 'date', 'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500'}),
@@ -63,21 +57,17 @@ class ReciboModelForm(forms.ModelForm):
             'numero_transferencia': forms.TextInput(attrs={'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500'}),
             'concepto': forms.Textarea(attrs={'rows': 2, 'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500'}),
             'conciliado': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500'}),
-            # Las categorías también usarán CheckboxInput
             **{f'categoria{i}': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500'}) for i in range(1, 11)}
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # 3. Personalizar labels de categorías
-        # Usamos el mapeo de categorías definido en models.py para los labels.
         for i, label in MAPEO_CATEGORIAS.items():
             field_name = f'categoria{i}'
             if field_name in self.fields:
                 self.fields[field_name].label = label
                 
-        # 4. Inicializar 'anular_recibo' si el recibo está anulado (para edición)
         if self.instance and self.instance.pk and self.instance.anulado:
             self.fields['anular_recibo'].initial = True
 
@@ -88,9 +78,46 @@ class ReciboModelForm(forms.ModelForm):
         """
         instance = super().save(commit=False)
         
-        # Sincronizar el campo custom 'anular_recibo' con el campo real 'anulado'
         instance.anulado = self.cleaned_data.get('anular_recibo', False)
         
         if commit:
             instance.save()
         return instance
+    
+    # AÑADIR ESTO AL forms.py
+class ReporteFiltrosForm(forms.Form):
+    # Rango de Fechas
+    fecha_inicio = forms.DateField(
+        label="Fecha Inicio (Opcional)",
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-input'})
+    )
+    fecha_fin = forms.DateField(
+        label="Fecha Fin (Opcional)",
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-input'})
+    )
+    
+    # Filtro de Estado
+    ESTADO_REPORTE_CHOICES = [('Todos', 'Todos')] + list(Recibo.ESTADO_CHOICES) + [
+        ('Activo', 'Solo Activos (No Anulados)'), 
+        ('Anulado', 'Solo Anulados')
+    ]
+    estado_filtro = forms.ChoiceField(
+        label="Filtrar por Estado",
+        choices=ESTADO_REPORTE_CHOICES,
+        initial='Todos',
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    # Filtro de Categorías
+    # Usamos el mapeo (1, Nombre), (2, Nombre), etc.
+    opciones_categorias = [(k, v) for k, v in MAPEO_CATEGORIAS.items()]
+    
+    categorias_filtro = forms.MultipleChoiceField(
+        label="Categorías (Incluir recibos con alguna de estas marcadas)",
+        choices=opciones_categorias,
+        required=False,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'space-y-1'})
+    )

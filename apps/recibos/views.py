@@ -42,7 +42,7 @@ class ExcelUploadView(LoginRequiredMixin, AdminRequiredMixin, View):
 
 class ReciboListView(LoginRequiredMixin, ListView):
     model = Recibo
-    template_name = 'recibos/recibo_list.html'
+    template_name = 'recibos/dashboard.html'
     context_object_name = 'recibos'
     paginate_by = 25
     
@@ -52,8 +52,6 @@ class ReciboListView(LoginRequiredMixin, ListView):
         estado = self.request.GET.get('estado')
         anulado = self.request.GET.get('anulado')
         
-        # Lógica de reporte (Se asume que la generación se hace en otra vista ReporteGeneracionView)
-        # Se elimina el bloque if action == 'excel' or action == 'pdf': que estaba incompleto
         
         if query:
             queryset = queryset.filter(
@@ -95,8 +93,9 @@ class ReciboUpdateView(LoginRequiredMixin, View):
         form = ReciboModelForm(request.POST, instance=recibo)
         
         if form.is_valid():
-            recibo = form.save()
-            
+            recibo = form.save(commit=False)
+            recibo.usuario_creador = request.user.username
+            recibo.save()
             if request.POST.get('regenerar_pdf_confirm') == 'on':
                 generar_pdf_individual(recibo)
             
@@ -112,7 +111,7 @@ class AnularReciboView(LoginRequiredMixin, View):
         if not recibo.anulado:
             recibo.anulado = True
             recibo.fecha_anulacion = datetime.now()
-            recibo.usuario_anulo = request.user
+            recibo.usuario_anulo = request.user.username
             recibo.save()
             return redirect('recibos:recibo_list')
         
