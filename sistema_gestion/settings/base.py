@@ -79,7 +79,7 @@ DATABASES = {
 LOGIN_URL = '/accounts/login/' 
 
 # Se usan los valores predeterminados de Django
-LOGIN_REDIRECT_URL = '/accounts/profile/'
+LOGIN_REDIRECT_URL = '/'
 
 # Se usan los valores predeterminados de Django
 LOGOUT_REDIRECT_URL = '/' 
