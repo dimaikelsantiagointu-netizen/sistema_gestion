@@ -1,17 +1,25 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.views.generic import ListView
+from django.views.generic.edit import CreateView, UpdateView # UpdateView si la usas
+from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import HttpResponse
-from django.db.models import Q
+from django.db.models import Q, Max 
 from datetime import datetime
 
-from .forms import ExcelUploadForm, ReporteFiltrosForm
 from .models import Recibo, MAPEO_CATEGORIAS
-from .utils import generar_pdf_individual, generar_reporte_excel_django, obtener_recibos_filtrados
-from .forms import ReciboModelForm 
-from .utils import generar_reporte_pdf_django 
-
+from .forms import (
+    ExcelUploadForm, 
+    ReporteFiltrosForm,
+    ReciboModelForm 
+)
+from .utils import (
+    generar_pdf_individual, 
+    generar_reporte_excel_django, 
+    obtener_recibos_filtrados,
+    generar_reporte_pdf_django 
+)
 class AdminRequiredMixin(UserPassesTestMixin):
     def test_func(self):
         return self.request.user.is_superuser or self.request.user.is_staff
@@ -77,11 +85,21 @@ class ReciboListView(LoginRequiredMixin, ListView):
         context['current_query'] = self.request.GET.get('q', '')
         context['current_estado'] = self.request.GET.get('estado', 'Todos')
         context['current_anulado'] = self.request.GET.get('anulado', 'False')
+        context['selected_categories'] = self.request.GET.getlist('categories')
         return context
 
+class ReciboCreateView(LoginRequiredMixin, CreateView):
+    model = Recibo
+    form_class = ReciboModelForm 
+    template_name = 'recibos/recibo_form.html' 
+    success_url = reverse_lazy('recibos:recibo_list') 
+
+    def form_valid(self, form):
+        form.instance.usuario_creador = self.request.user.username 
+        return super().form_valid(form)
 
 class ReciboUpdateView(LoginRequiredMixin, View):
-    template_name = 'recibos/recibo_edit.html'
+    template_name = 'recibos/recibo_form.html'
 
     def get(self, request, pk):
         recibo = get_object_or_404(Recibo, pk=pk)
@@ -142,9 +160,13 @@ class ReporteGeneracionView(LoginRequiredMixin, View):
             
             fecha_inicio = data['fecha_inicio']
             fecha_fin = data['fecha_fin']
-            estado_filtro = data['estado_filtro']
-            categorias_filtro = [int(c) for c in data['categorias_filtro']]
+            estado_filtro = self.request.GET.get('estado')
             
+            categorias_filtro = [int(c) for c in data['categorias_filtro']]
+        if estado_filtro == 'anulado':
+            queryset = queryset.filter(anulado=True)
+        elif estado_filtro == 'activo' or not estado_filtro: # Si es 'activo' o 'Todos' (estado vacío)
+            queryset = queryset.filter(anulado=False)
             formato = request.POST.get('formato')
             
             queryset = obtener_recibos_filtrados(
@@ -171,3 +193,5 @@ class ReporteGeneracionView(LoginRequiredMixin, View):
                 )
                 
         return render(request, self.template_name, {'form': form})
+    
+    

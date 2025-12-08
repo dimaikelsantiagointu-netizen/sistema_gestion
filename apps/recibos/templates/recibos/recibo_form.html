@@ -1,5 +1,6 @@
 {% extends "dashboard.html" %} 
 {% load crispy_forms_tags %}
+{% load custom_filters %}
 {# Asegúrate de tener instalado 'django-crispy-forms' para un renderizado limpio #}
 
 {% block title %}
@@ -29,7 +30,7 @@
                 {% if messages %}
                     {% for message in messages %}
                         <div class="p-4 rounded-md {% if message.tags == 'success' %}bg-green-100{% elif message.tags == 'error' %}bg-red-100{% endif %}">
-                            <p class="text-sm font-medium {% if message.tags == 'success' %}text-green-800{% else %}text-red-800{% endif %}">{{ message }}</p>
+                        <p class="text-sm font-medium {{ color_text }}">{{ message }}</p>
                         </div>
                     {% endfor %}
                 {% endif %}
@@ -79,8 +80,7 @@
                             {{ form.numero_transferencia|as_crispy_field }}
                         </div>
                         <div class="sm:col-span-3 flex items-end">
-                            {{ form.conciliado }}
-                            <label for="{{ form.conciliado.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-700">Conciliado</label>
+                        {{ form.conciliado|as_crispy_field }}
                         </div>
                         <div class="sm:col-span-6">
                             {{ form.concepto|as_crispy_field }}
@@ -132,8 +132,3 @@
         </div>
     </div>
 {% endblock main_content %}
-
-{# Necesitas un custom filter para iterar las categorías #}
-{% block custom_filters %}
-    {% load custom_filters %} 
-{% endblock custom_filters %}

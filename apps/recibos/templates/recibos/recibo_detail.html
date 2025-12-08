@@ -21,9 +21,9 @@
             ↩️ Volver al Dashboard
         </a>
         {# Asumiendo una ruta para generación de PDF individual #}
-        <a href="#" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
-            🖨️ Imprimir PDF
-        </a>
+        <a href="{% url 'recibos:generar_pdf_individual' pk=recibo.pk %}" target="_blank" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+        🖨️ Imprimir PDF</a>
+
     </div>
 {% endblock content_title %}
 

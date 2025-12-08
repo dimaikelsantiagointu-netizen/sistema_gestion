@@ -85,23 +85,18 @@ def procesar_excel_sync(file_content, user):
                 'usuario_creador': user.username,
             }
             
-            # --- Lógica de Categorías (Permanece igual) ---
             for i in range(1, 11):
                 col_name = f'Categoría {i}'
                 field_name = f'categoria{i}'
                 valor = _obtener_valor_celda(row, col_name)
                 recibo_data[field_name] = (valor in ['Sí', 'SI', 'si', True, 1])
 
-            # --- CRÍTICO: CAMBIAMOS A CREATE ---
-            # Al usar .create(), el modelo se inicializa SIN numero_recibo,
-            # lo que activa la lógica de autoincremento en el save() del modelo.
             recibo = Recibo.objects.create(**recibo_data) 
             
             recibos_creados += 1
             filas_procesadas += 1
 
         except Exception as e:
-            # Usar un identificador alternativo o el índice para el log
             logger.error(f"Error procesando fila {index}: {e}") 
             continue 
 
@@ -161,8 +156,7 @@ def generar_reporte_excel_django(queryset, filtros_data, user_name):
         cell.fill = header_fill
 
     for recibo in queryset:
-        categorias_marcadas = recibo.get_categorias_marcadas() 
-        
+        categorias_marcadas = ", ".join(recibo.get_categorias_marcadas_list())
         hoja_datos.append([
             recibo.numero_recibo,
             recibo.fecha.strftime('%Y-%m-%d'),
@@ -240,8 +234,7 @@ def generar_pdf_individual(recibo):
     
     Story.append(Paragraph(f"**Concepto:** {recibo.concepto}", styles['Normal']))
     Story.append(Spacer(1, 0.2 * inch))
-    Story.append(Paragraph(f"**Creado por:** {recibo.usuario_creador.username} el {recibo.fecha_creacion.strftime('%d/%m/%Y')}", styles['Italic']))
-
+    Story.append(Paragraph(f"**Creado por:** {recibo.usuario_creador} el {recibo.fecha_creacion.strftime('%d/%m/%Y')}", styles['Italic']))
     doc.build(Story)
     
     pdf = buffer.getvalue()
@@ -274,7 +267,7 @@ def generar_reporte_pdf_django(queryset, filtros_data, user_name):
     table_data.append(headers)
 
     for recibo in queryset:
-        categorias_marcadas = recibo.get_categorias_marcadas() 
+        categorias_marcadas = ", ".join(recibo.get_categorias_marcadas_list()) 
         table_data.append([
             recibo.numero_recibo,
             recibo.fecha.strftime('%d/%m/%Y'),

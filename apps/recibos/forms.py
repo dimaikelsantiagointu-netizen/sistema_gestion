@@ -84,9 +84,7 @@ class ReciboModelForm(forms.ModelForm):
             instance.save()
         return instance
     
-    # AÑADIR ESTO AL forms.py
 class ReporteFiltrosForm(forms.Form):
-    # Rango de Fechas
     fecha_inicio = forms.DateField(
         label="Fecha Inicio (Opcional)",
         required=False,
@@ -98,7 +96,6 @@ class ReporteFiltrosForm(forms.Form):
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-input'})
     )
     
-    # Filtro de Estado
     ESTADO_REPORTE_CHOICES = [('Todos', 'Todos')] + list(Recibo.ESTADO_CHOICES) + [
         ('Activo', 'Solo Activos (No Anulados)'), 
         ('Anulado', 'Solo Anulados')
@@ -111,8 +108,6 @@ class ReporteFiltrosForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
-    # Filtro de Categorías
-    # Usamos el mapeo (1, Nombre), (2, Nombre), etc.
     opciones_categorias = [(k, v) for k, v in MAPEO_CATEGORIAS.items()]
     
     categorias_filtro = forms.MultipleChoiceField(

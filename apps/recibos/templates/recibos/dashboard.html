@@ -35,19 +35,13 @@
 
     <header class="bg-indigo-700 shadow-lg sticky top-0 z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-            <a href="{% url 'recibos:dashboard' %}" class="flex items-center text-white text-xl font-extrabold tracking-wider">
+            <a href="{% url 'recibos:recibo_list' %}" class="flex items-center text-white text-xl font-extrabold tracking-wider">
                 <i class="fas fa-receipt mr-3 text-indigo-300"></i>
                 App Recibos
             </a>
             
             <div class="flex items-center space-x-4">
                 <span class="text-sm text-indigo-300 hidden sm:inline">Hola, {{ user.first_name|default:user.username }}</span>
-                
-                {% if user.is_authenticated %}
-                    <a href="{% url 'logout' %}" class="text-sm text-indigo-300 hover:text-white transition duration-150">
-                        <i class="fas fa-sign-out-alt"></i> Salir
-                    </a>
-                {% endif %}
             </div>
         </div>
     </header>
@@ -67,22 +61,23 @@
                         <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100">
                             <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i class="fas fa-file-upload mr-2 text-indigo-600"></i> Carga de Archivos</h2>
 
-                            <form method="post" enctype="multipart/form-data" action="{% url 'recibos:cargar_excel' %}" id="upload-form" class="space-y-4">
+                            <form method="post" enctype="multipart/form-data" action="{% url 'recibos:excel_upload' %}" id="upload-form" class="space-y-4">
                                 {% csrf_token %}
                                 <label class="block">
                                     <span class="sr-only">Seleccionar Archivo Excel</span>
                                     <input type="file" name="excel_file" accept=".xlsx" required
-                                                    class="block w-full text-sm text-gray-500
-                                                        file:mr-4 file:py-2 file:px-4
-                                                        file:rounded-lg file:border-0
-                                                        file:text-sm file:font-semibold
-                                                        file:bg-indigo-50 file:text-indigo-700
-                                                        hover:file:bg-indigo-100 transition duration-150"
+                                                     class="block w-full text-sm text-gray-500
+                                                             file:mr-4 file:py-2 file:px-4
+                                                             file:rounded-lg file:border-0
+                                                             file:text-sm file:font-semibold
+                                                             file:bg-indigo-50 file:text-indigo-700
+                                                             hover:file:bg-indigo-100 transition duration-150"
                                     >
                                 </label>
-                                <button type="submit" id="upload-button" class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150 disabled:opacity-50" disabled>
-                                    <i class="fas fa-upload mr-2"></i> Cargar Datos
-                                </button>
+                            
+                                {#<button type="submit" id="upload-button" class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150 disabled:opacity-50" disabled>#}
+                                    {#<i class="fas fa-upload mr-2"></i> Cargar Datos#}
+                                {#</button>#}
                             </form>
                             <p id="upload-status" class="mt-2 text-xs text-gray-500 text-center italic">
                                 Ningún archivo seleccionado.
@@ -92,7 +87,7 @@
                         <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100">
                             <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i class="fas fa-edit mr-2 text-yellow-600"></i> Creación Manual</h2>
 
-                            <a href="{% url 'recibos:crear_recibo' %}" class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 transition duration-150 flex justify-center items-center">
+                            <a href="{% url 'recibos:recibo_create' %}" class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 transition duration-150 flex justify-center items-center">
                                 <i class="fas fa-plus-circle mr-2"></i> Crear Nuevo Recibo
                             </a>
                             <p id="generation-status" class="mt-2 text-xs text-gray-500 text-center italic">
@@ -123,8 +118,7 @@
                         <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
                             <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-filter mr-2 text-purple-600"></i> Módulo de Reportes y Filtrado</h2>
 
-                            <form method="get" action="{% url 'recibos:dashboard' %}" class="space-y-4">
-                                
+                            <form method="get" action="{% url 'recibos:recibo_list' %}" class="space-y-4"><form method="get" action="{% url 'recibos:recibo_list' %}" class="space-y-4">                                
                                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                                     <div>
                                         <label for="fecha_inicial" class="block text-sm font-medium text-gray-700">Fecha Inicial</label>
@@ -147,22 +141,25 @@
                                 <fieldset class="mt-4 pt-4 border-t border-gray-200">
                                     <legend class="text-base font-medium text-gray-900 mb-2">Filtro por Conceptos / Categorías</legend>
                                 
+                                    {% load custom_filters %} 
                                     <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                                        {% for cat in categories %}
+                                    {% for key, value in categories.items %}
+
+                                        {% with slug_cat=value|slugify %}
                                             <div class="flex items-center">
-                                                <input id="{{ cat }}" 
+                                                <input id="{{ slug_cat }}" 
                                                     name="categories" 
                                                     type="checkbox" 
-                                                    value="{{ cat }}" 
-                                                    
-                                                    {% if cat in request.GET.getlist 'categories' %}checked{% endif %}
-                                                    
+                                                    value="{{ key }}" 
+                                                    {% if key|stringformat:"s" in selected_categories %}checked{% endif %}
                                                     class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                                                    
-                                                <label for="{{ cat }}" class="ml-2 block text-sm text-gray-700">{{ cat|capfirst }}</label>
+                                                    <label for="{{ slug_cat }}" class="ml-2 block text-sm text-gray-700">{{ value|capfirst }}</label>
                                             </div>
-                                        {% endfor %}
+                                        {% endwith %}
+                                        
+                                    {% endfor %}
                                     </div>
+                                    
 
                                 </fieldset>
                                 
@@ -170,10 +167,10 @@
                                     <button type="submit" name="action" value="filter" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition duration-150">
                                         <i class="fas fa-search mr-2"></i> Aplicar Filtros
                                     </button>
-                                    <button type="submit" name="action" value="excel" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition duration-150">
+                                    {##########button type="submit" name="action" value="excel" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition duration-150">#}
                                         <i class="fas fa-file-excel mr-2"></i> Generar Reporte Excel
                                     </button>
-                                    <button type="submit" name="action" value="pdf" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
+                                    {#########<button type="submit" name="action" value="pdf" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">#}
                                         <i class="fas fa-file-pdf mr-2"></i> Generar Reporte PDF
                                     </button>
                                 </div>
@@ -184,16 +181,16 @@
                             <h1 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-table mr-2 text-indigo-600"></i> Resultados y Gestión de Recibos</h1>
 
 
-                            <form method="get" action="{% url 'recibos:dashboard' %}" class="flex space-x-2 mb-4">
+                            <form method="get" action="{% url 'recibos:recibo_list' %}" class="flex space-x-2 mb-4">
                                 {% for key, value in request.GET.items %}
-                                    {% if key != 'quick_search' and key != 'page' %}
+                                    {% if key != 'q' and key != 'page' %}
                                         <input type="hidden" name="{{ key }}" value="{{ value }}">
                                     {% endif %}
                                 {% endfor %}
                                 
-                                <input type="text" name="quick_search" placeholder="Buscar por N°, Nombre, Cédula/RIF, Transferencia..." 
-                                                class="flex-grow rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                                value="{{ request.GET.quick_search|default:'' }}">
+                                <input type="text" name="q" placeholder="Buscar por N°, Nombre, Cédula/RIF, Transferencia..." 
+                                                       class="flex-grow rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                       value="{{ request.GET.q|default:'' }}">
                                 <button type="submit" class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
                                     <i class="fas fa-search"></i> Buscar
                                 </button>
@@ -243,7 +240,7 @@
                                                             class="text-red-600 hover:text-red-900 anular-recibo-button {% if recibo.anulado %}opacity-50 cursor-not-allowed{% endif %}" 
                                                             title="{% if recibo.anulado %}Recibo Anulado{% else %}Anular Recibo{% endif %}" 
                                                             {% if recibo.anulado %}disabled{% endif %}>
-                                                        <i class="fas fa-ban"></i>
+                                                         <i class="fas fa-ban"></i>
                                                     </button>
                                                 </td>
                                             </tr>
@@ -274,19 +271,18 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
+
                         <div class="flex justify-start mt-6 pt-4 border-t border-gray-200">
                             <button type="button" 
-                                    data-action-url="{% url 'recibos:limpiar_logs' %}" 
-                                    data-message="¿Estás seguro que deseas **LIMPIAR todos los registros de Logs**? Esta acción no se puede deshacer."
-                                    data-confirm-text="Sí, Limpiar Logs"
-                                    data-color="gray"
-                                    id="clear-logs-button"
-                                    class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 transition duration-150">
+                            {#0000000000000data-action-url="{% url 'recibos:limpiar_logs' %}" #}
+                                        data-message="¿Estás seguro que deseas **LIMPIAR todos los registros de Logs**? Esta acción no se puede deshacer."
+                                        data-confirm-text="Sí, Limpiar Logs"
+                                        data-color="gray"
+                                        id="clear-logs-button"
+                                        class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 transition duration-150">
                                 <i class="fas fa-eraser mr-2"></i> Limpiar Logs
                             </button>
-
-                            <form method="post" action="{% url 'recibos:limpiar_logs' %}" id="clear-logs-form" class="hidden">
+{#                            <form method="post" action="{% url 'recibos:limpiar_logs' %}" id="clear-logs-form" class="hidden">#}
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="clear_logs">
                             </form>

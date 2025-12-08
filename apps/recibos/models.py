@@ -15,8 +15,6 @@ MAPEO_CATEGORIAS = {
     10: _("Arrendamiento de Terrenos")
 }
 
-# --- Modelo Principal ---
-
 class Recibo(models.Model):
     id = models.AutoField(primary_key=True)
     numero_recibo = models.IntegerField(
@@ -25,14 +23,12 @@ class Recibo(models.Model):
         help_text="Número consecutivo asignado al recibo."
     )
     
-    # --- Campos de Datos del Cliente y Concepto ---
     nombre = models.CharField(max_length=255, verbose_name="Nombre del Pagador")
     rif_cedula_identidad = models.CharField(max_length=20, verbose_name="Cédula/RIF")
     direccion_inmueble = models.TextField(blank=True, null=True, verbose_name="Dirección del Inmueble")
     ente_liquidado = models.CharField(max_length=100, blank=True, null=True, verbose_name="Ente Liquidado")
     concepto = models.TextField(blank=True, null=True, verbose_name="Concepto de Pago")
     
-    # --- Campos de Categorías (10 Columnas Booleanas) ---
     categoria1 = models.BooleanField(default=False, verbose_name=MAPEO_CATEGORIAS.get(1))
     categoria2 = models.BooleanField(default=False, verbose_name=MAPEO_CATEGORIAS.get(2))
     categoria3 = models.BooleanField(default=False, verbose_name=MAPEO_CATEGORIAS.get(3))
@@ -44,7 +40,6 @@ class Recibo(models.Model):
     categoria9 = models.BooleanField(default=False, verbose_name=MAPEO_CATEGORIAS.get(9))
     categoria10 = models.BooleanField(default=False, verbose_name=MAPEO_CATEGORIAS.get(10))
 
-    # --- Campos Financieros y de Trazabilidad ---
     gastos_administrativos = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Gastos Adm. (Bs)")
     tasa_dia = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Tasa del Día (Bs/Divisa)")
     total_monto_bs = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Monto Total (Bs)")
@@ -54,7 +49,7 @@ class Recibo(models.Model):
         blank=True, 
         null=True, 
         verbose_name="Número de Transferencia",
-        unique=True, # Importante para la validación de duplicados
+        unique=True, 
     )
     
     fecha = models.DateField(verbose_name="Fecha de Pago/Emisión")
@@ -75,7 +70,6 @@ class Recibo(models.Model):
     conciliado = models.BooleanField(default=False, verbose_name="Conciliado (Banco)")
     anulado = models.BooleanField(default=False, verbose_name="Anulado")
 
-    # --- Campos de Auditoría (Reemplazando campos de usuario directo) ---
     usuario_creador = models.CharField(
       max_length=150, 
         verbose_name="Usuario Creador"
@@ -113,7 +107,6 @@ class Recibo(models.Model):
             campo = f'categoria{i}'
             if getattr(self, campo):
                 categorias.append(MAPEO_CATEGORIAS.get(i))
-        # El template recibo_detail usa una lista, aquí devolvemos la lista.
         return categorias
     
     
