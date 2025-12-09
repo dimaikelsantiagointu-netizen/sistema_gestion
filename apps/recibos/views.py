@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse, FileResponse
 from django.db.models import Max
 from django.contrib import messages
-from .models import Recibo # Asegúrate de que tu modelo esté en .models
+from .models import Recibo 
 import io
 import os
 from reportlab.pdfgen import canvas
@@ -11,12 +11,31 @@ from reportlab.lib.utils import ImageReader
 from decimal import Decimal
 import logging
 from .utils import importar_recibos_desde_excel 
+from django.conf import settings # 💡 NECESARIO PARA LA RUTA ABSOLUTA
 
 logger = logging.getLogger(__name__)
 
-HEADER_IMAGE = os.path.join(os.path.dirname(__file__), '..', 'static', 'images', 'header_logo.png')
+# 💡 CORRECCIÓN DE RUTA CRÍTICA: Definición de la ruta absoluta del encabezado.
+# Esto asegura que ReportLab (el generador de PDF) pueda encontrar la imagen.
+try:
+    # Esta ruta está construida asumiendo la estructura: 
+    # [BASE_DIR]/apps/recibos/static/recibos/images/encabezado.png
+    # 🚨 AJUSTA el segmento 'apps'/'recibos' si tu app está en otra ubicación (ej: sólo 'recibos')
+    HEADER_IMAGE = os.path.join(
+        settings.BASE_DIR, 
+        'apps', 
+        'recibos', 
+        'static', 
+        'recibos', 
+        'images', 
+        'encabezado.png' # <-- Nombre de archivo corregido
+    )
+except AttributeError:
+    # Fallback si por alguna razón settings.BASE_DIR no está disponible
+    HEADER_IMAGE = os.path.join(os.path.dirname(__file__), '..', 'static', 'recibos', 'images', 'encabezado.png')
 
-# 1. FUNCIONES AUXILIARES DE PDF (Permanecen sin cambios)
+
+# 1. FUNCIONES AUXILIARES DE PDF (Permanecen sin cambios excepto el uso de HEADER_IMAGE)
 
 def draw_text_line(canvas_obj, text, x_start, y_start, font_name="Helvetica", font_size=10, is_bold=False):
     """Dibuja una línea de texto y ajusta la posición Y."""
@@ -49,7 +68,7 @@ def generate_receipt_pdf(recibo_obj):
     num_transf = recibo_obj.numero_transferencia if recibo_obj.numero_transferencia else ''
     fecha = recibo_obj.fecha.strftime("%d/%m/%Y")
     concepto = recibo_obj.concepto
-    estado = recibo_obj.estado
+    estado = 'ANULADO' if recibo_obj.anulado else 'ACTIVO'
     num_recibo = str(recibo_obj.numero_recibo)
     
     categorias = {
@@ -65,6 +84,8 @@ def generate_receipt_pdf(recibo_obj):
     
     current_y = height - 50
     y_top = height - 50
+    
+    # 💡 Lógica de carga de imagen usando la ruta corregida (HEADER_IMAGE)
     if os.path.exists(HEADER_IMAGE):
         try:
             img = ImageReader(HEADER_IMAGE)
@@ -223,11 +244,15 @@ def generate_receipt_pdf(recibo_obj):
     buffer.seek(0)
     return buffer 
 
+# ----------------------------------------------------------------------
+# 2. VISTAS PRINCIPALES (SE MANTIENEN EN LA VERSIÓN SIMPLE, EVITANDO EL PRG COMPLEJO)
+# ----------------------------------------------------------------------
 
 def crear_recibo_desde_excel(request):
     """
-    Maneja la subida del archivo Excel, ejecuta la importación, guarda los datos, 
-    y genera el PDF del último recibo.
+    Maneja la subida del archivo Excel y la descarga directa del PDF.
+    NOTA: Este flujo de descarga directa impide que el mensaje de éxito se muestre
+    y que el spinner se oculte automáticamente sin el patrón PRG completo.
     """
     TEMPLATE_NAME = 'recibos/dashboard.html'
     
@@ -258,11 +283,13 @@ def crear_recibo_desde_excel(request):
                 filename = f"Recibo_N_{ultimo_recibo_obj.numero_recibo}.pdf"
                 response['Content-Disposition'] = f'attachment; filename="{filename}"'
                 
+                # Este mensaje se guarda en la sesión, pero NO se muestra porque la respuesta es un PDF.
                 messages.success(request, f"Importación exitosa. Descargando recibo N° {ultimo_recibo_obj.numero_recibo}.")
+                
                 return response
             
             except Recibo.DoesNotExist:
-                messages.error(request, "Error: La importación fue exitosa, pero no se pudo encontrar el recibo para generar el PDF (Error de concurrencia o lógica).")
+                messages.error(request, "Error: La importación fue exitosa, pero no se pudo encontrar el recibo para generar el PDF.")
                 return render(request, TEMPLATE_NAME, {})
             
             except Exception as e:
@@ -274,4 +301,47 @@ def crear_recibo_desde_excel(request):
             messages.error(request, f"Fallo en la carga de Excel: {message}")
             return render(request, TEMPLATE_NAME, {})
             
-    return render(request, TEMPLATE_NAME, {})
+    # Lógica GET normal
+    try:
+        context = {}
+        # Asumiendo que quieres ver los últimos 20 recibos
+        context['recibos'] = Recibo.objects.all().order_by('-fecha', '-numero_recibo')[:20] 
+    except Exception:
+        context = {'recibos': []}
+
+    return render(request, TEMPLATE_NAME, context)
+
+
+def descargar_pdf(request, pk):
+    """
+    Función de descarga. Asumo que se mantiene por si la necesitas para otros flujos.
+    """
+    try:
+        recibo_obj = Recibo.objects.get(pk=pk)
+    except Recibo.DoesNotExist:
+        messages.error(request, "Error: El recibo solicitado para descarga no existe.")
+        return redirect('dashboard')
+
+    try:
+        pdf_buffer = generate_receipt_pdf(recibo_obj)
+        
+        response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
+        filename = f"Recibo_N_{recibo_obj.numero_recibo}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error al generar el PDF de descarga: {e}")
+        messages.error(request, f"Error al generar el PDF: {e}")
+        return redirect('dashboard')
+
+# Las funciones anular_recibo y editar_recibo (si existen) deben mantenerse o crearse.
+# Por ejemplo:
+# def anular_recibo(request, pk):
+#     # ... lógica de anulación ...
+#     return redirect('dashboard')
+# 
+# def editar_recibo(request, pk):
+#     # ... lógica de edición ...
+#     return render(request, 'recibos/editar_recibo.html', {})

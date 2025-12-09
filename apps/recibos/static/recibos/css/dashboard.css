@@ -1,0 +1,10 @@
+body {
+  background-color: #f9f4f4;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+#confirmation-modal.hidden {
+  display: none;
+}
