@@ -1,8 +1,8 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, FileResponse
-from django.db.models import Max
+from django.db.models import Max, Q, Sum
 from django.contrib import messages
-from .models import Recibo 
+from .models import Recibo
 import io
 import os
 from reportlab.pdfgen import canvas
@@ -10,9 +10,10 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.utils import ImageReader
 from decimal import Decimal
 import logging
-from .utils import importar_recibos_desde_excel 
+from django.urls import reverse
+from .utils import importar_recibos_desde_excel, generar_excel_recibos, generar_pdf_reporte
 from django.conf import settings # 💡 NECESARIO PARA LA RUTA ABSOLUTA
-
+from.constants import CATEGORY_CHOICES_MAP
 logger = logging.getLogger(__name__)
 
 try:
@@ -270,89 +271,213 @@ def generate_receipt_pdf(recibo_obj):
 
 def crear_recibo_desde_excel(request):
     """
-    Maneja la subida del archivo Excel y la descarga directa del PDF.
-    NOTA: Este flujo de descarga directa impide que el mensaje de éxito se muestre
-    y que el spinner se oculte automáticamente sin el patrón PRG completo.
+    Maneja la subida del archivo Excel (POST), las acciones de Anulación/Limpieza (POST)
+    y la visualización/filtrado del Dashboard (GET).
     """
     TEMPLATE_NAME = 'recibos/dashboard.html'
     
+    # ====================================================================
+    #           LÓGICA POST (Carga de Excel, Anulación, Limpieza)
+    # ====================================================================
     if request.method == 'POST':
-        archivo_excel = request.FILES.get('archivo_recibo') 
-        
-        if not archivo_excel:
-            messages.error(request, "Por favor, sube un archivo Excel con el nombre 'archivo_recibo'.")
-            return render(request, TEMPLATE_NAME, {})
+        action = request.POST.get('action')
 
-        try:
-            success, message, nuevo_recibo_id = importar_recibos_desde_excel(archivo_excel) 
-        except Exception as e:
-            logger.error(f"Error al ejecutar la importación de Excel: {e}")
-            messages.error(request, f"Error interno en la lógica de importación: {e}")
-            return render(request, TEMPLATE_NAME, {})
-        
-        if success:
-            try:
-                if nuevo_recibo_id is None:
-                    raise Recibo.DoesNotExist("La importación fue exitosa, pero no devolvió el ID del recibo creado.")
-                    
-                ultimo_recibo_obj = Recibo.objects.get(pk=nuevo_recibo_id) 
-                
-                pdf_buffer = generate_receipt_pdf(ultimo_recibo_obj)
-                
-                response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
-                filename = f"Recibo_N_{ultimo_recibo_obj.numero_recibo}.pdf"
-                response['Content-Disposition'] = f'attachment; filename="{filename}"'
-                
-                # Este mensaje se guarda en la sesión, pero NO se muestra porque la respuesta es un PDF.
-                messages.success(request, f"Importación exitosa. Descargando recibo N° {ultimo_recibo_obj.numero_recibo}.")
-                
-                return response
-            
-            except Recibo.DoesNotExist:
-                messages.error(request, "Error: La importación fue exitosa, pero no se pudo encontrar el recibo para generar el PDF.")
-                return render(request, TEMPLATE_NAME, {})
-            
-            except Exception as e:
-                logger.error(f"Error al generar el PDF: {e}")
-                messages.error(request, f"Error crítico al generar el PDF: {e}")
-                return render(request, TEMPLATE_NAME, {})
+        # --- INSERCIÓN: Manejo de Anulación de Recibo ---
+        if action == 'anular':
+            recibo_id = request.POST.get('recibo_id') 
+            if recibo_id:
+                # Usa get_object_or_404 para manejar si el ID no existe
+                recibo = get_object_or_404(Recibo, pk=recibo_id) 
+                if not recibo.anulado: 
+                    recibo.anulado = True
+                    recibo.estado = 'Anulado' # Asegúrate que este valor coincida con tu campo 'estado'
+                    recibo.save()
+                    messages.success(request, f"El recibo N° {recibo.numero_recibo} ha sido ANULADO correctamente.")
+                else:
+                    messages.warning(request, "Este recibo ya estaba anulado.")
+            else:
+                messages.error(request, "No se proporcionó el ID del recibo a anular.")
+            # Patrón PRG: Redirigir a la misma vista después de cualquier acción POST no relacionada con descarga
+            return redirect(reverse('recibos:dashboard')) 
 
+        # --- INSERCIÓN: Manejo de Limpieza de Logs ---
+        elif action == 'clear_logs':
+            Recibo.objects.all().delete() # Cuidado: Borrado de todos los registros
+            messages.success(request, "Todos los recibos han sido eliminados de la base de datos.")
+            return redirect(reverse('recibos:dashboard')) 
+        
+        # --- LÓGICA ORIGINAL DE CARGA DE EXCEL (NO MODIFICADA) ---
         else:
-            messages.error(request, f"Fallo en la carga de Excel: {message}")
-            return render(request, TEMPLATE_NAME, {})
+            archivo_excel = request.FILES.get('archivo_recibo') 
             
-    # Lógica GET normal
+            if not archivo_excel:
+                messages.error(request, "Por favor, sube un archivo Excel con el nombre 'archivo_recibo'.")
+                return render(request, TEMPLATE_NAME, {})
+
+            try:
+                success, message, nuevo_recibo_id = importar_recibos_desde_excel(archivo_excel) 
+            except Exception as e:
+                logger.error(f"Error al ejecutar la importación de Excel: {e}")
+                messages.error(request, f"Error interno en la lógica de importación: {e}")
+                return render(request, TEMPLATE_NAME, {})
+            
+            if success:
+                try:
+                    if nuevo_recibo_id is None:
+                        raise Recibo.DoesNotExist("La importación fue exitosa, pero no devolvió el ID del recibo creado.")
+                        
+                    ultimo_recibo_obj = Recibo.objects.get(pk=nuevo_recibo_id) 
+                    
+                    pdf_buffer = generate_receipt_pdf(ultimo_recibo_obj)
+                    
+                    response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
+                    filename = f"Recibo_N_{ultimo_recibo_obj.numero_recibo}.pdf"
+                    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    
+                    messages.success(request, f"Importación exitosa. Descargando recibo N° {ultimo_recibo_obj.numero_recibo}.")
+                    
+                    return response
+                
+                except Recibo.DoesNotExist:
+                    messages.error(request, "Error: La importación fue exitosa, pero no se pudo encontrar el recibo para generar el PDF.")
+                    return render(request, TEMPLATE_NAME, {})
+                
+                except Exception as e:
+                    logger.error(f"Error al generar el PDF: {e}")
+                    messages.error(request, f"Error crítico al generar el PDF: {e}")
+                    return render(request, TEMPLATE_NAME, {})
+
+            else:
+                messages.error(request, f"Fallo en la carga de Excel: {message}")
+                return render(request, TEMPLATE_NAME, {})
+                
+    # ====================================================================
+    #           REEMPLAZO TOTAL: LÓGICA GET (Visualización y Filtrado)
+    # ====================================================================
+    
+    # 1. Inicializar la Query y el Contexto
+    recibos_queryset = Recibo.objects.all().order_by('-fecha', '-numero_recibo')
+    filters = Q() 
+    
+    # Contexto con el mapeo de categorías para la plantilla
+    context = {
+        'categories': CATEGORY_CHOICES_MAP, 
+        'selected_categories': [],          
+        'total_sum': 0.0,
+        'recibos': [],
+    }
+    
     try:
-        context = {}
-        # Asumiendo que quieres ver los últimos 20 recibos
-        context['recibos'] = Recibo.objects.all().order_by('-fecha', '-numero_recibo')[:20] 
-    except Exception:
-        context = {'recibos': []}
-
-    return render(request, TEMPLATE_NAME, context)
-
-
-def descargar_pdf(request, pk):
-    """
-    Función de descarga. Asumo que se mantiene por si la necesitas para otros flujos.
-    """
-    try:
-        recibo_obj = Recibo.objects.get(pk=pk)
-    except Recibo.DoesNotExist:
-        messages.error(request, "Error: El recibo solicitado para descarga no existe.")
-        return redirect('dashboard')
-
-    try:
-        pdf_buffer = generate_receipt_pdf(recibo_obj)
+        # 2. Procesar filtros de FECHA (Campo 'fecha')
+        fecha_inicial = request.GET.get('fecha_inicial')
+        fecha_final = request.GET.get('fecha_final')
         
-        response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
-        filename = f"Recibo_N_{recibo_obj.numero_recibo}.pdf"
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        if fecha_inicial:
+            filters &= Q(fecha__gte=fecha_inicial)
+        if fecha_final:
+            filters &= Q(fecha__lte=fecha_final)
+
+        # 3. Procesar filtro de ESTADO (Campo 'estado')
+        estado_filtro = request.GET.get('estado')
+        if estado_filtro and estado_filtro != '':
+            filters &= Q(estado__iexact=estado_filtro) 
+
+        # 4. Procesar filtro de CATEGORÍAS (Lógica OR compleja)
+        selected_categories_keys = request.GET.getlist('categories')
         
-        return response
+        if selected_categories_keys:
+            context['selected_categories'] = selected_categories_keys 
+            
+            category_filters = Q()
+            # Construcción dinámica de la condición OR para los 10 campos de categoría
+            for field_name in selected_categories_keys:
+                category_filters |= Q(**{field_name: True})
+                
+            filters &= category_filters 
+        
+        # 5. Aplicar filtros y Calcular Totales
+        recibos_list = recibos_queryset.filter(filters)
+        
+        total_sum_result = recibos_list.aggregate(total=Sum('monto'))
+        total_sum = total_sum_result['total'] if total_sum_result['total'] is not None else 0.0
+
+        # 6. Finalizar Contexto
+        # Si no hay filtros aplicados, limitamos a 20 resultados (mantiene el comportamiento original)
+        if not filters:
+            recibos_list = recibos_list[:20] 
+            
+        context['recibos'] = recibos_list
+        context['total_sum'] = total_sum
+        context['request_get'] = request.GET 
         
     except Exception as e:
-        logger.error(f"Error al generar el PDF de descarga: {e}")
-        messages.error(request, f"Error al generar el PDF: {e}")
-        return redirect('dashboard')
+        # Captura errores en la lógica de filtrado o DB (Ej: Q, Sum)
+        # Es vital que esta sección maneje errores sin caer en un 500
+        # Recomiendo fuertemente configurar un logger aquí
+        # logger.error(f"Error al aplicar filtros en el dashboard: {e}") 
+        messages.error(request, "Error interno al cargar la lista de recibos filtrada. Revise los logs.")
+        context['recibos'] = []
+        
+    return render(request, TEMPLATE_NAME, context)
 
+def generar_reporte_view(request):
+    """
+    Recibe los parámetros GET, aplica el mismo filtrado que el dashboard
+    y genera un archivo Excel o PDF para su descarga.
+    """
+    
+    # --- 1. LÓGICA DE FILTRADO (Duplicamos la lógica GET del dashboard) ---
+    
+    recibos_queryset = Recibo.objects.all().order_by('-fecha', '-numero_recibo')
+    filters = Q() 
+    
+    # Procesar filtros de FECHA
+    fecha_inicial = request.GET.get('fecha_inicial')
+    fecha_final = request.GET.get('fecha_final')
+    if fecha_inicial:
+        filters &= Q(fecha__gte=fecha_inicial)
+    if fecha_final:
+        filters &= Q(fecha__lte=fecha_final)
+
+    # Procesar filtro de ESTADO
+    estado_filtro = request.GET.get('estado')
+    if estado_filtro and estado_filtro != '':
+        filters &= Q(estado__iexact=estado_filtro) 
+
+    # Procesar filtro de CATEGORÍAS (Campos booleanos)
+    selected_categories_keys = request.GET.getlist('categories') 
+    
+    if selected_categories_keys:
+        category_filters = Q()
+        for field_name in selected_categories_keys:
+            # Filtro booleano: el campo debe ser True
+            category_filters |= Q(**{field_name: True}) 
+        filters &= category_filters
+    
+    # Aplicar todos los filtros
+    recibos_filtrados = recibos_queryset.filter(filters)
+    
+    # --- 2. GENERACIÓN DEL REPORTE ---
+    
+    action = request.GET.get('action') # 'excel' o 'pdf'
+    
+    if action == 'excel':
+        try:
+            # La función generar_excel_recibos debe tomar el queryset y devolver un HttpResponse
+            return generar_excel_recibos(recibos_filtrados) 
+        except Exception as e:
+            messages.error(request, f"Error al generar el reporte Excel: {e}")
+            # Redirigir al dashboard para ver el mensaje de error
+            return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
+
+    elif action == 'pdf':
+        try:
+            # La función generar_pdf_reporte debe tomar el queryset y devolver un HttpResponse
+            return generar_pdf_reporte(recibos_filtrados)
+        except Exception as e:
+            messages.error(request, f"Error al generar el reporte PDF: {e}")
+            return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
+            
+    else:
+        messages.error(request, "Acción de reporte no válida.")
+        return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())

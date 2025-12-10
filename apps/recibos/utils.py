@@ -1,11 +1,17 @@
 import pandas as pd
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Max, Sum
 from decimal import Decimal, InvalidOperation
 from datetime import date 
 import logging
 import re
-from .models import Recibo 
+import io
+from django.http import HttpResponse
+from django.utils import timezone
+
+# 🚨 Importaciones de Constantes y Utilerías
+# Mantenemos las constantes aquí, pero el modelo Recibo lo movemos abajo.
+from .constants import CATEGORY_CHOICES_MAP 
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +52,9 @@ def limpiar_y_convertir_decimal(value):
 # --- FUNCIÓN PRINCIPAL DE IMPORTACIÓN ---
 
 def importar_recibos_desde_excel(archivo_excel):
-    
+    # 🚨 Importación del Modelo SOLO dentro de la función donde se usa
+    from .models import Recibo 
+
     RIF_COL = 'rif_cedula_identidad'
 
     try:
@@ -64,7 +72,7 @@ def importar_recibos_desde_excel(archivo_excel):
             archivo_excel, 
             sheet_name='Hoja2', 
             header=3, # La fila con el índice 3 (Fila 4) es el encabezado
-            nrows=1   # Lee SOLO UNA fila de datos (Fila 5)
+            nrows=1 # Lee SOLO UNA fila de datos (Fila 5)
         )
         
         # ... (Validación de df.empty, fila_datos y columnas) ...
@@ -77,7 +85,7 @@ def importar_recibos_desde_excel(archivo_excel):
         if len(fila_datos) != len(COLUMNAS_CANONICAS):
             # 🛑 RETURN DE FALLO
             return False, f"Error: Se encontraron {len(fila_datos)} valores, pero se esperaban {len(COLUMNAS_CANONICAS)}. El Excel tiene columnas vacías.", None
-             
+            
         fila_mapeada = dict(zip(COLUMNAS_CANONICAS, fila_datos.tolist()))
         
         # --- VALIDACIÓN DEL RIF ---
@@ -151,3 +159,116 @@ def importar_recibos_desde_excel(archivo_excel):
         logger.error(f"FALLO DE VALIDACIÓN en el registro: {e}")
         # 🛑 RETURN DE FALLO (Ahora devolvemos None)
         return False, f"Fallo en la carga: Error de validación de datos (revisar consola): {str(e)}", None
+    
+    
+# --- FUNCIÓN PRINCIPAL DE REPORTE EXCEL ---
+
+def generar_excel_recibos(queryset): # <-- CORREGIDO: Sin indentación
+    """
+    Genera un reporte Excel (.xlsx) a partir de un QuerySet filtrado de Recibo.
+    """
+    # 🚨 OPTIMIZACIÓN: Ya no necesitamos importar CATEGORY_CHOICES_MAP aquí,
+    # porque ya está importada al inicio del archivo desde .constants.
+
+    # 1. Preparar la Lista de Datos
+    data = []
+    
+    # Nombres de las categorías que usaremos en las columnas
+    category_names = list(CATEGORY_CHOICES_MAP.values()) 
+    
+    # Definir el encabezado del reporte (Columnas)
+    headers = [
+        'N° Recibo', 
+        'Fecha', 
+        'Estado', 
+        'Nombre Cliente', 
+        'RIF/Cédula', 
+        'Dirección', 
+        'Ente Liquidado', 
+        'Gastos Adm.',
+        'Tasa Día',
+        'Monto Total (Bs)',
+        'N° Transferencia',
+        'Conciliado',
+        'Concepto',
+    ] + category_names # Añadir las 10 columnas de categoría
+    
+    # 2. Iterar sobre el QuerySet
+    for recibo in queryset:
+        row = [
+            recibo.numero_recibo,
+            recibo.fecha.strftime('%Y-%m-%d'),
+            recibo.estado,
+            recibo.nombre,
+            recibo.rif_cedula_identidad,
+            recibo.direccion_inmueble,
+            recibo.ente_liquidado,
+            recibo.gastos_administrativos,
+            recibo.tasa_dia,
+            recibo.total_monto_bs,
+            recibo.numero_transferencia,
+            'Sí' if recibo.conciliado else 'No',
+            recibo.concepto,
+        ]
+        
+        # 3. Mapear los campos booleanos a 'Sí' o 'No' para el reporte
+        category_status = []
+        for i in range(1, 11):
+            field_name = f'categoria{i}'
+            # Usamos getattr() para acceder dinámicamente al valor booleano (True/False)
+            is_active = getattr(recibo, field_name) 
+            category_status.append('Sí' if is_active else 'No')
+            
+        data.append(row + category_status)
+
+    # 4. Cálculo de Totales 
+    total_sum_bs = queryset.aggregate(total=Sum('total_monto_bs'))['total'] or Decimal(0)
+    
+    # 5. Crear el DataFrame y el Archivo Excel
+    df = pd.DataFrame(data, columns=headers)
+    
+    # Añadir una fila de totales (Ajustada para que el Total caiga en la columna correcta)
+    total_row = [''] * (len(headers) - 1) + [total_sum_bs] 
+    df.loc['Total'] = total_row
+    
+    output = io.BytesIO()
+    
+    # Asegúrate de tener 'xlsxwriter' instalado en tu venv: pip install xlsxwriter
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Reporte Recibos')
+        
+        # 🚨 Detalle: Formatear la fila de totales
+        workbook = writer.book
+        worksheet = writer.sheets['Reporte Recibos']
+        
+        # Formato negrita para el texto del total
+        bold_format = workbook.add_format({'bold': True})
+        
+        # Índice de la última fila y de la columna 'Monto Total (Bs)'
+        last_row = len(df) # Fila 'Total'
+        total_col_index = headers.index('Monto Total (Bs)') 
+        
+        # Escribir el texto 'TOTAL GENERAL:' en negrita
+        worksheet.write(last_row, total_col_index - 1, 'TOTAL GENERAL:', bold_format)
+        
+    output.seek(0)
+    
+    # 6. Crear la Respuesta HTTP
+    filename = f"Reporte_Recibos_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    response = HttpResponse(
+        output, 
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+    
+# --- FUNCIÓN PRINCIPAL DE REPORTE PDF ---
+
+def generar_pdf_reporte(queryset): # <-- CORREGIDO: Sin indentación
+    """
+    Genera un reporte PDF tabular de resumen a partir de un QuerySet filtrado.
+    """
+    raise NotImplementedError(
+        "La funcionalidad de Reporte PDF tabular aún no está implementada. "
+        "Debe usar una librería como ReportLab o WeasyPrint para generar tablas."
+    )

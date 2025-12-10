@@ -116,65 +116,94 @@
           
           
           <section class="w-full lg:w-3/4 space-y-6">
-            {#modificando de 120 hasta 177 lineas#}
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-               {#modulo de reportes y filtrado#}
-              <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-filter mr-2 text-purple-600"></i> Módulo de Reportes y Filtrado</h2>
 
-               {#div contenedor de modulo de reportes y filtrado#}
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
 
-                  {#div fecha inicial#}
-                  <div>
-                    <label for="fecha_inicial" class="block text-sm font-medium text-gray-700">Fecha Inicial</label>
-                    <input type="date" name="fecha_inicial" id="fecha_inicial" value="{{ request.GET.fecha_inicial|default:'' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                  </div>
-                  {#fin div fecha inicial#}
+            {#modificando nuevos filtros#}
+<div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-filter mr-2 text-purple-600"></i> Módulo de Reportes y Filtrado</h2>
 
-                  {#div fecha Final#}
-                  <div>
-                    <label for="fecha_final" class="block text-sm font-medium text-gray-700">Fecha Final</label>
-                    <input type="date" name="fecha_final" id="fecha_final" value="{{ request.GET.fecha_final|default:'' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                  </div>
-                  {#div fecha Final#}
-                  
-                  {#div filtro por estado#}
-                  <div class="md:col-span-2">
-                    <label for="estado" class="block text-sm font-medium text-gray-700">Filtrar por Estado</label>
-                    <select id="estado" name="estado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                    {#dentro de este select debe estar los estados de mi bd#}
-                    </select>
-                  </div>
-                  {#fin div filtro por estado#}
-                </div>
-               {#fin div contenedor de modulo de reportes y filtrado#}
+    {# Inicia el formulario de filtro. Usamos GET para que los filtros se mantengan en la URL. #}
+    <form method="get" action="{% url 'recibos:dashboard' %}" id="filter-form" class="space-y-4">
+        
+        {# Contenedor principal de filtros de fecha y estado #}
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
 
-                {##filtro por categorias#}
-                <fieldset class="mt-4 pt-4 border-t border-gray-200">
-                  <legend class="text-base font-medium text-gray-900 mb-2">Filtro Categorías</legend>
-                  {# agregar las categorias aca#}
-                </fieldset>
-                {## fin filtro por categorias#}
-                
-
-                  {#div botones de aplicar filtros y generar reportes#}
-                <div class="flex space-x-4 pt-4 border-t border-gray-200">
-                  {#boton aplicar filtros#}
-                  <button type="submit" name="action" value="filter" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition duration-150">
-                    <i class="fas fa-search mr-2"></i> Aplicar Filtros
-                  </button>
-
-                          {#boton generar reporte excel acmodar#} 
-                    <i class="fas fa-file-excel mr-2"></i> Generar Reporte Excel
-
-                     {##boton generar reporte pdf acomodar#}
-                    <i class="fas fa-file-pdf mr-2"></i> Generar Reporte PDF
-                  
-                </div>
-                  {#fin div botones de aplicar filtros y generar reportes#}
-
-              </form>
+            {# Filtro: Fecha Inicial (Filtra el campo 'fecha' de la DB) #}
+            <div>
+                <label for="fecha_inicial" class="block text-sm font-medium text-gray-700">Fecha Inicial</label>
+                <input type="date" name="fecha_inicial" id="fecha_inicial" value="{{ request.GET.fecha_inicial|default:'' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
             </div>
+            
+            {# Filtro: Fecha Final (Filtra el campo 'fecha' de la DB) #}
+            <div>
+                <label for="fecha_final" class="block text-sm font-medium text-gray-700">Fecha Final</label>
+                <input type="date" name="fecha_final" id="fecha_final" value="{{ request.GET.fecha_final|default:'' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            
+            {# Filtro: Estado (Filtra el campo 'estado' de la DB) #}
+            <div class="md:col-span-2">
+                <label for="estado" class="block text-sm font-medium text-gray-700">Filtrar por Estado</label>
+                <select id="estado" name="estado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    
+                    {# Las opciones de estado deben coincidir con los valores almacenados en tu campo 'estado' #}
+                    <option value="" {% if not request.GET.estado %}selected{% endif %}>Todos</option>
+                    <option value="pagado" {% if request.GET.estado == 'pagado' %}selected{% endif %}>Pagado</option>
+                    <option value="pendiente" {% if request.GET.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                    <option value="cancelado" {% if request.GET.estado == 'cancelado' %}selected{% endif %}>Cancelado</option>
+                    
+                </select>
+            </div>
+        </div>
+
+        {# Filtro por Categorías (usando Checkboxes para campos categoria1..categoria10) #}
+        <fieldset class="mt-4 pt-4 border-t border-gray-200">
+            <legend class="text-base font-medium text-gray-900 mb-2">Filtro por Conceptos / Categorías</legend>
+            
+            {% load custom_filters %} 
+            
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            
+            {# Iteramos sobre el diccionario donde la clave es el nombre del campo (ej: 'categoria1') #}
+            {% for field_name, label in categories.items %}
+                {% with slug_cat=label|slugify %}
+                    <div class="flex items-center">
+                        <input id="{{ slug_cat }}" 
+                            name="categories" 
+                            type="checkbox" 
+                            {# EL VALOR ENVIADO ES EL NOMBRE DEL CAMPO DE LA DB #}
+                            value="{{ field_name }}" 
+                            {# Comparamos si el nombre del campo está en la lista de seleccionados #}
+                            {% if field_name in selected_categories %}checked{% endif %}
+                            class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <label for="{{ slug_cat }}" class="ml-2 block text-sm text-gray-700">{{ label|capfirst }}</label>
+                    </div>
+                {% endwith %}
+            {% endfor %}
+            
+            </div>
+        </fieldset>
+
+        {# Botones de Acción #}
+        <div class="flex space-x-4 pt-4 border-t border-gray-200">
+            
+            {# Botón 1: Aplicar Filtros (Necesita la URL 'recibos:dashboard' para funcionar) #}
+            <button type="submit" name="action" value="filter" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition duration-150">
+                <i class="fas fa-search mr-2"></i> Aplicar Filtros
+            </button>
+
+            {# Botón 2: Generar Reporte Excel (Necesita la URL 'recibos:generar_reporte') #}
+            <button type="submit" name="action" value="excel" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition duration-150">
+              <i class="fas fa-file-excel mr-2"></i> Generar Reporte Excel
+            </button>
+
+            {# Botón 3: Generar Reporte PDF (Necesita la URL 'recibos:generar_reporte') #}
+            <button type="submit" name="action" value="pdf" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
+              <i class="fas fa-file-pdf mr-2"></i> Generar Reporte PDF
+            </button>
+            
+        </div>
+    </form>
+</div>
             
 
             {#div zona de gestion de recibos#}

@@ -1,5 +1,5 @@
-# En recibos/models.py (Estructura Completa Sugerida)
 from django.db import models
+from .constants import CATEGORY_CHOICES, CATEGORY_CHOICES_MAP
 
 class Recibo(models.Model):
     # Campos automáticos/de control
