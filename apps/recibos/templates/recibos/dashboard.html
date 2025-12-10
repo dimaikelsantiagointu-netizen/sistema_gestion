@@ -31,23 +31,21 @@
 
   <header class="bg-indigo-700 shadow-lg sticky top-0 z-10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-      {#<a href="{% url 'recibos:recibo_list' %}" class="flex items-center text-white text-xl font-extrabold tracking-wider">#}
         <i class="fas fa-receipt mr-3 text-indigo-300"></i>
         App Recibos
       </a>
-      
+      {#modificar lo del user#}
       <div class="flex items-center space-x-4">
         <span class="text-sm text-indigo-300 hidden sm:inline">Hola, {{ user.first_name|default:user.username }}</span>
       </div>
+
     </div>
   </header>
   
   <main class="flex-grow p-4 sm:p-6 lg:p-8">
     <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 bg-white/80 rounded-2xl shadow-xl">
       
-      {% block content_title %}
-        <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">Dashboard de Recibos</h1>
-      {% endblock content_title %}
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">Generador de Recibos de Pago</h1>
             
             {% comment %} Manejo de Mensajes de Django {% endcomment %}
             <div class="mb-4 space-y-2">
@@ -60,12 +58,15 @@
             </div>
             
       {% block main_content %}
-        <div class="flex flex-col lg:flex-row gap-6">
 
+      {#Carga de archivos#}
+      {#debajo barra latera (zona derecha) entra carga de archivo#}
+        <div class="flex flex-col lg:flex-row gap-6"> 
+{#barra lateral izquierda donde estan carga de archivos, generar recibos y procesos y log#}
           <aside class="w-full lg:w-1/4 space-y-6">
             
             <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100">
-              <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i class="fas fa-file-upload mr-2 text-indigo-600"></i> Carga de Archivos</h2>
+              <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i class="fas fa-file-upload mr-2 text-indigo-600"></i> Carga de Archivos Excel</h2>
 
               <form method="post" enctype="multipart/form-data" action="{% url 'recibos:dashboard' %}" id="upload-form" class="space-y-4">
                 {% csrf_token %}
@@ -85,126 +86,128 @@
                 Ningún archivo seleccionado.
               </p>
             </div>
-
+            {#fin Carga de archivos#}
+            
+            {# Generar Recibos#}
             <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100">
-              <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i class="fas fa-edit mr-2 text-yellow-600"></i> Creación</h2>
+              <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i class="fas fa-edit mr-2 text-yellow-600"></i> Generar Recibos</h2>
 
               <button type="button" id="create-recibo-button" class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 transition duration-150 flex justify-center items-center">
-                <i class="fas fa-plus-circle mr-2"></i> Crear Nuevo Recibo
+                <i class="fas fa-plus-circle mr-2"></i> Generar Nuevo Recibo
               </button>
               <p id="generation-status" class="mt-2 text-xs text-gray-500 text-center italic">
-                Usa el Excel para carga masiva o el botón para carga individual.
+                Usa el Excel para carga de datos.
               </p>
             </div>
-            
+            {# FIN Generar Recibos#}
+
+            {# Logs y Procesos #}
             <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100 h-96 flex flex-col">
               <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i class="fas fa-clipboard-list mr-2 text-blue-600"></i> Procesos y Logs</h2>
               <div id="log-display" class="flex-grow overflow-y-auto bg-gray-50 p-3 rounded-lg text-xs font-mono border border-gray-200">
-
-                <p class="mb-1 text-gray-700">
-                  [08:00:00] <span class="text-green-600">✅</span> Proceso de inicio del Dashboard.
-                </p>
+                {#dentro de este di tengo que agregar el contenido de logsq#}
               </div>
             </div>
+          {#FIn Logs y Procesos #}
 
           </aside>
+          {#fin de barra lateral izquierda donde estan carga de archivos, generar recibos y procesos y log#}
 
+          
+          
           <section class="w-full lg:w-3/4 space-y-6">
-            
+            {#modificando de 120 hasta 177 lineas#}
             <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+               {#modulo de reportes y filtrado#}
               <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-filter mr-2 text-purple-600"></i> Módulo de Reportes y Filtrado</h2>
 
-              {#<form method="get" action="{% url 'recibos:recibo_list' %}" id="filter-form" class="space-y-4">#}
+               {#div contenedor de modulo de reportes y filtrado#}
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+                  {#div fecha inicial#}
                   <div>
                     <label for="fecha_inicial" class="block text-sm font-medium text-gray-700">Fecha Inicial</label>
                     <input type="date" name="fecha_inicial" id="fecha_inicial" value="{{ request.GET.fecha_inicial|default:'' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                   </div>
+                  {#fin div fecha inicial#}
+
+                  {#div fecha Final#}
                   <div>
                     <label for="fecha_final" class="block text-sm font-medium text-gray-700">Fecha Final</label>
                     <input type="date" name="fecha_final" id="fecha_final" value="{{ request.GET.fecha_final|default:'' }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                   </div>
+                  {#div fecha Final#}
+                  
+                  {#div filtro por estado#}
                   <div class="md:col-span-2">
                     <label for="estado" class="block text-sm font-medium text-gray-700">Filtrar por Estado</label>
                     <select id="estado" name="estado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                      <option value="" {% if not request.GET.estado %}selected{% endif %}>Todos</option>
-                      <option value="activo" {% if request.GET.estado == 'activo' %}selected{% endif %}>Activos</option>
-                      <option value="anulado" {% if request.GET.estado == 'anulado' %}selected{% endif %}>Anulados</option>
+                    {#dentro de este select debe estar los estados de mi bd#}
                     </select>
                   </div>
+                  {#fin div filtro por estado#}
                 </div>
+               {#fin div contenedor de modulo de reportes y filtrado#}
 
+                {##filtro por categorias#}
                 <fieldset class="mt-4 pt-4 border-t border-gray-200">
-                  <legend class="text-base font-medium text-gray-900 mb-2">Filtro por Conceptos / Categorías</legend>
-                
-                  {% load custom_filters %} 
-                  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {% for key, value in categories.items %}
-                    {% with slug_cat=value|slugify %}
-                      <div class="flex items-center">
-                        <input id="{{ slug_cat }}" 
-                          name="categories" 
-                          type="checkbox" 
-                          value="{{ key }}" 
-                          {% if key|stringformat:"s" in selected_categories %}checked{% endif %}
-                          class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                          <label for="{{ slug_cat }}" class="ml-2 block text-sm text-gray-700">{{ value|capfirst }}</label>
-                      </div>
-                    {% endwith %}
-                  {% endfor %}
-                  </div>
+                  <legend class="text-base font-medium text-gray-900 mb-2">Filtro Categorías</legend>
+                  {# agregar las categorias aca#}
                 </fieldset>
+                {## fin filtro por categorias#}
                 
+
+                  {#div botones de aplicar filtros y generar reportes#}
                 <div class="flex space-x-4 pt-4 border-t border-gray-200">
+                  {#boton aplicar filtros#}
                   <button type="submit" name="action" value="filter" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition duration-150">
                     <i class="fas fa-search mr-2"></i> Aplicar Filtros
                   </button>
-                                  
-                  {#<button type="submit" name="action" value="excel" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition duration-150">#}
+
+                          {#boton generar reporte excel acmodar#} 
                     <i class="fas fa-file-excel mr-2"></i> Generar Reporte Excel
-                  </button>
-                                  
-                  {#<button type="submit" name="action" value="pdf" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">#}
+
+                     {##boton generar reporte pdf acomodar#}
                     <i class="fas fa-file-pdf mr-2"></i> Generar Reporte PDF
-                  </button>
+                  
                 </div>
+                  {#fin div botones de aplicar filtros y generar reportes#}
+
               </form>
             </div>
+            
 
+            {#div zona de gestion de recibos#}
             <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
               <h1 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-table mr-2 text-indigo-600"></i> Resultados y Gestión de Recibos</h1>
-
-              {# <form method="get" action="{% url 'recibos:recibo_list' %}" class="flex space-x-2 mb-4">#}
-                {% for key, value in request.GET.items %}
-                  {% if key != 'q' and key != 'page' %}
-                    <input type="hidden" name="{{ key }}" value="{{ value }}">
-                  {% endif %}
-                {% endfor %}
-                
+                {#boton buscar#}
                 <input type="text" name="q" placeholder="Buscar por N°, Nombre, Cédula/RIF, Transferencia..." 
                               class="flex-grow rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                               value="{{ request.GET.q|default:'' }}">
                 <button type="submit" class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
                   <i class="fas fa-search"></i> Buscar
                 </button>
-              </form>
+                {#fin boton buscar#}
+              
 
               <div class="overflow-x-auto border rounded-lg">
                 <table class="min-w-full divide-y divide-gray-200">
+                  {#encabezado de tabla#}
                   <thead class="bg-gray-50">
                     <tr>
                       <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                       <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Recibo</th>
-                      <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                      <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                       <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cédula/RIF</th>
                       <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto (Bs.)</th>
                       <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                       <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                      <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                     </tr>
                   </thead>
+                  {#fin encabezado de tabla#}
+                  
+                  {#contenido de tabla#}
                   <tbody class="bg-white divide-y divide-gray-200">
-
                     {% for recibo in recibos %}
                       <tr class="{% if recibo.anulado %}bg-red-50/50 text-gray-400{% else %}hover:bg-gray-50{% endif %} transition duration-100">
                         <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500">{{ recibo.id }}</td>
@@ -213,30 +216,13 @@
                         <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{{ recibo.rif_cedula_identidad }}</td>
                         <td class="px-3 py-2 whitespace-nowrap text-sm font-bold text-right text-indigo-600">{{ recibo.total_monto_bs|floatformat:2 }}</td>
                         <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{{ recibo.fecha|date:"d/m/Y" }}</td>
-                        <td class="px-3 py-2 whitespace-nowrap text-center">
-                          {% if recibo.anulado %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Anulado</span>
-                          {% else %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Activo</span>
-                          {% endif %}
-                        </td>
+                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{{ recibo.estado}}</td>
                         <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-center">
-
-                          {#<a href="{% url 'recibos:detalle_recibo' pk=recibo.id %}" class="text-indigo-600 hover:text-indigo-900 mr-2" title="Ver Detalle"><i class="fas fa-eye"></i></a>#}
-                          {#<a href="{% url 'recibos:editar_recibo' pk=recibo.id %}" class="text-yellow-600 hover:text-yellow-900 mr-2" title="Editar"><i class="fas fa-edit"></i></a>#}
-                          
-                          <button type="button" 
-                              {#data-action-url="{% url 'recibos:anular_recibo' pk=recibo.id %}"#}
-                              data-message="{% if recibo.anulado %}El recibo N° **{{ recibo.numero_recibo }}** ya está anulado.{% else %}¿Estás seguro que deseas **ANULAR** el recibo N° **{{ recibo.numero_recibo }}**? Esta acción es irreversible.{% endif %}"
-                              data-confirm-text="{% if recibo.anulado %}Recibo Anulado{% else %}Sí, Anular{% endif %}"
-                              data-color="{% if recibo.anulado %}gray{% else %}red{% endif %}"
-                              class="text-red-600 hover:text-red-900 anular-recibo-button {% if recibo.anulado %}opacity-50 cursor-not-allowed{% endif %}" 
-                              title="{% if recibo.anulado %}Recibo Anulado{% else %}Anular Recibo{% endif %}" 
-                              {% if recibo.anulado %}disabled{% endif %}>
-                            <i class="fas fa-ban"></i>
-                          </button>
                         </td>
                       </tr>
+                    {#fin contenido de tabla#}
+
+                    {#funcion por si la tabla esta vacia#}
                     {% empty %}
                       <tr class="col-span-8">
                         <td colspan="8" class="text-center p-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
@@ -249,25 +235,14 @@
                   </tbody>
                 </table>
               </div>
-
-              {% if recibos.has_other_pages %}
-                <div class="mt-4 flex justify-between items-center text-sm text-gray-600">
-                  <span>Página {{ recibos.number }} de {{ recibos.paginator.num_pages }}</span>
-                  <div class="flex space-x-2">
-                    {% if recibos.has_previous %}
-                      <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ recibos.previous_page_number }}" class="px-3 py-1 rounded-lg border hover:bg-gray-100">Anterior</a>
-                    {% endif %}
-                    {% if recibos.has_next %}
-                      <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ recibos.next_page_number }}" class="px-3 py-1 rounded-lg border hover:bg-gray-100">Siguiente</a>
-                    {% endif %}
-                  </div>
-                </div>
-              {% endif %}
+              {#fin contenido de tabla#}            
             </div>
+            {#fin div zona de gestion de recibos#}
 
+
+            {#div boton Limpiar logs#}
             <div class="flex justify-start mt-6 pt-4 border-t border-gray-200">
               <button type="button" 
-             {# data-action-url="{% url 'recibos:limpiar_logs' %}" #}
                   data-message="¿Estás seguro que deseas **LIMPIAR todos los registros de Logs**? Esta acción no se puede deshacer."
                   data-confirm-text="Sí, Limpiar Logs"
                   data-color="gray"
@@ -275,17 +250,15 @@
                   class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 transition duration-150">
                 <i class="fas fa-eraser mr-2"></i> Limpiar Logs
               </button>
-              {# <form method="post" action="{% url 'recibos:limpiar_logs' %}" id="clear-logs-form" class="hidden">#}
-                {% csrf_token %}
-                <input type="hidden" name="action" value="clear_logs">
-              </form>
             </div>
+            {#fin div boton Limpiar logs#}
             
           </section>
 
         </div>
       {% endblock main_content %}
     </div>
+    {#fin div zona derecha#}
   </main>
 
   <footer class="bg-gray-800 text-white p-4 mt-auto">
@@ -294,6 +267,8 @@
     </div>
   </footer>
 
+  {#modal para funciones de generar recibo#}
+  {#tengo que modificarlo#}
   <div id="confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 z-50 hidden transition-opacity duration-300" style="opacity: 0;">
     <div class="flex items-center justify-center min-h-screen p-4">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
@@ -312,9 +287,7 @@
       </div>
     </div>
   </div>
-  
-  {# 💡 CARGA DE JS SEPARADO #}
+  {#fin modal que tenfo que modificar#}
   <script src="{% static 'recibos/js/dashboard.js' %}"></script>
-
 </body>
 </html>

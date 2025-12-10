@@ -15,12 +15,7 @@ from django.conf import settings # 💡 NECESARIO PARA LA RUTA ABSOLUTA
 
 logger = logging.getLogger(__name__)
 
-# 💡 CORRECCIÓN DE RUTA CRÍTICA: Definición de la ruta absoluta del encabezado.
-# Esto asegura que ReportLab (el generador de PDF) pueda encontrar la imagen.
 try:
-    # Esta ruta está construida asumiendo la estructura: 
-    # [BASE_DIR]/apps/recibos/static/recibos/images/encabezado.png
-    # 🚨 AJUSTA el segmento 'apps'/'recibos' si tu app está en otra ubicación (ej: sólo 'recibos')
     HEADER_IMAGE = os.path.join(
         settings.BASE_DIR, 
         'apps', 
@@ -28,7 +23,7 @@ try:
         'static', 
         'recibos', 
         'images', 
-        'encabezado.png' # <-- Nombre de archivo corregido
+        'encabezado.png' 
     )
 except AttributeError:
     # Fallback si por alguna razón settings.BASE_DIR no está disponible
@@ -361,12 +356,3 @@ def descargar_pdf(request, pk):
         messages.error(request, f"Error al generar el PDF: {e}")
         return redirect('dashboard')
 
-# Las funciones anular_recibo y editar_recibo (si existen) deben mantenerse o crearse.
-# Por ejemplo:
-# def anular_recibo(request, pk):
-#     # ... lógica de anulación ...
-#     return redirect('dashboard')
-# 
-# def editar_recibo(request, pk):
-#     # ... lógica de edición ...
-#     return render(request, 'recibos/editar_recibo.html', {})
