@@ -245,3 +245,26 @@ document.addEventListener('DOMContentLoaded', function() {
       }, 5000); 
   });
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+        const triggerButton = document.getElementById('trigger-upload-button');
+        const uploadForm = document.getElementById('upload-form');
+        const fileInput = document.getElementById('excel-file-input');
+
+        if (triggerButton && uploadForm) {
+            triggerButton.addEventListener('click', function() {
+                // 1. Verificar si un archivo fue seleccionado
+                if (fileInput.files.length > 0) {
+                    // 2. Si hay un archivo, enviar el formulario
+                    uploadForm.submit();
+                    // Opcional: Deshabilitar el botón para evitar doble clic
+                    triggerButton.disabled = true; 
+                    triggerButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...';
+                } else {
+                    // 3. Si no hay archivo, mostrar una alerta simple
+                    alert("Por favor, selecciona un archivo Excel primero.");
+                    fileInput.focus();
+                }
+            });
+        }
+    });

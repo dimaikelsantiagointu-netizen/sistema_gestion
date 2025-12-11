@@ -12,10 +12,13 @@ from decimal import Decimal
 import logging
 from django.urls import reverse
 from .utils import importar_recibos_desde_excel, generar_excel_recibos, generar_pdf_reporte
-from django.conf import settings # 💡 NECESARIO PARA LA RUTA ABSOLUTA
-from.constants import CATEGORY_CHOICES_MAP
+from django.conf import settings
+from django.core.paginator import Paginator
+from .constants import CATEGORY_CHOICES_MAP, CATEGORY_CHOICES
+
 logger = logging.getLogger(__name__)
 
+# --- CONFIGURACIÓN DE IMAGEN DE ENCABEZADO ---
 try:
     HEADER_IMAGE = os.path.join(
         settings.BASE_DIR, 
@@ -27,11 +30,11 @@ try:
         'encabezado.png' 
     )
 except AttributeError:
-    # Fallback si por alguna razón settings.BASE_DIR no está disponible
+    # Ruta alternativa para desarrollo o entornos sin settings.BASE_DIR
     HEADER_IMAGE = os.path.join(os.path.dirname(__file__), '..', 'static', 'recibos', 'images', 'encabezado.png')
 
 
-# 1. FUNCIONES AUXILIARES DE PDF (Permanecen sin cambios excepto el uso de HEADER_IMAGE)
+# --- FUNCIONES DE AYUDA (PDF) ---
 
 def draw_text_line(canvas_obj, text, x_start, y_start, font_name="Helvetica", font_size=10, is_bold=False):
     """Dibuja una línea de texto y ajusta la posición Y."""
@@ -44,6 +47,7 @@ def format_currency(amount):
     """Formatea el monto como moneda (ej: 1.234,56)."""
     try:
         amount_decimal = Decimal(amount)
+        # Formatea a 2 decimales, usa 'X' temporalmente para la coma, luego reemplaza
         return "{:,.2f}".format(amount_decimal).replace(",", "X").replace(".", ",").replace("X", ".")
     except Exception:
         return "0,00" 
@@ -57,6 +61,7 @@ def draw_centered_text_right(canvas_obj, y_pos, text, x_start, width, font_name=
     canvas_obj.drawString(x, y_pos, text.upper())
     
 def generate_receipt_pdf(recibo_obj):
+    """Genera el contenido del PDF individual para un recibo."""
     nombre = recibo_obj.nombre
     cedula = recibo_obj.rif_cedula_identidad
     direccion = recibo_obj.direccion_inmueble
@@ -67,13 +72,13 @@ def generate_receipt_pdf(recibo_obj):
     estado = recibo_obj.estado
     num_recibo = str(recibo_obj.numero_recibo)
     
+    # Mapeo de categorías
     categorias = {
         f'categoria{i}': getattr(recibo_obj, f'categoria{i}') for i in range(1, 11)
     }
     
     monto_formateado = format_currency(monto)
 
-    # 1. Crear el Canvas en memoria
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
@@ -81,7 +86,7 @@ def generate_receipt_pdf(recibo_obj):
     current_y = height - 50
     y_top = height - 50
     
-    # 💡 Lógica de carga de imagen usando la ruta corregida (HEADER_IMAGE)
+    # Dibujar encabezado
     if os.path.exists(HEADER_IMAGE):
         try:
             img = ImageReader(HEADER_IMAGE)
@@ -103,11 +108,13 @@ def generate_receipt_pdf(recibo_obj):
     c.drawString(titulo_x, current_y, titulo_texto)
     current_y -= 25
 
+    # Posiciones de columnas
     X1_TITLE = 60
     X1_DATA = 160 
     X2_TITLE = 310
     X2_DATA = 470
     
+    # Dibujar detalles
     current_y = draw_text_line(c, "Estado:", X1_TITLE, current_y, is_bold=True)
     draw_text_line(c, estado, X1_DATA, current_y + 15, is_bold=False)
     draw_text_line(c, "Nº Recibo:", X2_TITLE, current_y + 15, is_bold=True)
@@ -131,12 +138,13 @@ def generate_receipt_pdf(recibo_obj):
     draw_text_line(c, "Fecha:", X2_TITLE, current_y + 15, is_bold=True)
     draw_text_line(c, fecha, X2_DATA, current_y + 15, is_bold=False)
     current_y -= 5
-     
+    
     current_y = draw_text_line(c, "Concepto:", X1_TITLE, current_y, is_bold=True)
     draw_text_line(c, concepto, X1_DATA, current_y + 15, is_bold=False)
     current_y -= 15
 
     
+    # --- Secciones de Categorías (Larga) ---
     hay_categorias = any(categorias.values())
     
     if hay_categorias:
@@ -208,217 +216,222 @@ def generate_receipt_pdf(recibo_obj):
             current_y = draw_text_line(c, "Número de unidades establecidas en el contrato, ancladas a la moneda de mayor valor estipulada por el BCV", X1_TITLE, current_y, font_size=8, is_bold=False)
             current_y -= 5
             
-    # En generate_receipt_pdf (Sustituye tu bloque actual por este):
-
     current_y -= 70
     
+    # Salto de página si el contenido está muy abajo
     if current_y < 150:
         c.showPage()
         current_y = height - 100
 
+    # Firmas
     line_width = 200
     left_line_x = (width / 2 - line_width - 20)
     right_line_x = (width / 2 + 20)
     
-    # DIBUJAMOS LAS LÍNEAS DE FIRMA
-    # La línea se dibuja en la posición Y = current_y
     c.line(left_line_x, current_y, left_line_x + line_width, current_y)
     c.line(right_line_x, current_y, right_line_x + line_width, current_y)
     
-    # -----------------------------------------------------
-    # Bloque 1: FIRMA DEL CLIENTE (Izquierda)
-    
-    # Inicia el texto 15 puntos debajo de la línea
+    # Firma del contribuyente
     y_sig = current_y - 15 
-    
     draw_centered_text_right(c, y_sig, "Firma", left_line_x, line_width) 
-    y_sig -= 13 # Salto
+    y_sig -= 13 
     draw_centered_text_right(c, y_sig, nombre, left_line_x, line_width, is_bold=True)
-    y_sig -= 12 # Salto
+    y_sig -= 12 
     draw_centered_text_right(c, y_sig, f"C.I./RIF: {cedula}", left_line_x, line_width, font_size=9)
-    # -----------------------------------------------------
 
-    # -----------------------------------------------------
-    # Bloque 2: RECIBIDO POR (Derecha)
-    
-    # Usamos la misma coordenada inicial para el texto: current_y - 15
+    # Firma del receptor
     y_sig_inst = current_y - 15 
-    
     draw_centered_text_right(c, y_sig_inst, "Recibido por:", right_line_x, line_width)
-    y_sig_inst -= 13 # Salto
+    y_sig_inst -= 13 
     draw_centered_text_right(c, y_sig_inst, "PRESLEY ORTEGA", right_line_x, line_width, is_bold=True)
-    y_sig_inst -= 12 # Salto
-    # El texto "GERENTE..." es largo, ajustamos el salto y la fuente a 9pt si es necesario.
+    y_sig_inst -= 12 
     draw_centered_text_right(c, y_sig_inst, "GERENTE DE ADMINISTRACIÓN Y SERVICIOS", right_line_x, line_width, font_size=9)
-    y_sig_inst -= 15 # Salto grande para la Gaceta (línea más pequeña)
-    
-    # Texto Gaceta (fuente 8pt, saltos más pequeños, decremento progresivo)
+    y_sig_inst -= 15 
     draw_centered_text_right(c, y_sig_inst, "Designado según gaceta oficial n° 43.062 de fecha", right_line_x, line_width, font_size=8)
     y_sig_inst -= 10
     draw_centered_text_right(c, y_sig_inst, "16 de febrero de 2025 y Providencia de", right_line_x, line_width, font_size=8)
     y_sig_inst -= 10
     draw_centered_text_right(c, y_sig_inst, "n° 016-2024 de fecha 16 de diciembre de 2024", right_line_x, line_width, font_size=8)
-    # -----------------------------------------------------
 
     c.showPage()
     c.save()
     buffer.seek(0)
     return buffer 
 
-# ----------------------------------------------------------------------
-# 2. VISTAS PRINCIPALES (SE MANTIENEN EN LA VERSIÓN SIMPLE, EVITANDO EL PRG COMPLEJO)
-# ----------------------------------------------------------------------
 
-def crear_recibo_desde_excel(request):
+def generar_pdf_recibo(request, pk):
+    """Genera y devuelve el PDF puro para la descarga."""
+    recibo_obj = get_object_or_404(Recibo, pk=pk)
+    # Asegúrate de que esta función existe y devuelve un buffer (BytesIO)
+    buffer = generate_receipt_pdf(recibo_obj) 
+    filename = f"Recibo_N_{recibo_obj.numero_recibo}.pdf"
+    
+    response = HttpResponse(
+        buffer.getvalue(), 
+        content_type='application/pdf'
+    )
+    # Solo el encabezado de adjunto
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+# 2. Función Intermedia para forzar la Descarga y el Refresco
+def init_download_and_refresh(request, pk):
+    """Renderiza una plantilla con JS que inicia la descarga y redirige."""
+    context = {
+        'recibo_pk': pk,
+        # Pasamos la URL del PDF real a la plantilla JS
+        'pdf_url': reverse('recibos:generar_pdf_recibo', kwargs={'pk': pk})
+    }
+    # Asegúrate de tener una plantilla llamada 'download_init.html'
+    return render(request, 'recibos/download_init.html', context)
+# --- VISTA PRINCIPAL (UNIFICADA) ---
+
+def dashboard_view(request):
     """
-    Maneja la subida del archivo Excel (POST), las acciones de Anulación/Limpieza (POST)
-    y la visualización/filtrado del Dashboard (GET).
+    Vista principal que maneja:
+    1. Lógica POST (Importación de Excel, Anulación, Limpieza).
+    2. Lógica GET (Filtrado, Búsqueda, Paginación).
     """
     TEMPLATE_NAME = 'recibos/dashboard.html'
     
-    # ====================================================================
-    #           LÓGICA POST (Carga de Excel, Anulación, Limpieza)
-    # ====================================================================
+    # ----------------------------------------------------
+    # LÓGICA DE POST
+    # ----------------------------------------------------
     if request.method == 'POST':
         action = request.POST.get('action')
 
-        # --- INSERCIÓN: Manejo de Anulación de Recibo ---
         if action == 'anular':
             recibo_id = request.POST.get('recibo_id') 
             if recibo_id:
-                # Usa get_object_or_404 para manejar si el ID no existe
                 recibo = get_object_or_404(Recibo, pk=recibo_id) 
                 if not recibo.anulado: 
                     recibo.anulado = True
-                    recibo.estado = 'Anulado' # Asegúrate que este valor coincida con tu campo 'estado'
+                    recibo.estado = 'Anulado' 
                     recibo.save()
                     messages.success(request, f"El recibo N° {recibo.numero_recibo} ha sido ANULADO correctamente.")
                 else:
                     messages.warning(request, "Este recibo ya estaba anulado.")
             else:
                 messages.error(request, "No se proporcionó el ID del recibo a anular.")
-            # Patrón PRG: Redirigir a la misma vista después de cualquier acción POST no relacionada con descarga
             return redirect(reverse('recibos:dashboard')) 
 
-        # --- INSERCIÓN: Manejo de Limpieza de Logs ---
         elif action == 'clear_logs':
-            Recibo.objects.all().delete() # Cuidado: Borrado de todos los registros
+            Recibo.objects.all().delete() 
             messages.success(request, "Todos los recibos han sido eliminados de la base de datos.")
             return redirect(reverse('recibos:dashboard')) 
         
-        # --- LÓGICA ORIGINAL DE CARGA DE EXCEL (NO MODIFICADA) ---
-        else:
+        elif action == 'upload': 
             archivo_excel = request.FILES.get('archivo_recibo') 
-            
             if not archivo_excel:
-                messages.error(request, "Por favor, sube un archivo Excel con el nombre 'archivo_recibo'.")
-                return render(request, TEMPLATE_NAME, {})
-
-            try:
-                success, message, nuevo_recibo_id = importar_recibos_desde_excel(archivo_excel) 
-            except Exception as e:
-                logger.error(f"Error al ejecutar la importación de Excel: {e}")
-                messages.error(request, f"Error interno en la lógica de importación: {e}")
-                return render(request, TEMPLATE_NAME, {})
-            
-            if success:
-                try:
-                    if nuevo_recibo_id is None:
-                        raise Recibo.DoesNotExist("La importación fue exitosa, pero no devolvió el ID del recibo creado.")
-                        
-                    ultimo_recibo_obj = Recibo.objects.get(pk=nuevo_recibo_id) 
-                    
-                    pdf_buffer = generate_receipt_pdf(ultimo_recibo_obj)
-                    
-                    response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
-                    filename = f"Recibo_N_{ultimo_recibo_obj.numero_recibo}.pdf"
-                    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-                    
-                    messages.success(request, f"Importación exitosa. Descargando recibo N° {ultimo_recibo_obj.numero_recibo}.")
-                    
-                    return response
-                
-                except Recibo.DoesNotExist:
-                    messages.error(request, "Error: La importación fue exitosa, pero no se pudo encontrar el recibo para generar el PDF.")
-                    return render(request, TEMPLATE_NAME, {})
-                
-                except Exception as e:
-                    logger.error(f"Error al generar el PDF: {e}")
-                    messages.error(request, f"Error crítico al generar el PDF: {e}")
-                    return render(request, TEMPLATE_NAME, {})
-
+                messages.error(request, "Por favor, sube un archivo Excel.")
             else:
-                messages.error(request, f"Fallo en la carga de Excel: {message}")
-                return render(request, TEMPLATE_NAME, {})
-                
-    # ====================================================================
-    #           REEMPLAZO TOTAL: LÓGICA GET (Visualización y Filtrado)
-    # ====================================================================
+                try:
+                    # ESTE ES EL PUNTO CLAVE: Llama a la función que devuelve tres valores.
+                    success, message, nuevo_recibo_id = importar_recibos_desde_excel(archivo_excel) 
+                    
+                    if success and nuevo_recibo_id:
+                        messages.success(request, f"Importación exitosa. Recibo N° {Recibo.objects.get(pk=nuevo_recibo_id).numero_recibo}. Generado")
+                        
+                        # ¡REDIRECCIÓN CLAVE A LA VISTA INTERMEDIA!
+                        return redirect(reverse('recibos:init_download', kwargs={'pk': nuevo_recibo_id}))
+                    
+                    elif success:
+                        messages.warning(request, "Importación exitosa, pero no se generó un nuevo recibo para descargar.")
+                    else:
+                        messages.error(request, f"Fallo en la carga de Excel: {message}")
+                except Exception as e:
+                    logger.error(f"Error al ejecutar la importación de Excel: {e}")
+                    messages.error(request, f"Error interno en la lógica de importación: {e}")
+            
+            # Si hay un error, redirecciona al dashboard (GET)
+            return redirect(reverse('recibos:dashboard'))
+
+
+    # ----------------------------------------------------
+    # LÓGICA DE GET (FILTRADO Y BÚSQUEDA)
+    # ----------------------------------------------------
     
-    # 1. Inicializar la Query y el Contexto
-    recibos_queryset = Recibo.objects.all().order_by('-fecha', '-numero_recibo')
-    filters = Q() 
-    
-    # Contexto con el mapeo de categorías para la plantilla
-    context = {
-        'categories': CATEGORY_CHOICES_MAP, 
-        'selected_categories': [],          
-        'total_sum': 0.0,
-        'recibos': [],
-    }
+    # QuerySet base ordenado por fecha y número de recibo
+    queryset = Recibo.objects.all().order_by('-fecha', '-numero_recibo')
+
+    # 1. Obtener estados disponibles (para el selectbox)
+    estados_disponibles = Recibo.objects.exclude(
+        estado__isnull=True
+    ).exclude(
+        estado__exact=''
+    ).values_list(
+        'estado', flat=True
+    ).distinct().order_by('estado')
+
+    # Filtro 1: Estado Geográfico
+    estado_seleccionado = request.GET.get('estado')
+    if estado_seleccionado and estado_seleccionado != "":
+        queryset = queryset.filter(estado__iexact=estado_seleccionado) 
+
+    # Filtro 2: Rango de Fechas
+    fecha_inicio_str = request.GET.get('fecha_inicio')
+    fecha_fin_str = request.GET.get('fecha_fin')
     
     try:
-        # 2. Procesar filtros de FECHA (Campo 'fecha')
-        fecha_inicial = request.GET.get('fecha_inicial')
-        fecha_final = request.GET.get('fecha_final')
+        if fecha_inicio_str:
+            queryset = queryset.filter(fecha__gte=fecha_inicio_str)
         
-        if fecha_inicial:
-            filters &= Q(fecha__gte=fecha_inicial)
-        if fecha_final:
-            filters &= Q(fecha__lte=fecha_final)
-
-        # 3. Procesar filtro de ESTADO (Campo 'estado')
-        estado_filtro = request.GET.get('estado')
-        if estado_filtro and estado_filtro != '':
-            filters &= Q(estado__iexact=estado_filtro) 
-
-        # 4. Procesar filtro de CATEGORÍAS (Lógica OR compleja)
-        selected_categories_keys = request.GET.getlist('categories')
+        if fecha_fin_str:
+            queryset = queryset.filter(fecha__lte=fecha_fin_str)
+    except ValueError:
+        pass 
         
-        if selected_categories_keys:
-            context['selected_categories'] = selected_categories_keys 
-            
-            category_filters = Q()
-            # Construcción dinámica de la condición OR para los 10 campos de categoría
-            for field_name in selected_categories_keys:
-                category_filters |= Q(**{field_name: True})
-                
-            filters &= category_filters 
+    # Filtro 3: Categorías (Checkboxes)
+    for codigo, _ in CATEGORY_CHOICES: 
+        if request.GET.get(codigo) == 'on':
+            queryset = queryset.filter(**{f'{codigo}': True})
+    
+    # Filtro 4: BÚSQUEDA GENERAL (q) - Corregido y Alineado
+    search_query = request.GET.get('q')
+    if search_query:
+        query_normalizado = search_query.strip() 
         
-        # 5. Aplicar filtros y Calcular Totales
-        recibos_list = recibos_queryset.filter(filters)
+        q_objects = (
+            Q(nombre__icontains=search_query) |            
+            Q(rif_cedula_identidad__icontains=query_normalizado) | 
+            Q(numero_recibo__iexact=query_normalizado) | 
+            Q(numero_transferencia__icontains=query_normalizado) |
+            Q(estado__icontains=search_query)
+        )
+        try:
+            recibo_id = int(search_query.strip())
+            q_objects |= Q(id=recibo_id)
+        except ValueError:
+            pass
         
-        total_sum_result = recibos_list.aggregate(total=Sum('monto'))
-        total_sum = total_sum_result['total'] if total_sum_result['total'] is not None else 0.0
-
-        # 6. Finalizar Contexto
-        # Si no hay filtros aplicados, limitamos a 20 resultados (mantiene el comportamiento original)
-        if not filters:
-            recibos_list = recibos_list[:20] 
-            
-        context['recibos'] = recibos_list
-        context['total_sum'] = total_sum
-        context['request_get'] = request.GET 
-        
-    except Exception as e:
-        # Captura errores en la lógica de filtrado o DB (Ej: Q, Sum)
-        # Es vital que esta sección maneje errores sin caer en un 500
-        # Recomiendo fuertemente configurar un logger aquí
-        # logger.error(f"Error al aplicar filtros en el dashboard: {e}") 
-        messages.error(request, "Error interno al cargar la lista de recibos filtrada. Revise los logs.")
-        context['recibos'] = []
-        
+        queryset = queryset.filter(q_objects)
+    
+    # ----------------------------------------------------
+    # PAGINACIÓN
+    # ----------------------------------------------------
+    paginator = Paginator(queryset, 20)  
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # ----------------------------------------------------
+    # CONTEXTO
+    # ----------------------------------------------------
+    context = {
+        'recibos': page_obj,  
+        'page_obj': page_obj, 
+        'estados_db': estados_disponibles, 
+        'categorias_list': CATEGORY_CHOICES, 
+        # Valores de filtro para mantener el estado en la plantilla
+        'current_estado': estado_seleccionado, 
+        'current_start_date': fecha_inicio_str,
+        'current_end_date': fecha_fin_str,
+        'request_get': request.GET # Contiene todos los filtros actuales (útil para reportes)
+    }
+    
     return render(request, TEMPLATE_NAME, context)
+
+
+# --- VISTA DE REPORTES (Excel/PDF) ---
 
 def generar_reporte_view(request):
     """
@@ -426,12 +439,13 @@ def generar_reporte_view(request):
     y genera un archivo Excel o PDF para su descarga.
     """
     
-    # --- 1. LÓGICA DE FILTRADO (Duplicamos la lógica GET del dashboard) ---
-    
+    # 1. Aplicar la lógica de filtrado (Similar a dashboard_view, pero sin paginación)
     recibos_queryset = Recibo.objects.all().order_by('-fecha', '-numero_recibo')
+    
+    # Inicialización del objeto Q
     filters = Q() 
     
-    # Procesar filtros de FECHA
+    # Filtro de Fechas
     fecha_inicial = request.GET.get('fecha_inicial')
     fecha_final = request.GET.get('fecha_final')
     if fecha_inicial:
@@ -439,40 +453,57 @@ def generar_reporte_view(request):
     if fecha_final:
         filters &= Q(fecha__lte=fecha_final)
 
-    # Procesar filtro de ESTADO
+    # Filtro de Estado
     estado_filtro = request.GET.get('estado')
     if estado_filtro and estado_filtro != '':
         filters &= Q(estado__iexact=estado_filtro) 
 
-    # Procesar filtro de CATEGORÍAS (Campos booleanos)
+    # Filtro de Categorías
     selected_categories_keys = request.GET.getlist('categories') 
-    
     if selected_categories_keys:
         category_filters = Q()
         for field_name in selected_categories_keys:
-            # Filtro booleano: el campo debe ser True
-            category_filters |= Q(**{field_name: True}) 
+            # Aquí la lógica debe cambiar para usar los nombres de campo (categoria1, categoria2)
+            # Asegúrate que los checkboxes en la plantilla envíen estos nombres o ajusta la lógica
+            if field_name.startswith('categoria'): # Asumiendo que las claves son 'categoria1', 'categoria2', etc.
+                category_filters |= Q(**{field_name: True}) 
         filters &= category_filters
     
-    # Aplicar todos los filtros
+    # Búsqueda Global (q)
+    search_query = request.GET.get('q')
+    if search_query:
+        query_normalizado = search_query.strip() 
+        q_objects = (
+            Q(nombre__icontains=search_query) |            
+            Q(rif_cedula_identidad__icontains=query_normalizado) | 
+            Q(numero_recibo__iexact=query_normalizado) | 
+            Q(numero_transferencia__icontains=query_normalizado) |
+            Q(estado__icontains=search_query)
+        )
+        try:
+            recibo_id = int(search_query.strip())
+            q_objects |= Q(id=recibo_id)
+        except ValueError:
+            pass
+        
+        filters &= q_objects # Aplicar la búsqueda al filtro existente
+    
+    # Aplicar todos los filtros al QuerySet final
     recibos_filtrados = recibos_queryset.filter(filters)
     
-    # --- 2. GENERACIÓN DEL REPORTE ---
-    
-    action = request.GET.get('action') # 'excel' o 'pdf'
+    # 2. Generar el reporte según la acción
+    action = request.GET.get('action') 
     
     if action == 'excel':
         try:
-            # La función generar_excel_recibos debe tomar el queryset y devolver un HttpResponse
             return generar_excel_recibos(recibos_filtrados) 
         except Exception as e:
             messages.error(request, f"Error al generar el reporte Excel: {e}")
-            # Redirigir al dashboard para ver el mensaje de error
             return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
 
     elif action == 'pdf':
         try:
-            # La función generar_pdf_reporte debe tomar el queryset y devolver un HttpResponse
+            # Necesitas asegurarte que generar_pdf_reporte esté implementado en utils.py
             return generar_pdf_reporte(recibos_filtrados)
         except Exception as e:
             messages.error(request, f"Error al generar el reporte PDF: {e}")

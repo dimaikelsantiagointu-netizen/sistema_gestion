@@ -11,3 +11,4 @@ CATEGORY_CHOICES = (
     ('categoria10', 'Arrendamiento Terrenos'),
 )
 CATEGORY_CHOICES_MAP = dict(CATEGORY_CHOICES)
+

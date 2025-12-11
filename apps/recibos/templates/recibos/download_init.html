@@ -1,0 +1,62 @@
+{#HTML Auxiliar para la recarga automatica de la pagina#}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procesando Recibo...</title>
+    <script src="https://cdn.tailwindcss.com"></script> 
+    
+    <style>
+        /* Animación simple de rotación para el spinner */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex items-center justify-center h-screen">
+
+    <div class="bg-white p-10 rounded-xl shadow-2xl text-center max-w-sm w-full border border-indigo-100">
+        <div class="flex justify-center mb-6">
+            <svg class="spinner w-10 h-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+        
+        <h1 class="text-xl font-bold text-gray-800 mb-2">Generación de Recibo Exitosa</h1>
+        <p class="text-gray-600 mb-6">
+            La descarga del PDF comenzará automáticamente. Redirigiendo al panel de control...
+        </p>
+
+        <p class="text-xs text-gray-400 mt-4">
+            Si la descarga no se inicia, haga clic <a href="{{ pdf_url }}" class="text-indigo-500 hover:text-indigo-700 font-medium">aquí</a>.
+        </p>
+    </div>
+
+    <script>
+        // Obtener la URL del PDF del contexto de Django
+        const pdfUrl = "{{ pdf_url }}"; 
+        
+        // 1. Crear un enlace temporal y simular un clic para iniciar la descarga
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = true; // Asegura que se fuerce la descarga
+        
+        // Simulación de clic para iniciar la descarga
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // 2. Redirigir la ventana principal al dashboard inmediatamente
+        // Usamos un retraso de 0ms para que sea lo más instantáneo posible.
+        setTimeout(function() {
+            window.location.href = "{% url 'recibos:dashboard' %}";
+        }, 1000); 
+        
+    </script>
+</body>
+</html>

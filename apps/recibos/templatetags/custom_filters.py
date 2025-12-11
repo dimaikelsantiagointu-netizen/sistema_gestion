@@ -3,10 +3,12 @@ from django import template
 from django.utils.text import slugify as django_slugify
 from django.template.defaultfilters import capfirst
 from ..models import CATEGORY_CHOICES_MAP
+from urllib.parse import urlencode
+import re
 # 💡 NOTA IMPORTANTE:
 # Debes reemplazar el siguiente diccionario de ejemplo 
 # con la importación real de tu mapeo de categorías desde models.py.
-
+register = template.Library()
 # Ejemplo de cómo debe lucir el mapeo:
 CATEGORY_CHOICES_MAP = {
     1: 'Pago Mensual',
@@ -48,3 +50,12 @@ def get_category_label(field_name):
         return ""
     
     return CATEGORY_CHOICES_MAP.get(field_name, 'Concepto Desconocido')
+
+@register.filter(name='get_item')
+def get_item(dictionary, key):
+    return dictionary.get(key)
+
+@register.filter(name='remove_page')
+def remove_page(url_querystring):
+    """Elimina 'page' de la query string para que se pueda añadir un nuevo número de página."""
+    return re.sub(r'[?&]page=\d+', '', url_querystring)
