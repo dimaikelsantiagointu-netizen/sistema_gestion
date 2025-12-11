@@ -139,90 +139,132 @@ def importar_recibos_desde_excel(archivo_excel):
         return False, f"Fallo en la carga: Error de validación de datos (revisar consola): {str(e)}", None
     
     
-
-def generar_excel_recibos(queryset): 
+#Generar reporte en excel modificaremos
+def generar_reporte_excel(request_filters, queryset, filtros_aplicados): 
     """
-    Genera un reporte Excel (.xlsx) a partir de un QuerySet filtrado de Recibo.
+    Genera un reporte Excel (.xlsx) con dos hojas: 'Recibos' (datos) e 
+    'info_reporte' (metadatos de filtrado), sin la fila de Total General en la hoja 'Recibos'.
+    
+    Argumentos:
+        request_filters (QueryDict): Los parámetros de filtro originales (request.GET).
+        queryset (QuerySet): El QuerySet de Recibos ya filtrado.
+        filtros_aplicados (dict): Diccionario que contiene el detalle de los filtros aplicados 
+                                  por el usuario (para la hoja info_reporte).
     """
-
+    # 1. Preparar la Hoja 'Recibos' (Datos Detallados)
     data = []
     
-    category_names = list(CATEGORY_CHOICES_MAP.values()) 
-    
     headers = [
-        'N° Recibo', 
+        'Número Recibo', 
+        'Nombre', 
+        'Cédula/RIF', 
         'Fecha', 
         'Estado', 
-        'Nombre Cliente', 
-        'RIF/Cédula', 
-        'Dirección', 
-        'Ente Liquidado', 
-        'Gastos Adm.',
-        'Tasa Día',
-        'Monto Total (Bs)',
-        'N° Transferencia',
-        'Conciliado',
-        'Concepto',
-    ] + category_names 
+        'Monto Total (Bs.)',       
+        'N° Transferencia', 
+        'Concepto',                
+        'Categorías'               
+    ]
     
     for recibo in queryset:
-        row = [
-            recibo.numero_recibo,
-            recibo.fecha.strftime('%Y-%m-%d'),
-            recibo.estado,
-            recibo.nombre,
-            recibo.rif_cedula_identidad,
-            recibo.direccion_inmueble,
-            recibo.ente_liquidado,
-            recibo.gastos_administrativos,
-            recibo.tasa_dia,
-            recibo.total_monto_bs,
-            recibo.numero_transferencia,
-            'Sí' if recibo.conciliado else 'No',
-            recibo.concepto,
-        ]
         
-        category_status = []
+        categoria_detalle_nombres = []
         for i in range(1, 11):
             field_name = f'categoria{i}'
-            is_active = getattr(recibo, field_name) 
-            category_status.append('Sí' if is_active else 'No')
             
-        data.append(row + category_status)
+            if getattr(recibo, field_name):
+                 nombre_categoria = CATEGORY_CHOICES_MAP.get(field_name, f'Categoría {i} (Desconocida)')
+                 categoria_detalle_nombres.append(nombre_categoria)
+        
+        categorias_concatenadas = ', '.join(categoria_detalle_nombres)
 
-    total_sum_bs = queryset.aggregate(total=Sum('total_monto_bs'))['total'] or Decimal(0)
+        row = [
+            recibo.numero_recibo,
+            recibo.nombre,
+            recibo.rif_cedula_identidad,
+            recibo.fecha.strftime('%Y-%m-%d'),
+            recibo.estado,
+            recibo.total_monto_bs,             
+            recibo.numero_transferencia,
+            recibo.concepto.strip(),           
+            categorias_concatenadas            
+        ]
+        data.append(row)
+
+    # 2. Preparar la Hoja 'info_reporte' (Metadatos)
     
-    df = pd.DataFrame(data, columns=headers)
+    # NOTA: Mantenemos el cálculo del total aquí ya que SÍ se usa en la hoja 'info_reporte'
+    total_registros = queryset.count()
+    total_monto_bs = queryset.aggregate(total=Sum('total_monto_bs'))['total'] or Decimal(0)
     
-    total_row = [''] * (len(headers) - 1) + [total_sum_bs] 
-    df.loc['Total'] = total_row
+    info_data = [
+        ['Fecha de Generación', timezone.now().strftime('%Y-%m-%d %H:%M:%S')],
+        ['Período del Reporte', filtros_aplicados.get('periodo', 'Todos los períodos')],
+        ['Estado Filtrado', filtros_aplicados.get('estado', 'Todos los estados')],
+        ['Categorías Filtradas', filtros_aplicados.get('categorias', 'Todas las categorías')],
+        ['Total de Registros', total_registros],
+        ['Monto Total (Bs)', total_monto_bs], # ¡Se mantiene en info_reporte!
+    ]
+    info_df = pd.DataFrame(info_data, columns=['Parámetro', 'Valor'])
+
+    # 3. Generar el Archivo Excel con Pandas y XlsxWriter
     
+    df_recibos = pd.DataFrame(data, columns=headers)
     output = io.BytesIO()
     
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Reporte Recibos')
         
+        # --- Hoja 1: info_reporte ---
+        info_df.to_excel(writer, index=False, sheet_name='info_reporte')
+        
+        # --- Hoja 2: Recibos ---
+        df_recibos.to_excel(writer, index=False, sheet_name='Recibos', startrow=0, header=True)
+        
+        # --- Aplicar Formato a la Hoja 'Recibos' ---
         workbook = writer.book
-        worksheet = writer.sheets['Reporte Recibos']
+        worksheet_recibos = writer.sheets['Recibos']
         
-        bold_format = workbook.add_format({'bold': True})
+        money_format = workbook.add_format({'num_format': '#,##0.00', 'align': 'right'})
+        bold_format = workbook.add_format({'bold': True, 'bg_color': '#EAEAEA'})
         
-        last_row = len(df) # Fila 'Total'
-        total_col_index = headers.index('Monto Total (Bs)') 
+        # Ancho de columnas
+        worksheet_recibos.set_column('A:A', 15) # 0: Número Recibo
+        worksheet_recibos.set_column('B:C', 25) # 1: Nombre, 2: Cédula
+        worksheet_recibos.set_column('D:D', 12) # 3: Fecha
+        worksheet_recibos.set_column('E:E', 15) # 4: Estado
+        worksheet_recibos.set_column('F:F', 18, money_format) # 5: Monto Total (Bs.)
+        worksheet_recibos.set_column('G:G', 20) # 6: N° Transferencia
+        worksheet_recibos.set_column('H:H', 40) # 7: Concepto
+        worksheet_recibos.set_column('I:I', 50) # 8: Categorías
         
-        worksheet.write(last_row, total_col_index - 1, 'TOTAL GENERAL:', bold_format)
+        # Formato para el encabezado (reiterar)
+        for col_num, value in enumerate(headers):
+            worksheet_recibos.write(0, col_num, value, bold_format)
+            
+        # ❌ Se elimina el código que escribía la fila de 'TOTAL GENERAL'
         
+        # --- Aplicar Formato a la Hoja 'info_reporte' ---
+        worksheet_info = writer.sheets['info_reporte']
+        worksheet_info.set_column('A:A', 30) # Parámetro
+        worksheet_info.set_column('B:B', 40) # Valor
+        
+        # Formato para el encabezado
+        worksheet_info.write(0, 0, 'Parámetro', bold_format)
+        worksheet_info.write(0, 1, 'Valor', bold_format)
+    
     output.seek(0)
     
-    filename = f"Reporte_Recibos_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    # 4. Devolver la Respuesta HTTP
+    filename = f"Reporte_Recibos_Masivo_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     response = HttpResponse(
         output, 
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
-    
-#Generar reportes en formato pdf aun no implementado
+
+
+# Generar reportes en formato pdf aun no implementado
 def generar_pdf_reporte(queryset):
     """
     Genera un reporte PDF tabular de resumen a partir de un QuerySet filtrado.
@@ -231,3 +273,4 @@ def generar_pdf_reporte(queryset):
         "La funcionalidad de Reporte PDF tabular aún no está implementada. "
         "Debe usar una librería como ReportLab o WeasyPrint para generar tablas."
     )
+    

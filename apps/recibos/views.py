@@ -11,10 +11,12 @@ from reportlab.lib.utils import ImageReader
 from decimal import Decimal
 import logging
 from django.urls import reverse
-from .utils import importar_recibos_desde_excel, generar_excel_recibos, generar_pdf_reporte
+# 🚀 AJUSTE DE IMPORTACIÓN: Cambiamos 'generar_excel_recibos' por 'generar_reporte_excel'
+from .utils import importar_recibos_desde_excel, generar_reporte_excel, generar_pdf_reporte
 from django.conf import settings
 from django.core.paginator import Paginator
-from .constants import CATEGORY_CHOICES_MAP, CATEGORY_CHOICES
+# 🚀 ADICIÓN DE CONSTANTES: Necesitamos los mapas para nombres legibles
+from .constants import CATEGORY_CHOICES_MAP, CATEGORY_CHOICES, ESTADO_CHOICES_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -347,11 +349,8 @@ def dashboard_view(request):
             return redirect(reverse('recibos:dashboard'))
 
 
-    # ----------------------------------------------------
     # LÓGICA DE GET (FILTRADO Y BÚSQUEDA)
-    # ----------------------------------------------------
     
-    # QuerySet base ordenado por fecha y número de recibo
     queryset = Recibo.objects.all().order_by('-fecha', '-numero_recibo')
 
     # 1. Obtener estados disponibles (para el selectbox)
@@ -406,22 +405,15 @@ def dashboard_view(request):
         
         queryset = queryset.filter(q_objects)
     
-    # ----------------------------------------------------
-    # PAGINACIÓN
-    # ----------------------------------------------------
     paginator = Paginator(queryset, 20)  
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # ----------------------------------------------------
-    # CONTEXTO
-    # ----------------------------------------------------
     context = {
         'recibos': page_obj,  
         'page_obj': page_obj, 
         'estados_db': estados_disponibles, 
         'categorias_list': CATEGORY_CHOICES, 
-        # Valores de filtro para mantener el estado en la plantilla
         'current_estado': estado_seleccionado, 
         'current_start_date': fecha_inicio_str,
         'current_end_date': fecha_fin_str,
@@ -431,83 +423,120 @@ def dashboard_view(request):
     return render(request, TEMPLATE_NAME, context)
 
 
-# --- VISTA DE REPORTES (Excel/PDF) ---
 
 def generar_reporte_view(request):
     """
-    Recibe los parámetros GET, aplica el mismo filtrado que el dashboard
-    y genera un archivo Excel o PDF para su descarga.
+    Recibe los parámetros GET, aplica el mismo filtrado que el dashboard,
+    prepara los metadatos y genera un archivo Excel o PDF.
     """
     
-    # 1. Aplicar la lógica de filtrado (Similar a dashboard_view, pero sin paginación)
+    # 1. Inicializar QuerySet y Metadatos
     recibos_queryset = Recibo.objects.all().order_by('-fecha', '-numero_recibo')
+    filters = Q()
     
-    # Inicialización del objeto Q
-    filters = Q() 
+    # Diccionario para la hoja 'info_reporte' (Metadatos legibles)
+    filtros_aplicados = {}
+
+    # 2. Aplicar Filtros (Alineado con dashboard_view)
+
+    # Filtro 1: Estado Geográfico
+    estado_seleccionado = request.GET.get('estado')
+    if estado_seleccionado and estado_seleccionado != "":
+        # Aplicar filtro al QuerySet
+        filters &= Q(estado__iexact=estado_seleccionado)
+        # Guardar valor legible para el reporte
+        filtros_aplicados['estado'] = estado_seleccionado # Usamos el valor directo o el mapeo si es un código
+    else:
+         filtros_aplicados['estado'] = 'Todos los estados'
+        
+    # Filtro 2: Rango de Fechas (Período)
+    fecha_inicio_str = request.GET.get('fecha_inicio')
+    fecha_fin_str = request.GET.get('fecha_fin')
     
-    # Filtro de Fechas
-    fecha_inicial = request.GET.get('fecha_inicial')
-    fecha_final = request.GET.get('fecha_final')
-    if fecha_inicial:
-        filters &= Q(fecha__gte=fecha_inicial)
-    if fecha_final:
-        filters &= Q(fecha__lte=fecha_final)
+    periodo_str = 'Todas las fechas'
+    
+    try:
+        if fecha_inicio_str:
+            filters &= Q(fecha__gte=fecha_inicio_str)
+            periodo_str = f"Desde: {fecha_inicio_str}"
+        
+        if fecha_fin_str:
+            filters &= Q(fecha__lte=fecha_fin_str)
+            periodo_str = f"{periodo_str} Hasta: {fecha_fin_str}"
+            
+    except ValueError:
+        pass 
+        
+    filtros_aplicados['periodo'] = periodo_str.replace('Todas las fechas Hasta: None', 'Todas las fechas') # Limpieza si solo hay fecha_fin
 
-    # Filtro de Estado
-    estado_filtro = request.GET.get('estado')
-    if estado_filtro and estado_filtro != '':
-        filters &= Q(estado__iexact=estado_filtro) 
 
-    # Filtro de Categorías
-    selected_categories_keys = request.GET.getlist('categories') 
-    if selected_categories_keys:
-        category_filters = Q()
-        for field_name in selected_categories_keys:
-            # Aquí la lógica debe cambiar para usar los nombres de campo (categoria1, categoria2)
-            # Asegúrate que los checkboxes en la plantilla envíen estos nombres o ajusta la lógica
-            if field_name.startswith('categoria'): # Asumiendo que las claves son 'categoria1', 'categoria2', etc.
-                category_filters |= Q(**{field_name: True}) 
+    # Filtro 3: Categorías
+    selected_categories_names = []
+    category_filters = Q()
+    category_count = 0
+
+    for codigo, nombre_display in CATEGORY_CHOICES: 
+        if request.GET.get(codigo) == 'on':
+            # Aplicar filtro al QuerySet
+            category_filters |= Q(**{f'{codigo}': True})
+            # Guardar valor legible para el reporte
+            selected_categories_names.append(nombre_display)
+            category_count += 1
+            
+    if category_count > 0:
         filters &= category_filters
+        filtros_aplicados['categorias'] = ', '.join(selected_categories_names)
+    else:
+        filtros_aplicados['categorias'] = 'Todas las categorías'
     
-    # Búsqueda Global (q)
+    # Filtro 4: BÚSQUEDA GENERAL (q)
     search_query = request.GET.get('q')
     if search_query:
         query_normalizado = search_query.strip() 
+        # ... (La lógica Q de búsqueda se mantiene igual y se aplica a 'filters') ...
         q_objects = (
-            Q(nombre__icontains=search_query) |            
-            Q(rif_cedula_identidad__icontains=query_normalizado) | 
-            Q(numero_recibo__iexact=query_normalizado) | 
-            Q(numero_transferencia__icontains=query_normalizado) |
-            Q(estado__icontains=search_query)
-        )
+             Q(nombre__icontains=search_query) |            
+             Q(rif_cedula_identidad__icontains=query_normalizado) | 
+             Q(numero_recibo__iexact=query_normalizado) | 
+             Q(numero_transferencia__icontains=query_normalizado) |
+             Q(estado__icontains=search_query)
+         )
         try:
-            recibo_id = int(search_query.strip())
-            q_objects |= Q(id=recibo_id)
+             recibo_id = int(search_query.strip())
+             q_objects |= Q(id=recibo_id)
         except ValueError:
-            pass
-        
-        filters &= q_objects # Aplicar la búsqueda al filtro existente
+             pass
+        filters &= q_objects
+        filtros_aplicados['busqueda'] = search_query
     
-    # Aplicar todos los filtros al QuerySet final
+    # 3. Obtener el QuerySet final
     recibos_filtrados = recibos_queryset.filter(filters)
     
-    # 2. Generar el reporte según la acción
+    # 4. Determinar Acción (Excel vs. PDF)
     action = request.GET.get('action') 
     
     if action == 'excel':
+        # 🚀 LÓGICA CLAVE: Llamar a la función de utilidad con los metadatos
         try:
-            return generar_excel_recibos(recibos_filtrados) 
+            return generar_reporte_excel(request.GET, recibos_filtrados, filtros_aplicados)
         except Exception as e:
+            logger.error(f"Error al generar el reporte Excel: {e}")
             messages.error(request, f"Error al generar el reporte Excel: {e}")
             return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
 
     elif action == 'pdf':
-        try:
-            # Necesitas asegurarte que generar_pdf_reporte esté implementado en utils.py
-            return generar_pdf_reporte(recibos_filtrados)
-        except Exception as e:
-            messages.error(request, f"Error al generar el reporte PDF: {e}")
-            return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
+        # ❌ Mantenemos el PDF deshabilitado o con la lógica existente (si ya está funcionando)
+        # Si la implementación actual es funcional (usa ReportLab), la dejamos. 
+        # Si NO ES FUNCIONAL para reporte masivo, se recomienda:
+        messages.error(request, "La generación de Reporte PDF masivo aún no está implementada completamente (Formato Estructurado).")
+        return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
+        
+        # O si deseas usar la versión base, déjala como está:
+        # try:
+        #     return generar_pdf_reporte(recibos_filtrados) 
+        # except Exception as e:
+        #     messages.error(request, f"Error al generar el reporte PDF: {e}")
+        #     return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
             
     else:
         messages.error(request, "Acción de reporte no válida.")

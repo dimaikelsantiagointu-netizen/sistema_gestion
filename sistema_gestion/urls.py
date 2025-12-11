@@ -7,8 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # URL de la Aplicación Recibos (Namespace: 'recibos')
-    path('recibos/', include('apps.recibos.urls')), 
-    
+    path('recibos/', include('apps.recibos.urls', namespace='recibos')),    
     # 🎯 NUEVA URL RAÍZ: Servir directamente el base.html
     # Asume que tu archivo está en: /templates/base.html (si esa es la ubicación registrada en settings.py)
     path('', TemplateView.as_view(template_name='base.html'), name='home'),
