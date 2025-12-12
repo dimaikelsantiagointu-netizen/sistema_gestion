@@ -73,6 +73,26 @@ class ReciboForm(forms.ModelForm):
             'concepto',
         ]
         
+        # 🌟🌟🌟 CAMBIO CLAVE: ETIQUETAS PERSONALIZADAS PARA CATEGORÍAS 🌟🌟🌟
+        labels = {
+            # Ajusta estos nombres (etiquetas) para que coincidan con tu lógica de negocio
+            'categoria1': '1.Título Tierra Urbana',
+            'categoria2': '2.Título + Vivienda',
+            'categoria3': '3.Municipal',
+            'categoria4': '4.Tierra Privada',
+            'categoria5': '5.Tierra INAVI',
+            'categoria6': '6.Excedentes Título',
+            'categoria7': '7.Excedentes INAVI',
+            'categoria8': '8.Estudios Técnico',
+            'categoria9': '9.Locales Comerciales',
+            'categoria10': '10.Arrendamiento Terrenos)',
+            
+            # Opcional: También puedes redefinir otros labels si lo deseas
+            'conciliado': 'Conciliado (Pago Confirmado)',
+            'gastos_administrativos': 'Gastos Admin.',
+            'tasa_dia': 'Tasa del Día (BCV)',
+        }
+        
         widgets = {
             # CAMPO READONLY: Estilo distinto para readonly
             'numero_recibo': forms.TextInput(attrs={

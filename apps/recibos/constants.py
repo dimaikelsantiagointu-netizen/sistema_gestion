@@ -1,16 +1,16 @@
 # constants.py
 
 CATEGORY_CHOICES = (
-    ('categoria1', 'Título Tierra Urbana'),
-    ('categoria2', 'Título + Vivienda'),
-    ('categoria3', 'Municipal'),
-    ('categoria4', 'Tierra Privada'),
-    ('categoria5', 'Tierra INAVI'),
-    ('categoria6', 'Excedentes Título'),
-    ('categoria7', 'Excedentes INAVI'),
-    ('categoria8', 'Estudio Técnico'),
-    ('categoria9', 'Locales Comerciales'),
-    ('categoria10', 'Arrendamiento Terrenos'),
+    ('categoria1', '1.Título Tierra Urbana'),
+    ('categoria2', '2.Título + Vivienda'),
+    ('categoria3', '3.Municipal'),
+    ('categoria4', '4.Tierra Privada'),
+    ('categoria5', '5.Tierra INAVI'),
+    ('categoria6', '6.Excedentes Título'),
+    ('categoria7', '7.Excedentes INAVI'),
+    ('categoria8', '8.Estudio Técnico'),
+    ('categoria9', '9.Locales Comerciales'),
+    ('categoria10', '10.Arrendamiento Terrenos'),
 )
 CATEGORY_CHOICES_MAP = dict(CATEGORY_CHOICES)
 
