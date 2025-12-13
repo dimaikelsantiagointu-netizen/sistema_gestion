@@ -6,7 +6,7 @@ class Recibo(models.Model):
     numero_recibo = models.IntegerField(unique=True, null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     anulado = models.BooleanField(default=False) 
-
+    fecha_anulacion = models.DateTimeField(null=True, blank=True)
     # 1. Datos del Cliente
     estado = models.CharField(max_length=100)
     nombre = models.CharField(max_length=255)

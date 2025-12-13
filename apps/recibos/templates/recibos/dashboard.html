@@ -9,11 +9,11 @@
     {# Configuración de Tailwind CSS #}
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+        tailwind.config={
+            theme:{
+                extend:{
+                    fontFamily:{
+                        sans:['Inter','sans-serif'],
                     },
                 },
             },
@@ -41,12 +41,12 @@
             </a>
             <div class="flex items-center space-x-4">
                 {# Botón compacto para Página Principal (Solo Icono en pantallas pequeñas) #}
-                <a href="{% url 'base' %}" 
-                class="p-2 text-sm font-medium text-white bg-indigo-600 rounded-full hover:bg-indigo-700 transition duration-150 shadow-md flex items-center">
-                    
+                <a href="{% url 'base' %}"
+                    class="p-2 text-sm font-medium text-white bg-indigo-600 rounded-full hover:bg-indigo-700 transition duration-150 shadow-md flex items-center">
+
                     {# Icono #}
-                    <i class="fas fa-home"></i> 
-                    
+                    <i class="fas fa-home"></i>
+
                     {# Texto: Solo visible en pantallas medianas y grandes (sm:inline) #}
                     <span class="hidden sm:inline ml-2">Principal</span>
                 </a>
@@ -98,11 +98,11 @@
                                 <span class="sr-only">Seleccionar Archivo Excel</span>
                                 <input type="file" name="archivo_recibo" id="excel-file-input" accept=".xlsx" required
                                     class="block w-full text-sm text-gray-500
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-lg file:border-0
-                                file:text-sm file:font-semibold
-                                file:bg-indigo-50 file:text-indigo-700
-                                hover:file:bg-indigo-100 transition duration-150"
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-lg file:border-0
+                                    file:text-sm file:font-semibold
+                                    file:bg-indigo-50 file:text-indigo-700
+                                    hover:file:bg-indigo-100 transition duration-150"
                                 >
                             </label>
                         </form>
@@ -266,9 +266,9 @@
 
                             {# Mantiene todos los parámetros GET activos (filtros, etc.) excepto 'q','field' y 'page' #}
                             {% for key, value in request.GET.items %}
-                            {% if key != 'q' and key != 'page' and key != 'field' %}
-                            <input type="hidden" name="{{ key }}" value="{{ value }}">
-                            {% endif %}
+                                {% if key != 'q' and key != 'page' and key != 'field' %}
+                                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                                {% endif %}
                             {% endfor %}
 
                             <div class="mb-4 flex space-x-3 items-center gap-3">
@@ -336,90 +336,90 @@
                                 {# Contenido de tabla #}
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     {% for recibo in recibos %}
-                                        <tr
-                                            class="{% if recibo.anulado %}bg-red-50/50 text-gray-400 opacity-80{% else %}hover:bg-gray-50{% endif %} transition duration-100">
-                                            <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500">{{ recibo.id }}
-                                            </td>
-                                            <td
-                                                class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                {# 🛑 CAMBIO APLICADO AQUÍ: stringformat:"04d" #}
-                                                <a href="{% url 'recibos:modificar_recibo' recibo.pk %}" class="{% if not recibo.anulado %}text-indigo-600 hover:text-indigo-900 font-bold{% else %}text-gray-500{% endif %}">
-                                                    {{ recibo.numero_recibo|stringformat:"04d" }}
+                                    <tr
+                                        class="{% if recibo.anulado %}bg-red-50/50 text-gray-400 opacity-80{% else %}hover:bg-gray-50{% endif %} transition duration-100">
+                                        <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500">{{ recibo.id }}
+                                        </td>
+                                        <td
+                                            class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            {# Enlace al recibo para modificar #}
+                                            <a href="{% url 'recibos:modificar_recibo' recibo.pk %}" class="{% if not recibo.anulado %}text-indigo-600 hover:text-indigo-900 font-bold{% else %}text-gray-500{% endif %}">
+                                                {{ recibo.numero_recibo|stringformat:"04d" }}
+                                            </a>
+                                        </td>
+                                        <td
+                                            class="px-3 py-2 whitespace-nowrap text-sm text-gray-700 max-w-xs overflow-hidden text-ellipsis">
+                                            {{ recibo.nombre }}</td>
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                                            {{ recibo.rif_cedula_identidad }}</td>
+
+                                        <td
+                                            class="px-3 py-2 whitespace-nowrap text-sm font-bold text-right text-indigo-600">
+                                            {{ recibo.total_monto_bs|floatformat:2 }}
+                                        </td>
+
+                                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                                            {{ recibo.fecha|date:"d/m/Y" }}</td>
+
+                                        {# ESTILO PARA EL ESTADO #}
+                                        <td class="px-3 py-2 whitespace-nowrap text-center">
+                                            {% if recibo.anulado %}
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                <i class="fas fa-ban mr-1"></i> ANULADO
+                                            </span>
+                                            {% else %}
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                {{ recibo.estado|default:"N/A"|title }}
+                                            </span>
+                                            {% endif %}
+                                        </td>
+
+                                        {# BOTONES DE ACCIÓN #}
+                                        <td class="px-3 py-2 whitespace-nowrap text-center text-sm font-medium">
+                                            <div class="flex space-x-2 justify-center">
+
+                                                {# 1. DESCARGAR (PDF) - Icono de flecha abajo #}
+                                                <a href="{% url 'recibos:generar_pdf_recibo' recibo.pk %}"
+                                                    title="Descargar PDF"
+                                                    class="text-green-600 hover:text-green-900 transition duration-150 p-1 rounded hover:bg-green-50">
+                                                    <i class="fas fa-file-pdf text-xl"></i>
                                                 </a>
-                                            </td>
-                                            <td
-                                                class="px-3 py-2 whitespace-nowrap text-sm text-gray-700 max-w-xs overflow-hidden text-ellipsis">
-                                                {{ recibo.nombre }}</td>
-                                            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                                {{ recibo.rif_cedula_identidad }}</td>
 
-                                            <td
-                                                class="px-3 py-2 whitespace-nowrap text-sm font-bold text-right text-indigo-600">
-                                                {{ recibo.total_monto_bs|floatformat:2 }}
-                                            </td>
-
-                                            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                                {{ recibo.fecha|date:"d/m/Y" }}</td>
-
-                                            {# ESTILO PARA EL ESTADO #}
-                                            <td class="px-3 py-2 whitespace-nowrap text-center">
-                                                {% if recibo.anulado %}
-                                                <span
-                                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                    <i class="fas fa-ban mr-1"></i> ANULADO
-                                                </span>
+                                                {# 2. MODIFICAR (Icono lápiz) - ENLACE DIRECTO #}
+                                                {% if not recibo.anulado %}
+                                                <a href="{% url 'recibos:modificar_recibo' pk=recibo.pk %}"
+                                                    title="Modificar Recibo"
+                                                    class="text-blue-600 hover:text-blue-900 transition duration-150 p-1 rounded hover:bg-blue-50">
+                                                    <i class="fas fa-edit text-xl"></i>
+                                                </a>
                                                 {% else %}
-                                                <span
-                                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                    {{ recibo.estado|default:"N/A"|title }}
+                                                <span title="Recibo Anulado, no se puede modificar" class="text-gray-300 p-1">
+                                                    <i class="fas fa-edit text-xl"></i>
                                                 </span>
                                                 {% endif %}
-                                            </td>
 
-                                            {# BOTONES DE ACCIÓN #}
-                                            <td class="px-3 py-2 whitespace-nowrap text-center text-sm font-medium">
-                                                <div class="flex space-x-2 justify-center">
-
-                                                    {# 1. DESCARGAR (PDF) - Icono de flecha abajo #}
-                                                    <a href="{% url 'recibos:generar_pdf_recibo' recibo.pk %}"
-                                                        title="Descargar PDF"
-                                                        class="text-green-600 hover:text-green-900 transition duration-150 p-1 rounded hover:bg-green-50">
-                                                        <i class="fas fa-file-pdf text-xl"></i>
-                                                    </a>
-
-                                                    {# 2. MODIFICAR (Icono de lápiz) - ENLACE DIRECTO #}
-                                                    {% if not recibo.anulado %}
-                                                    <a href="{% url 'recibos:modificar_recibo' pk=recibo.pk %}"
-                                                        title="Modificar Recibo"
-                                                        class="text-blue-600 hover:text-blue-900 transition duration-150 p-1 rounded hover:bg-blue-50">
-                                                        <i class="fas fa-edit text-xl"></i>
-                                                    </a>
-                                                    {% else %}
-                                                    <span title="Recibo Anulado, no se puede modificar" class="text-gray-300 p-1">
-                                                        <i class="fas fa-edit text-xl"></i>
-                                                    </span>
-                                                    {% endif %}
-
-                                                    {# 3. ANULAR (Icono de cruz) #}
-                                                    {% if not recibo.anulado %}
-                                                    <button type="button"
-                                                        data-message="¿Estás seguro que deseas **ANULAR el recibo N°{{ recibo.numero_recibo|stringformat:'04d' }}**? Esta acción no se puede deshacer."
-                                                        data-confirm-text="Sí, Anular"
-                                                        data-color="red"
-                                                        data-action-url="{% url 'recibos:dashboard' %}"
-                                                        data-recibo-id="{{ recibo.pk }}"
-                                                        class="anular-recibo-btn text-red-600 hover:text-red-900 transition duration-150 p-1 rounded hover:bg-red-50"
-                                                        title="Anular Recibo">
-                                                        <i class="fas fa-times-circle text-xl"></i>
-                                                    </button>
-                                                    {% else %}
-                                                    <span title="Recibo Anulado" class="text-gray-300 p-1">
-                                                        <i class="fas fa-times-circle text-xl"></i>
-                                                    </span>
-                                                    {% endif %}
-                                                </div>
-                                            </td>
-                                        </tr>
+                                                {# 3. ANULAR (Icono de cruz) #}
+                                                {% if not recibo.anulado %}
+                                                <button type="button"
+                                                    data-message="¿Estás seguro que deseas **ANULAR el recibo N°{{ recibo.numero_recibo|stringformat:'04d' }}**? Esta acción no se puede deshacer."
+                                                    data-confirm-text="Sí, Anular"
+                                                    data-color="red"
+                                                    data-action-url="{% url 'recibos:dashboard' %}"
+                                                    data-recibo-id="{{ recibo.pk }}"
+                                                    class="anular-recibo-btn text-red-600 hover:text-red-900 transition duration-150 p-1 rounded hover:bg-red-50"
+                                                    title="Anular Recibo">
+                                                    <i class="fas fa-times-circle text-xl"></i>
+                                                </button>
+                                                {% else %}
+                                                <span title="Recibo Anulado" class="text-gray-300 p-1">
+                                                    <i class="fas fa-times-circle text-xl"></i>
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
                                     {% empty %}
                                     <tr>
                                         <td colspan="8"

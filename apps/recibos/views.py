@@ -12,8 +12,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, Paragraph
 from decimal import Decimal
 import logging
 from django.urls import reverse
-# 🛑 IMPORTACIÓN CORREGIDA: Asegúrate de importar la utilidad de recibo unitario
-from .utils import importar_recibos_desde_excel, generar_reporte_excel, generar_pdf_reporte, generar_pdf_recibo_unitario 
+from .utils import importar_recibos_desde_excel, generar_reporte_excel, generar_pdf_reporte, generar_pdf_recibo_unitario
 from django.conf import settings
 from django.views.generic import ListView, TemplateView
 from .forms import ReciboForm
@@ -22,6 +21,8 @@ import zipfile
 from django.utils import timezone
 import pandas as pd
 from reportlab.lib.styles import getSampleStyleSheet
+from datetime import datetime
+import pytz # Importación necesaria para manejar la zona horaria
 
 logger = logging.getLogger(__name__)
 
@@ -37,18 +38,13 @@ try:
         'encabezado.png'
     )
 except AttributeError:
+    # Fallback si settings.BASE_DIR no está definido (aunque en Django debería estarlo)
     HEADER_IMAGE = os.path.join(os.path.dirname(__file__), '..', 'static', 'recibos', 'images', 'encabezado.png')
 
 
 class PaginaBaseView(TemplateView):
     template_name = 'base.html'
 
-# ❌ LÓGICA DE GENERACIÓN DE PDF ELIMINADA:
-# Se ha movido a .utils.generar_pdf_recibo_unitario para centralizar.
-# Las funciones de dibujo y formateo auxiliar (draw_text_line, format_currency, draw_centered_text_right)
-# deben ser revisadas si se usan en generate_receipt_pdf. Si no se usan en otro lugar, también deben eliminarse.
-# Si se usan en utils.py, se deben mover a utils.py o mantenerse aquí si utils.py las importa desde aquí.
-# Por simplicidad, he dejado las funciones auxiliares aquí, asumiendo que generate_receipt_pdf fue eliminada.
 
 def format_currency(amount):
     """Formatea el monto como moneda (ej: 1.234,56)."""
@@ -74,20 +70,15 @@ def draw_centered_text_right(canvas_obj, y_pos, text, x_start, width, font_name=
     x = x_start + (width - text_width) / 2
     canvas_obj.drawString(x, y_pos, text.upper())
 
-# ❌ FUNCIÓN generate_receipt_pdf ELIMINADA
 
-# 🛑 FUNCIÓN CORREGIDA
 def generar_pdf_recibo(request, pk):
     """
     Genera el PDF de un recibo específico y retorna el HttpResponse para
-    la descarga directa (Usada por el botón del dashboard).
+    la descarga directa (Usado por el botón del dashboard).
     """
     try:
         recibo = get_object_or_404(Recibo, pk=pk)
-        
-        # ✅ CORRECCIÓN CLAVE: Llama a la utilidad de descarga y retorna su respuesta.
         return generar_pdf_recibo_unitario(recibo)
-
     except Exception as e:
         logger.error(f"Error al generar PDF unitario para PK={pk}: {e}")
         return HttpResponse(f"Error al generar el PDF: {e}", status=500)
@@ -118,11 +109,8 @@ def generar_zip_recibos(request):
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for recibo in recibos:
             try:
-                # 🛑 CORRECCIÓN: Usar la nueva utilidad de generación PDF unitaria
-                pdf_response = generar_pdf_recibo_unitario(recibo) 
-                
-                # Extraer el contenido (bytes) del HttpResponse
-                pdf_buffer_value = pdf_response.content 
+                pdf_response = generar_pdf_recibo_unitario(recibo)
+                pdf_buffer_value = pdf_response.content
 
                 num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
                 filename = f"Recibo_N_{num_recibo_zfill}_{recibo.rif_cedula_identidad}.pdf"
@@ -139,7 +127,7 @@ def generar_zip_recibos(request):
         zip_buffer.getvalue(),
         content_type='application/zip'
     )
-    response['Content-Disposition'] = f'attachment;filename="{filename_zip}"'
+    response['Content-Disposition'] = f'attachment; filename="{filename_zip}"'
 
     return response
 
@@ -153,17 +141,27 @@ class ReciboListView(ListView):
     def post(self, request, *args, **kwargs):
         """Maneja todas las acciones POST: Carga de Excel, Anulación, Limpieza."""
         action = request.POST.get('action')
+        
+        # Obtener la zona horaria del proyecto de Django para manejar la fecha de anulación
+        try:
+            current_timezone = pytz.timezone(settings.TIME_ZONE)
+        except:
+            current_timezone = timezone.get_current_timezone() # Fallback si TIME_ZONE no está configurado
 
         if action == 'anular':
             recibo_id = request.POST.get('recibo_id')
             if recibo_id:
                 recibo = get_object_or_404(Recibo, pk=recibo_id)
+                num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
+                
                 if not recibo.anulado:
-
-                    num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
-
+                    
+                    # === INICIO CORRECCIÓN CLAVE ===
                     recibo.anulado = True
+                    recibo.fecha_anulacion = datetime.now(current_timezone) # <-- ¡Aquí está la corrección!
                     recibo.save()
+                    # === FIN CORRECCIÓN CLAVE ===
+                    
                     messages.success(request, f"El recibo N°{num_recibo_zfill} ha sido ANULADO correctamente.")
                 else:
                     messages.warning(request, "Este recibo ya estaba anulado.")
@@ -172,6 +170,7 @@ class ReciboListView(ListView):
             return redirect(reverse('recibos:dashboard'))
 
         elif action == 'clear_logs':
+            # Nota: 'clear_logs' en realidad elimina todos los recibos. Mantengo tu lógica.
             Recibo.objects.all().delete()
             messages.success(request, "Todos los recibos han sido eliminados de la base de datos.")
             return redirect(reverse('recibos:dashboard'))
@@ -188,8 +187,7 @@ class ReciboListView(ListView):
                         messages.success(request, message)
 
                         if len(recibos_pks) == 1:
-                            # ✅ CORRECCIÓN CLAVE: Redirigir a la vista de descarga directa (generar_pdf_recibo)
-                            return redirect(reverse('recibos:generar_pdf_recibo', kwargs={'pk': recibos_pks[0]})) 
+                            return redirect(reverse('recibos:generar_pdf_recibo', kwargs={'pk': recibos_pks[0]}))
                         else:
                             pks_str = ','.join(map(str, recibos_pks))
                             return redirect(reverse('recibos:generar_zip_recibos') + f'?pks={pks_str}')
@@ -309,7 +307,7 @@ def generar_reporte_view(request):
 
     if estado_seleccionado and estado_seleccionado != "":
         filters &= Q(estado__iexact=estado_seleccionado)
-    filtros_aplicados['estado'] = estado_seleccionado if estado_seleccionado else 'Todos los estados'
+        filtros_aplicados['estado'] = estado_seleccionado if estado_seleccionado else 'Todos los estados'
 
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')
@@ -343,7 +341,7 @@ def generar_reporte_view(request):
 
     if category_count > 0:
         filters &= category_filters
-        filtros_aplicados['categorias'] = ','.join(selected_categories_names)
+        filtros_aplicados['categorias'] = ', '.join(selected_categories_names)
     else:
         filtros_aplicados['categorias'] = 'Todas las categorías'
 
@@ -420,10 +418,21 @@ def modificar_recibo(request, pk):
         action = request.POST.get('action')
 
         if action == 'anular':
+            
+            # Obtener la zona horaria del proyecto de Django
+            try:
+                current_timezone = pytz.timezone(settings.TIME_ZONE)
+            except:
+                current_timezone = timezone.get_current_timezone()
+
             recibo.anulado = True
+            recibo.fecha_anulacion = datetime.now(current_timezone)
             recibo.save()
             messages.warning(request, f"¡Recibo N°{num_recibo_zfill} ha sido ANULADO exitosamente! (Acción irreversible)")
-            return redirect(reverse('recibos:recibos_anulados'))
+            
+            # === REDIRECCIÓN CORREGIDA ===
+            return redirect(reverse('recibos:dashboard')) # <-- ¡Cambiado de recibos_anulados a dashboard!
+            # =============================
 
         else:
             form = ReciboForm(request.POST, instance=recibo)
