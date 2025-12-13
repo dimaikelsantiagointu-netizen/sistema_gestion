@@ -6,69 +6,134 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SG - Centro de Control Principal</title>
     
-    <!-- CRÍTICO: Carga de Tailwind (Necesario para el CSS personalizado) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Carga de estilos personalizados -->
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
 </head>
-<body class="body-base">
 
-    <!-- ENCABEZADO -->
-    <header class="nav-bar">
-        <div class="nav-cont">
-            <a href="/" class="nav-logo">
-                SISTEMA GESTION APPS
+<body class="min-h-screen bg-gray-50 font-sans antialiased text-gray-800">
+
+    <header class="bg-indigo-900 shadow-2xl sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+            
+            <a href="{% url 'base' %}" class="text-white text-xl font-extrabold tracking-wide flex items-center">
+                <i class="fas fa-cubes mr-3 text-indigo-400"></i> SISTEMA GESTION
             </a>
-            <div class="user-info">
-                <span class="user-name">#######</span>
-                <button class="btn-logout">######</button>
+            
+            <div class="flex items-center space-x-4">
+                
+                {# SECCIÓN DE USUARIO SIMPLIFICADA #}
+                <span class="hidden sm:inline text-sm text-indigo-300">Hola, Admin</span>
+                
+                {# BOTÓN CERRAR SESIÓN (Anteriormente 'Salir') #}
+                <a href="#" 
+                   class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition duration-150">
+                   <i class="fas fa-sign-out-alt mr-1"></i> Cerrar Sesión
+                </a>
+                
             </div>
         </div>
     </header>
 
-    <!-- CONTENIDO PRINCIPAL: CENTRO DE CONTROL -->
-    <main class="main-cont">
+    <main class="max-w-7xl mx-auto p-8 sm:p-12 flex-grow">
         
-        <h1 class="main-title">
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-center text-gray-900 mb-2 mt-4">
             Centro de Control
         </h1>
 
-        <p class="main-desc">Selecciona el módulo de gestión que deseas utilizar. Los módulos inactivos estarán disponibles pronto.</p>
+        <p class="text-lg text-center text-gray-600 mb-12">Selecciona el módulo de gestión que deseas utilizar. Los módulos inactivos estarán disponibles pronto.</p>
 
-        <!-- GRID DE APLICACIONES -->
-        <div class="app-grid">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             
-            <!-- MÓDULO ACTIVO: Recibos (Destacado) -->
-            <a href="{% url 'recibos:dashboard' %}" class="app-card app-card-active"></a>
+            {# ======================================================= #}
+            {# 1. MÓDULO ACTIVO: Recibos #}
+            {# ======================================================= #}
+            <a href="{% url 'recibos:dashboard' %}" 
+               title="Ingresar al módulo de Recibos"
+               class="bg-white border-2 border-indigo-500 rounded-xl p-8 shadow-2xl hover:shadow-indigo-300/50 hover:scale-[1.02] transform transition duration-300 cursor-pointer flex flex-col items-center text-center">
                 
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="app-icon">
+                {# Icono: Recibo #}
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-indigo-600 mb-4">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m-3.75 4.5H12M9 3v2.25M9 5.25v2.25m-2.25 0h7.5A2.25 2.25 0 0 0 16.5 7.5v11.25a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25V7.5A2.25 2.25 0 0 1 7.5 5.25h7.5" />
                 </svg>
-                <span class="app-title">Gestión de Recibos</span>
-                <span class="app-desc">Creación y seguimiento de pagos.</span>
+                
+                <span class="text-2xl font-bold text-indigo-800 mb-2">Gestión de Recibos</span>
+                <span class="text-base text-gray-600">Creación, anulación y seguimiento de pagos.</span>
             </a>
 
-            <!-- MÓDULO INACTIVO: Clientes -->
-            <div title="Módulo inactivo" class="app-card app-card-inactive">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="app-icon">
+            {# ======================================================= #}
+            {# 2. MÓDULO INACTIVO: Gestión de Clientes #}
+            {# ======================================================= #}
+            <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
+                
+                {# Icono: Usuarios/Clientes #}
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-gray-500 mb-4">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                 </svg>
-                <span class="app-title">Gestión de Clientes</span>
-                <span class="app-desc">Próximamente.</span>
+                
+                <span class="text-2xl font-bold text-gray-600 mb-2">Gestión de Clientes</span>
+                <span class="text-base text-gray-500">Próximamente.</span>
             </div>
             
-            <!-- MÓDULO INACTIVO: Reportes -->
-            <div title="Módulo inactivo" class="app-card app-card-inactive">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="app-icon">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.5h.001m.001 0h.001m.001 0h.001M21 13.5h-.001m.001 0h-.001m.001 0h-.001M16.5 7.5h.001m.001 0h.001m.001 0h.001M16.5 16.5h.001m.001 0h.001m.001 0h.001M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
+            {# ======================================================= #}
+            {# 3. MÓDULO INACTIVO: Sistema de Pagos (Nuevo) #}
+            {# ======================================================= #}
+            <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
+                
+                {# Icono: Tarjeta o Dinero #}
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-gray-500 mb-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.063 60.063 0 0 1 15.794 2.155 3.001 3.001 0 0 0 3.712-1.748L22.28 16.5A.75.75 0 0 0 21.75 16H8.25a.75.75 0 0 0-.742.639l-.495 2.126a2.25 2.25 0 0 1-2.07 1.735h-3.24a.75.75 0 0 1 0-1.5h3.24a.75.75 0 0 0 .69-1.077L7.5 17.139a.75.75 0 0 0-.742-.639H2.25a.75.75 0 0 0 0 1.5h4.125a.75.75 0 0 1 .69 1.077l.495 2.126zM2.25 12a.75.75 0 0 0 0 1.5h18a.75.75 0 0 0 0-1.5h-18z" />
                 </svg>
-            <span class="app-title">Reportes y Estadísticas</span>
-                <span class="app-desc">Próximamente.</span>
+                
+                <span class="text-2xl font-bold text-gray-600 mb-2">Sistema de Pagos</span>
+                <span class="text-base text-gray-500">Próximamente.</span>
+            </div>
+
+            {# ======================================================= #}
+            {# 4. MÓDULO INACTIVO: Gestión de Contratos (Nuevo) #}
+            {# ======================================================= #}
+            <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
+                
+                {# Icono: Contrato/Documento #}
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-gray-500 mb-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.25a.75.75 0 0 0-.75-.75h-2.25a.75.75 0 0 0-.75.75v2.25m4.5 0h-4.5m4.5 0a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1-.75-.75v-3.75a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 .75.75v3.75m-4.5-9h4.5m-4.5 0h4.5m-4.5 0h4.5m-4.5 0h4.5M6.75 6.75h.008v.008h-.008V6.75ZM6.75 10.5h.008v.008h-.008V10.5ZM6.75 14.25h.008v.008h-.008V14.25ZM6.75 18h.008v.008h-.008V18ZM11.25 6.75h.008v.008h-.008V6.75ZM11.25 10.5h.008v.008h-.008V10.5ZM11.25 14.25h.008v.008h-.008V14.25ZM11.25 18h.008v.008h-.008V18Z" />
+                </svg>
+                
+                <span class="text-2xl font-bold text-gray-600 mb-2">Gestión de Contratos</span>
+                <span class="text-base text-gray-500">Próximamente.</span>
+            </div>
+
+            {# ======================================================= #}
+            {# 5. MÓDULO INACTIVO: Sellos Dorados (Nuevo) #}
+            {# ======================================================= #}
+            <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
+                
+                {# Icono: Sello/Medalla #}
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-gray-500 mb-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21.75V15.75M12 15.75h3M12 15.75H9M12 15.75v-3m0 3v3m0-3h3m0 0H9m0 0v-3m0 3v3m0 0H9m0 0v-3m0 0v-3m0 0v-3M12 12V3m0 9v3m0-3h3m0 0H9m0 0v-3m0 3v3m0 0H9m0 0v-3m0 0v-3m0 0v-3M6 12h12M6 12v3m0-3v-3m0 3v3m0 0h12M6 12v3m0-3v-3m0 0H18m0 0v-3m0 3v3m0 0H6M6 12v3m0-3v-3m0 0H18m0 0v-3m0 3v3M6 12v3m0-3v-3m0 0H18m0 0v-3m0 3v3M12 21.75V15.75M12 15.75h3M12 15.75H9M12 15.75v-3m0 3v3m0 0H9M12 15.75v-3m0 3v3M12 15.75v-3m0 3v3M12 21.75V15.75M12 15.75h3M12 15.75H9M12 15.75v-3m0 3v3M12 15.75v-3m0 3v3M12 21.75V15.75M12 15.75h3M12 15.75H9M12 15.75v-3m0 3v3M12 15.75v-3m0 3v3" />
+                </svg>
+
+                <span class="text-2xl font-bold text-gray-600 mb-2">Sellos Dorados</span>
+                <span class="text-base text-gray-500">Próximamente.</span>
+            </div>
+            
+            {# ======================================================= #}
+            {# 6. MÓDULO INACTIVO: Gestión Documental (Reemplaza Reportes) #}
+            {# ======================================================= #}
+            <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
+                
+                {# Icono: Documento / Folder #}
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-gray-500 mb-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12h18m-18 0a6 6 0 0 1 12 0v2.25a.75.75 0 0 0 .75.75h6.75a.75.75 0 0 0 .75-.75V12m-18 0a6 6 0 0 0 12 0v2.25a.75.75 0 0 0 .75.75h6.75a.75.75 0 0 0 .75-.75V12m-18 0a6 6 0 0 0 12 0v2.25a.75.75 0 0 0 .75.75h6.75a.75.75 0 0 0 .75-.75V12m-18 0a6 6 0 0 0 12 0v2.25a.75.75 0 0 0 .75.75h6.75a.75.75 0 0 0 .75-.75V12" />
+                </svg>
+                
+                <span class="text-2xl font-bold text-gray-600 mb-2">Gestión Documental</span>
+                <span class="text-base text-gray-500">Próximamente.</span>
             </div>
 
         </div>
     </main>
 
 </body>
-</html>    
+</html>

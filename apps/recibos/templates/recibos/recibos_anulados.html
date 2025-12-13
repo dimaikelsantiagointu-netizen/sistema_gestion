@@ -26,7 +26,12 @@
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre/Cédula/RIF</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto Total (Bs)</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    
+                    {# CAMBIO 1: Estado del recibo (valor real) #}
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado Geográfico</th> 
+                    
+                    {# CAMBIO 2: Nueva columna para el Estatus de Anulación #}
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estatus Anulación</th> 
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -45,6 +50,13 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-700">
                         Bs {{ recibo.total_monto_bs|floatformat:2 }}
                     </td>
+                    
+                    {# CAMBIO 3: Muestra el estado geográfico real #}
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {{ recibo.estado|default:"N/A" }}
+                    </td>
+                    
+                    {# CAMBIO 4: Muestra el estatus de Anulación con la etiqueta visual #}
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-200 text-red-800">
                             ANULADO
@@ -53,7 +65,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
                         <i class="fas fa-frown mr-2"></i> No hay recibos anulados en el sistema.
                     </td>
                 </tr>

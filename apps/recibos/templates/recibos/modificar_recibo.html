@@ -141,7 +141,7 @@
                                     {{ field }}
                                 </div>
                                 <div class="ml-3 text-sm leading-6">
-                                    <label for="{{ field.id_for_label }}" class="font-medium text-gray-900">{{ field.label }}</label>
+                                    <label for="{{ field.id_for_label }}" class="font-medium text-gray-700">{{ field.label }}</label>
                                 </div>
                                 {% if field.errors %} <p class="text-red-500 text-xs mt-1">{{ field.errors.as_text }}</p> {% endif %}
                             </div>
@@ -165,7 +165,13 @@
                         {# Campo fecha #}
                         <div class="sm:col-span-2">
                             <label for="{{ form.fecha.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.fecha.label }} (Fecha Pago):</label>
-                            <div class="mt-1">{{ form.fecha }}</div>
+                            {# AÑADIR ATRIBUTO 'value' si no se usa el widget de DateInput en forms.py #}
+                            {# Si usas el widget DateInput en forms.py, esto no es estrictamente necesario, pero ayuda a la claridad: #}
+                            <div class="mt-1">
+                                <input type="date" name="{{ form.fecha.name }}" id="{{ form.fecha.id_for_label }}" 
+                                    value="{{ recibo.fecha|date:'Y-m-d' }}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
                             {% if form.fecha.errors %} <p class="text-red-500 text-xs mt-1">{{ form.fecha.errors.as_text }}</p> {% endif %}
                         </div>
 

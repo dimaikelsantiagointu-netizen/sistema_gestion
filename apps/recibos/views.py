@@ -13,7 +13,7 @@ import logging
 from django.urls import reverse
 from .utils import importar_recibos_desde_excel, generar_reporte_excel, generar_pdf_reporte
 from django.conf import settings
-from django.views.generic import ListView
+from django.views.generic import ListView, TemplateView
 from .forms import ReciboForm
 from .constants import CATEGORY_CHOICES_MAP, CATEGORY_CHOICES, ESTADO_CHOICES_MAP
 
@@ -35,6 +35,10 @@ except AttributeError:
     # Fallback si settings.BASE_DIR no está disponible o la ruta es relativa
     HEADER_IMAGE = os.path.join(os.path.dirname(__file__), '..', 'static', 'recibos', 'images', 'encabezado.png')
 
+#para volver a la pagina incial base
+class PaginaBaseView(TemplateView):
+    template_name = 'base.html'
+    
 def draw_text_line(canvas_obj, text, x_start, y_start, font_name="Helvetica", font_size=10, is_bold=False):
     """Dibuja una línea de texto y ajusta la posición Y."""
     font = font_name + "-Bold" if is_bold else font_name
@@ -296,7 +300,6 @@ class ReciboListView(ListView):
                 # Aplicamos la lógica de anulación aquí
                 if not recibo.anulado:
                     recibo.anulado = True
-                    recibo.estado = 'Anulado' # Opcional: Establecer un estado de 'Anulado'
                     recibo.save()
                     messages.success(request, f"El recibo N°{recibo.numero_recibo} ha sido ANULADO correctamente.")
                 else:
@@ -446,13 +449,18 @@ class ReciboListView(ListView):
 # =======================================================
 
 def generar_reporte_view(request):
-    # En esta vista, deberías decidir si los reportes deben incluir recibos ANULADOS o no.
-    # Por defecto, los he dejado para que incluyan todos los recibos para la generación de reportes históricos.
-    recibos_queryset = Recibo.objects.all().order_by('-fecha', '-numero_recibo')
+    # 🌟🌟 CAMBIO CLAVE: FILTRAR PARA EXCLUIR ANULADOS 🌟🌟
+    # Aseguramos que solo se consideren los recibos que NO están anulados.
+    recibos_queryset = Recibo.objects.filter(anulado=False).order_by('-fecha', '-numero_recibo')
+    
     filters = Q()
     filtros_aplicados = {}
     periodo_str = 'Todas las fechas'
     
+    # 1. Filtro de Estado
+    estado_seleccionado = request.GET.get('estado')
+    # ... (El resto de la lógica de filtros se mantiene igual) ...
+
     # 1. Filtro de Estado
     estado_seleccionado = request.GET.get('estado')
     if estado_seleccionado and estado_seleccionado != "":
@@ -485,7 +493,8 @@ def generar_reporte_view(request):
     category_filters = Q()
     category_count = 0
 
-    for codigo, nombre_display in CATEGORY_CHOICES:
+    # Nota: CATEGORY_CHOICES debe estar importado
+    for codigo, nombre_display in CATEGORY_CHOICES: 
         if request.GET.get(codigo) == 'on':
             category_filters |= Q(**{f'{codigo}': True})
             selected_categories_names.append(nombre_display)
@@ -532,7 +541,7 @@ def generar_reporte_view(request):
         filtros_aplicados['busqueda'] = 'Ninguna'
 
 
-    recibos_filtrados = recibos_queryset.filter(filters)
+    recibos_filtrados = recibos_queryset.filter(filters) # Aplica todos los filtros adicionales
 
     action = request.GET.get('action')
 

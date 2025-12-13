@@ -14,19 +14,65 @@ const fileInput = document.getElementById('excel-file-input');
 const uploadStatus = document.getElementById('upload-status');
 const triggerUploadButton = document.getElementById('trigger-upload-button');
 const uploadForm = document.getElementById('upload-form');
-const logDisplay = document.getElementById('log-display');
+const logDisplay = document.getElementById('log-display'); // Declaración principal
 
 // Formularios Ocultos
 const anularForm = document.getElementById('anular-form');
 const clearLogsForm = document.getElementById('clear-logs-form'); 
 
-// Nuevo Botón de Logs Visuales
-const clearVisualLogsButton = document.getElementById('clear-visual-logs-button');
+// Botón de Logs Visuales
+const clearVisualLogsButton = document.getElementById('clear-visual-logs-button'); // Declaración principal
 
 let currentFormToSubmit = null; // Variable para rastrear qué formulario debe enviarse
 
+
+// =======================================================
+// 2. FUNCIONALIDAD DE LOGS VISUALES
+// =======================================================
+
+/**
+ * Agrega un mensaje al panel de logs con estilos de color.
+ * Esta función es la que genera todas las entradas.
+ * @param {string} message - El texto del mensaje.
+ * @param {string} type - 'success', 'error', 'warning', 'info', o 'default'.
+ */
+function logMessage(message, type = 'default') {
+    if (!logDisplay) return;
+
+    const newMessage = document.createElement('p');
+    newMessage.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+
+    // Definición de clases de Tailwind según el tipo
+    let classColor = 'text-gray-700';
+    
+    switch (type) {
+        case 'success':
+            classColor = 'text-green-600 font-bold';
+            break;
+        case 'error':
+            classColor = 'text-red-600 font-bold';
+            break;
+        case 'warning':
+            classColor = 'text-yellow-600';
+            break;
+        case 'info':
+            classColor = 'text-blue-600';
+            break;
+        case 'default':
+        default:
+            classColor = 'text-gray-700';
+            break;
+    }
+
+    newMessage.classList.add('log-entry', classColor);
+    
+    // Añadir el mensaje al inicio del log para ver lo más reciente
+    logDisplay.prepend(newMessage); 
+}
+
+
 // =================================================================
-// 2. FUNCIONES DEL MODAL (Hechas globales para acceso en HTML)
+// 3. FUNCIONES DEL MODAL (Hechas globales para acceso en HTML)
 // =================================================================
 
 window.showModal = function(title, messageHtml, confirmText, targetAction, confirmColor) {
@@ -53,7 +99,7 @@ window.showModal = function(title, messageHtml, confirmText, targetAction, confi
     confirmButton.setAttribute('data-action-type', targetAction);
 
     // Lógica para deshabilitar o cambiar texto si es "solo informativo"
-    const isInfoOnly = (targetAction === 'info'); // Corregido: usa targetAction
+    const isInfoOnly = (targetAction === 'info'); 
     confirmButton.disabled = isInfoOnly;
 
     modal.classList.remove('hidden');
@@ -80,8 +126,9 @@ window.hideModal = function() {
     }, 300);
 }
 
+
 // =================================================================
-// 3. MANEJO DE ESTADO DE CARGA (FEEDBACK VISUAL)
+// 4. MANEJO DE ESTADO DE CARGA (FEEDBACK VISUAL)
 // =================================================================
 
 function setLoadingState(isLoading, fileName = '') {
@@ -94,15 +141,12 @@ function setLoadingState(isLoading, fileName = '') {
         triggerUploadButton.classList.add('opacity-75', 'cursor-wait');
         triggerUploadButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...';
         
-        // Agregar log
-        if (logDisplay) {
-            logDisplay.innerHTML += `<p class="text-yellow-700">[${new Date().toLocaleTimeString()}] Iniciando carga y procesamiento de ${fileName}...</p>`;
-            logDisplay.scrollTop = logDisplay.scrollHeight;
-        }
+        // Agregar log (Usamos la función unificada)
+        logMessage(`Iniciando carga y procesamiento de ${fileName}...`, 'warning');
+
 
     } else {
         // Restaurar estado normal
-        // Ya no es necesario manejar el estado de disabled aquí, lo hace updateUploadButtonState
         triggerUploadButton.classList.remove('opacity-75', 'cursor-wait');
 
         // Restaurar el texto original si existe
@@ -120,18 +164,58 @@ function updateUploadButtonState(hasFile) {
         triggerUploadButton.disabled = false;
         triggerUploadButton.classList.remove('bg-yellow-600', 'hover:bg-yellow-700');
         triggerUploadButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-        triggerUploadButton.innerHTML = '<i class="fas fa-upload mr-2"></i> **CARGAR** Datos Excel';
+        triggerUploadButton.innerHTML = '<i class="fas fa-upload mr-2"></i> Generar Nuevo Recibo';
     } else {
         triggerUploadButton.disabled = true;
         triggerUploadButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
         triggerUploadButton.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
-        triggerUploadButton.innerHTML = '<i class="fas fa-arrow-up mr-2"></i> Cargar Datos Excel'; //Texto original
+        triggerUploadButton.innerHTML = '<i class="fas fa-arrow-up mr-2"></i> Esperando Archivo'; //Texto original
     }
 }
 
 
 // =================================================================
-// 4. EVENTOS (DOMContentLoaded)
+// 5. MANEJADOR ÚNICO DE CLICK EN EL BOTÓN DE CONFIRMACIÓN DEL MODAL
+// =================================================================
+
+confirmButton.addEventListener('click', function() {
+    const actionType = this.getAttribute('data-action-type');
+
+    if (actionType === 'clear_visual_logs') {
+        // Limpieza de logs visuales (no necesita submit de formulario)
+        if (logDisplay) {
+            logDisplay.innerHTML = `<p class="text-gray-400">Logs limpios. Listo para nuevos procesos.</p>`;
+        }
+        logMessage('Limpieza de logs visuales completada.', 'info');
+        window.hideModal();
+    } 
+    else if (actionType === 'info') {
+        // Botón 'Entendido' (solo es informativo)
+        window.hideModal();
+    }
+    else if (currentFormToSubmit && !this.disabled) {
+        // Acciones que requieren envío de formulario (Anular, Limpiar BD, Carga Excel)
+        
+        if (actionType === 'upload') {
+            const fileName = fileInput.files.length > 0 ? fileInput.files[0].name : '';
+            window.hideModal(); // Ocultar antes de submit para ver el spinner
+            setLoadingState(true, fileName);
+            
+            // Retraso pequeño para asegurar que el DOM se actualice (spinner/log) antes de la navegación
+            setTimeout(() => {
+                currentFormToSubmit.submit();
+            }, 50); 
+        } else {
+            // Anular o Limpiar Logs de BD
+            currentFormToSubmit.submit();
+            window.hideModal(); 
+        }
+    }
+});
+
+
+// =================================================================
+// 6. EVENTOS (DOMContentLoaded)
 // =================================================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -172,16 +256,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (fileInput.files.length > 0) {
                 currentFormToSubmit = uploadForm;
                 
-                // Muestra modal de confirmación antes de enviar
                 window.showModal(
                     'Confirmación de Carga Masiva',
-                    `¿Estás seguro que deseas **cargar los recibos del archivo Excel "${fileInput.files[0].name}"**? Esto creará nuevos registros de forma masiva.`,
+                    `¿Estás seguro que deseas **cargar los recibos del archivo Excel "${fileInput.files[0].name}"**? Esto creará nuevos registros.`,
                     'Sí, Cargar Excel',
-                    'upload', // Identificador de acción
+                    'upload', 
                     'indigo'
                 );
             } else {
-                // Mensaje informativo (Función pendiente)
                 window.showModal(
                     'Acción Inválida',
                     'Por favor, selecciona un archivo Excel primero. (La creación/modificación individual se maneja en la tabla de resultados).',
@@ -198,13 +280,13 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             const reciboId = this.getAttribute('data-recibo-id');
             document.getElementById('anular-recibo-id').value = reciboId;
-            currentFormToSubmit = anularForm; // Referencia al formulario oculto
+            currentFormToSubmit = anularForm; 
 
             window.showModal(
                 'Confirmar Anulación',
                 this.getAttribute('data-message'),
                 this.getAttribute('data-confirm-text'),
-                'anular', // Identificador de acción
+                'anular', 
                 this.getAttribute('data-color')
             );
         });
@@ -217,20 +299,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Confirmar Limpieza de Logs',
                 this.dataset.message,
                 this.dataset.confirmText,
-                'clear_visual_logs', // Identificador de acción
+                'clear_visual_logs', 
                 this.dataset.color
             );
         });
     }
+    
+    // --- G. Integración con Mensajes de Django ---
+    const djangoMessages = document.querySelectorAll('.message-django'); 
 
-    // --- G. Manejo de Filtros Automáticos ---
+    djangoMessages.forEach(messageDiv => {
+        const text = messageDiv.textContent.trim();
+        let type = messageDiv.getAttribute('data-type') || 'default';
+        
+        // Mapear los tipos de mensajes de Django a los tipos de log
+        if (type === 'success') type = 'success';
+        if (type === 'error') type = 'error';
+        if (type === 'warning') type = 'warning';
+        if (type === 'info') type = 'info';
+
+        // Manda el mensaje de Django al panel de logs
+        logMessage(`[Mensaje del Servidor] ${text}`, type);
+
+        // Opcional: Eliminar los mensajes de Django de su ubicación original
+        messageDiv.remove(); 
+    });
+    
+    // Si no hay mensajes, muestra un log inicial de estado
+    if (djangoMessages.length === 0) {
+        logMessage('Sistema iniciado. Listo para recibir comandos.', 'default');
+    }
+
+
+    // --- H. Manejo ade Filtros Automáticos ---
     document.querySelectorAll('#estado, #fecha_inicio, #fecha_fin').forEach(element => {
         element.addEventListener('change', function() {
             document.getElementById('filter-form').submit();
         });
     });
 
-    // --- H. Auto-descarte de Mensajes de Éxito ---
+    // --- I. Auto-descarte de Mensajes de Éxito ---
     const successMessages = document.querySelectorAll('.bg-green-100');
     successMessages.forEach(message => {
         setTimeout(() => {
@@ -243,45 +351,3 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
 });
-
-// =================================================================
-// 5. MANEJADOR ÚNICO DE CLICK EN EL BOTÓN DE CONFIRMACIÓN DEL MODAL
-// =================================================================
-
-confirmButton.addEventListener('click', function() {
-    const actionType = this.getAttribute('data-action-type');
-
-    if (actionType === 'clear_visual_logs') {
-        // Limpieza de logs visuales (no necesita submit de formulario)
-        if (logDisplay) {
-            logDisplay.innerHTML = `<p class="text-gray-400">[${new Date().toLocaleTimeString()}] Logs visuales limpiados.</p>`;
-            logDisplay.scrollTop = 0;
-        }
-        window.hideModal();
-    } 
-    else if (actionType === 'info') {
-        // Botón 'Entendido' (solo es informativo)
-        window.hideModal();
-    }
-    else if (currentFormToSubmit && !this.disabled) {
-        // Acciones que requieren envío de formulario (Anular, Limpiar BD, Carga Excel)
-        
-        if (actionType === 'upload') {
-            // Lógica especial para la carga de Excel: feedback visual ANTES de submit
-            const fileName = fileInput.files.length > 0 ? fileInput.files[0].name : '';
-            window.hideModal(); // Ocultar antes de submit para ver el spinner
-            setLoadingState(true, fileName);
-            
-            // Retraso pequeño para asegurar que el DOM se actualice (spinner/log) antes de la navegación
-            setTimeout(() => {
-                currentFormToSubmit.submit();
-            }, 50); 
-        } else {
-            // Anular
-            currentFormToSubmit.submit();
-            window.hideModal(); 
-        }
-    }
-});
-
-// 🛑 Bloque G de Modificar eliminado, se asume que se usa un <a> en el HTML.

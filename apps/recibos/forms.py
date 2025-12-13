@@ -3,6 +3,7 @@
 from django import forms
 from .models import Recibo 
 from django.core.exceptions import ValidationError
+from unidecode import unidecode # <--- NUEVA IMPORTACIÓN
 
 # Clases base de Tailwind modificadas:
 
@@ -17,7 +18,7 @@ class ReciboForm(forms.ModelForm):
     """
 
     # =======================================================
-    # 1. NORMALIZACIÓN DE DATOS (clean methods) - MANTENIDOS
+    # 1. NORMALIZACIÓN DE DATOS (clean methods) - ACTUALIZADOS
     # =======================================================
 
     def clean_nombre(self):
@@ -32,9 +33,15 @@ class ReciboForm(forms.ModelForm):
         data = self.cleaned_data['ente_liquidado'].strip()
         return data.upper()
     
+    # 🌟🌟🌟 CAMBIO REQUERIDO: NORMALIZAR ESTADO A MAYÚSCULAS Y SIN ACENTOS 🌟🌟🌟
     def clean_estado(self):
         data = self.cleaned_data['estado'].strip()
-        return data.title()
+        if data:
+            # 1. Eliminar acentos (Ej: Mérida -> Merida)
+            data_sin_acentos = unidecode(data)
+            # 2. Convertir a MAYÚSCULAS (Ej: Merida -> MERIDA)
+            return data_sin_acentos.upper()
+        return data
     
     def clean_numero_transferencia(self):
         data = self.cleaned_data['numero_transferencia'].strip()
@@ -69,7 +76,7 @@ class ReciboForm(forms.ModelForm):
             'total_monto_bs',
             'numero_transferencia',
             'conciliado',
-            'fecha',
+            'fecha', # <--- Se asegura de que esté en fields
             'concepto',
         ]
         
@@ -114,6 +121,10 @@ class ReciboForm(forms.ModelForm):
             
             # 3. Conciliación
             'numero_transferencia': forms.TextInput(attrs={'class': TAILWIND_CLASS}),
+            
+            # 🌟🌟🌟 CAMBIO REQUERIDO: DateInput para mantener la fecha. 
+            # El HTML ya lo maneja directamente, pero es buena práctica declararlo aquí.
             'fecha': forms.DateInput(attrs={'type': 'date', 'class': DATE_INPUT_CLASS}), 
+            
             'concepto': forms.Textarea(attrs={'class': TAILWIND_CLASS, 'rows': 2}),
         }

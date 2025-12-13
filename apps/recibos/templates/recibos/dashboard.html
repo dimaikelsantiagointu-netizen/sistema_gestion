@@ -1,6 +1,5 @@
 {% load custom_filters %}
 {% load static %}
-<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -22,7 +21,7 @@
     </script>
 
     {# Font Awesome Icons #}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"/>
 
     {# Estilos personalizados #}
     <link rel="stylesheet" href="{% static 'recibos/css/dashboard.css' %}">
@@ -36,12 +35,21 @@
     {#=================================================================#}
     <header class="bg-indigo-700 shadow-lg z-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-            <a href="{% url 'recibos:dashboard' %}" class="text-white text-xl font-bold flex items-center">
+            <a class="text-white text-xl font-bold flex items-center">
                 <i class="fas fa-receipt mr-3 text-indigo-300"></i>
                 App Recibos
             </a>
             <div class="flex items-center space-x-4">
-                <span class="text-sm text-indigo-300 hidden sm:inline">Hola, {{ user.first_name|default:user.username }}</span>
+                {# Botón compacto para Página Principal (Solo Icono en pantallas pequeñas) #}
+                <a href="{% url 'base' %}" 
+                class="p-2 text-sm font-medium text-white bg-indigo-600 rounded-full hover:bg-indigo-700 transition duration-150 shadow-md flex items-center">
+                    
+                    {# Icono #}
+                    <i class="fas fa-home"></i> 
+                    
+                    {# Texto: Solo visible en pantallas medianas y grandes (sm:inline) #}
+                    <span class="hidden sm:inline ml-2">Principal</span>
+                </a>
             </div>
         </div>
     </header>
@@ -54,17 +62,19 @@
 
             <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">Generador de Recibos de Pago</h1>
 
-            {# Contenedor de Mensajes (Django Messages) #}
-            <div class="mb-4 space-y-2">
+            {#=================================================================#}
+            {# MENSAJES DE DJANGO PARA LOGS (Ocultos y gestionados por JS) #}
+            {# ESTE BLOQUE ES CRUCIAL PARA LA INTEGRACIÓN CON dashboard.js #}
+            {#=================================================================#}
+            {% if messages %}
+            <div id="django-message-catcher" style="display:none;">
                 {% for message in messages %}
-                <div class="p-3 rounded-lg text-sm {% if message.tags == 'success' %}bg-green-100 text-green-800{% elif message.tags == 'error' %}bg-red-100 text-red-800{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %} flex justify-between items-center"
-                    role="alert">
-                    <p>{{ message }}</p>
-                    <button type="button" onclick="this.parentElement.style.display='none';"
-                        class="text-lg font-semibold ml-4">&times;</button>
+                <div class="message-django" data-type="{{ message.tags }}">
+                    {{ message }}
                 </div>
                 {% endfor %}
             </div>
+            {% endif %}
 
             {% block main_content %}
 
@@ -77,8 +87,9 @@
 
                     {# BLOQUE 1: Carga de Archivos #}
                     <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100">
-                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i
-                                class="fas fa-file-upload mr-2 text-indigo-600"></i>Carga de Archivos Excel</h2>
+                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-file-upload mr-2 text-indigo-600"></i> Carga de Archivos Excel
+                        </h2>
                         <form method="post" enctype="multipart/form-data" action="{% url 'recibos:dashboard' %}"
                             id="upload-form" class="space-y-4">
                             {% csrf_token %}
@@ -87,11 +98,11 @@
                                 <span class="sr-only">Seleccionar Archivo Excel</span>
                                 <input type="file" name="archivo_recibo" id="excel-file-input" accept=".xlsx" required
                                     class="block w-full text-sm text-gray-500
-                                    file:mr-4 file:py-2 file:px-4
-                                    file:rounded-lg file:border-0
-                                    file:text-sm file:font-semibold
-                                    file:bg-indigo-50 file:text-indigo-700
-                                    hover:file:bg-indigo-100 transition duration-150"
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-lg file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-indigo-50 file:text-indigo-700
+                                hover:file:bg-indigo-100 transition duration-150"
                                 >
                             </label>
                         </form>
@@ -102,12 +113,13 @@
 
                     {# BLOQUE 2: Botón de Generar Recibos #}
                     <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100">
-                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i
-                                class="fas fa-edit mr-2 text-yellow-600"></i>Generar Recibos</h2>
+                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-edit mr-2 text-yellow-600"></i> Generar Recibos
+                        </h2>
                         <button type="button" id="trigger-upload-button"
                             class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 transition duration-150 flex justify-center items-center disabled:opacity-50"
                             disabled>
-                            <i class="fas fa-arrow-up mr-2"></i>Cargar Datos Excel
+                            <i class="fas fa-arrow-up mr-2"></i> Esperando Archivo
                         </button>
                         <p id="generation-status" class="mt-2 text-xs text-gray-500 text-center italic">
                             Presiona para procesar el archivo seleccionado.
@@ -116,8 +128,9 @@
 
                     {# BLOQUE 3: Logs y Botón Limpiar Logs Visual #}
                     <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100 max-h-96 flex flex-col">
-                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i
-                                class="fas fa-clipboard-list mr-2 text-blue-600"></i>Procesos y Logs</h2>
+                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-clipboard-list mr-2 text-blue-600"></i> Procesos y Logs
+                        </h2>
                         <div id="log-display"
                             class="flex-grow overflow-y-auto bg-gray-50 p-3 rounded-lg text-xs font-mono border border-gray-200">
                             <p class="text-gray-400">Log inicial: Listo para cargar archivo.</p>
@@ -130,13 +143,13 @@
                             data-color="gray"
                             id="clear-visual-logs-button"
                             class="mt-3 w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 transition duration-150 flex justify-center items-center">
-                            <i class="fas fa-broom mr-2"></i>Limpiar Logs (Visual)
+                            <i class="fas fa-broom mr-2"></i> Limpiar Logs (Visual)
                         </button>
                     </div>
-                    
+
                     <div>
-                        <a href="{% url 'recibos:recibos_anulados' %}" 
-                        class="px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition duration-150 flex items-center shadow-md">
+                        <a href="{% url 'recibos:recibos_anulados' %}"
+                            class="px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition duration-150 flex items-center shadow-md">
                             <i class="fas fa-archive mr-2"></i> Ver Recibos Anulados
                         </a>
                     </div>
@@ -150,8 +163,9 @@
 
                     {# Módulo de Reportes y Filtrado #}
                     <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center"><i
-                                class="fas fa-filter mr-2 text-purple-600"></i>Módulo de Reportes y Filtrado</h2>
+                        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-filter mr-2 text-purple-600"></i> Módulo de Reportes y Filtrado
+                        </h2>
 
                         <form method="get" action="{% url 'recibos:dashboard' %}" id="filter-form" class="space-y-4">
 
@@ -220,21 +234,21 @@
                                 {# Botón 1: Aplicar Filtros #}
                                 <button type="submit" name="action" value="filter"
                                     class="flex-1 min-w-[150px] inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition duration-150">
-                                    <i class="fas fa-search mr-2"></i>Aplicar Filtros
+                                    <i class="fas fa-search mr-2"></i> Aplicar Filtros
                                 </button>
 
                                 {# Botón 2: Generar Reporte Excel #}
                                 <button type="submit" name="action" value="excel"
                                     formaction="{% url 'recibos:generar_reporte' %}"
                                     class="flex-1 min-w-[150px] inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition duration-150">
-                                    <i class="fas fa-file-excel mr-2"></i>Generar Reporte Excel
+                                    <i class="fas fa-file-excel mr-2"></i> Generar Reporte Excel
                                 </button>
 
                                 {# Botón 3: Generar Reporte PDF #}
                                 <button type="submit" name="action" value="pdf"
                                     formaction="{% url 'recibos:generar_reporte' %}"
                                     class="flex-1 min-w-[150px] inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
-                                    <i class="fas fa-file-pdf mr-2"></i>Generar Reporte PDF
+                                    <i class="fas fa-file-pdf mr-2"></i> Generar Reporte PDF
                                 </button>
                             </div>
                         </form>
@@ -244,7 +258,7 @@
                     {# Sección de Resultados y Tabla #}
                     <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
                         <h1 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-table mr-2 text-indigo-600"></i>Resultados y Gestión de Recibos
+                            <i class="fas fa-table mr-2 text-indigo-600"></i> Resultados y Gestión de Recibos
                         </h1>
 
                         {# Zona de Búsqueda de la Tabla #}
@@ -252,14 +266,14 @@
 
                             {# Mantiene todos los parámetros GET activos (filtros, etc.) excepto 'q','field' y 'page' #}
                             {% for key, value in request.GET.items %}
-                                {% if key != 'q' and key != 'page' and key != 'field' %}
-                                    <input type="hidden" name="{{ key }}" value="{{ value }}">
-                                {% endif %}
+                            {% if key != 'q' and key != 'page' and key != 'field' %}
+                            <input type="hidden" name="{{ key }}" value="{{ value }}">
+                            {% endif %}
                             {% endfor %}
 
                             <div class="mb-4 flex space-x-3 items-center gap-3">
 
-                                {# Campo de Selección para la Búsqueda (Estructura Corregida) #}
+                                {# Campo de Selección para la Búsqueda #}
                                 <div class="flex-none">
                                     <label for="search-field" class="block text-sm font-medium text-gray-700 mb-1">Buscar por</label>
                                     <select id="search-field" name="field"
@@ -279,7 +293,7 @@
 
                                 <button type="submit"
                                     class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
-                                    <i class="fas fa-search"></i>Buscar
+                                    <i class="fas fa-search"></i> Buscar
                                 </button>
                             </div>
                         </form>
@@ -347,7 +361,7 @@
                                             {% if recibo.anulado %}
                                             <span
                                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                <i class="fas fa-ban mr-1"></i>ANULADO
+                                                <i class="fas fa-ban mr-1"></i> ANULADO
                                             </span>
                                             {% else %}
                                             <span
@@ -376,8 +390,9 @@
                                                     <i class="fas fa-edit text-xl"></i>
                                                 </a>
                                                 {% else %}
-                                                <span title="Recibo Anulado, no se puede modificar" class="text-gray-300 p-1"><i
-                                                        class="fas fa-edit text-xl"></i></span>
+                                                <span title="Recibo Anulado, no se puede modificar" class="text-gray-300 p-1">
+                                                    <i class="fas fa-edit text-xl"></i>
+                                                </span>
                                                 {% endif %}
 
                                                 {# 3. ANULAR (Icono de cruz) #}
@@ -393,8 +408,9 @@
                                                     <i class="fas fa-times-circle text-xl"></i>
                                                 </button>
                                                 {% else %}
-                                                <span title="Recibo Anulado" class="text-gray-300 p-1"><i
-                                                        class="fas fa-times-circle text-xl"></i></span>
+                                                <span title="Recibo Anulado" class="text-gray-300 p-1">
+                                                    <i class="fas fa-times-circle text-xl"></i>
+                                                </span>
                                                 {% endif %}
                                             </div>
                                         </td>
@@ -478,7 +494,7 @@
             </div>
 
             {#=================================================================#}
-            {# 3. FORMULARIOS OCULTOS PARA POST #}
+            {# 3. FORMULARIOS OCULTOS PARA POST (Anular, Limpiar BD) #}
             {#=================================================================#}
             <form id="anular-form" method="POST" action="{% url 'recibos:dashboard' %}" class="hidden">
                 {% csrf_token %}
@@ -533,7 +549,7 @@
     {#=================================================================#}
     {# 6. SCRIPTS JS #}
     {#=================================================================#}
-    {# Este archivo debe contener la lógica para el botón de carga y el modal de anulación/limpieza #}
+    {# Este archivo contiene la lógica completa para el dashboard, modal y logs. #}
     <script src="{% static 'recibos/js/dashboard.js' %}"></script>
     {% block extra_js %}{% endblock extra_js %}
 

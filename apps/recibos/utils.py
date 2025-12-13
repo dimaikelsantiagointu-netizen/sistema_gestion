@@ -17,7 +17,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT 
 from django.conf import settings
-
+from unidecode import unidecode
 from .constants import CATEGORY_CHOICES_MAP 
 from .models import Recibo 
 
@@ -109,7 +109,17 @@ def importar_recibos_desde_excel(archivo_excel):
             ultimo_recibo = Recibo.objects.aggregate(Max('numero_recibo'))['numero_recibo__max']
             data_a_insertar['numero_recibo'] = (ultimo_recibo or 0) + 1
             
-            data_a_insertar['estado'] = str(fila_mapeada.get('estado', '')).strip().upper() 
+            # 🌟🌟 LÓGICA DE NORMALIZACIÓN APLICADA A 'estado' 🌟🌟
+            estado_raw = str(fila_mapeada.get('estado', '')).strip()
+            if estado_raw:
+                # 1. Eliminar acentos (Ej: Mérida -> Merida)
+                estado_sin_acentos = unidecode(estado_raw) 
+                # 2. Convertir a MAYÚSCULAS (Ej: Merida -> MERIDA)
+                data_a_insertar['estado'] = estado_sin_acentos.upper()
+            else:
+                data_a_insertar['estado'] = '' # Maneja el caso vacío
+            # ------------------------------------------------------------
+            
             data_a_insertar['nombre'] = str(fila_mapeada.get('nombre', '')).strip().title()
             data_a_insertar['rif_cedula_identidad'] = str(rif_cedula_raw).strip().replace('.', '').replace('-', '').replace(' ', '').upper()
             data_a_insertar['direccion_inmueble'] = str(fila_mapeada.get('direccion_inmueble', 'DIRECCION NO ESPECIFICADA')).strip().title()
@@ -155,7 +165,6 @@ def importar_recibos_desde_excel(archivo_excel):
     except Exception as e:
         logger.error(f"FALLO DE VALIDACIÓN en el registro: {e}")
         return False, f"Fallo en la carga: Error de validación de datos (revisar consola): {str(e)}", None
-    
 # --- Generador de Reporte Excel (Se mantiene igual) ---
 
 def generar_reporte_excel(request_filters, queryset, filtros_aplicados): 
