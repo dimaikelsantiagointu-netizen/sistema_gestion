@@ -11,15 +11,17 @@ from reportlab.lib.utils import ImageReader
 from decimal import Decimal
 import logging
 from django.urls import reverse
+# Asegúrate de que importar_recibos_desde_excel devuelva una lista de PKs
 from .utils import importar_recibos_desde_excel, generar_reporte_excel, generar_pdf_reporte
 from django.conf import settings
 from django.views.generic import ListView, TemplateView
 from .forms import ReciboForm
 from .constants import CATEGORY_CHOICES_MAP, CATEGORY_CHOICES, ESTADO_CHOICES_MAP
+import zipfile
+from django.utils import timezone # Import necesario para el nombre del ZIP
 
 logger = logging.getLogger(__name__)
 
-# --- Configuración de Imagen y Funciones de Utilidad PDF (Mantenidas) ---
 
 try:
     HEADER_IMAGE = os.path.join(
@@ -32,13 +34,11 @@ try:
         'encabezado.png'
     )
 except AttributeError:
-    # Fallback si settings.BASE_DIR no está disponible o la ruta es relativa
     HEADER_IMAGE = os.path.join(os.path.dirname(__file__), '..', 'static', 'recibos', 'images', 'encabezado.png')
 
-#para volver a la pagina incial base
 class PaginaBaseView(TemplateView):
     template_name = 'base.html'
-    
+
 def draw_text_line(canvas_obj, text, x_start, y_start, font_name="Helvetica", font_size=10, is_bold=False):
     """Dibuja una línea de texto y ajusta la posición Y."""
     font = font_name + "-Bold" if is_bold else font_name
@@ -50,9 +50,7 @@ def format_currency(amount):
     """Formatea el monto como moneda (ej: 1.234,56)."""
     try:
         amount_decimal = Decimal(amount)
-        # Formato ES/LATAM: punto para miles, coma para decimales
         formatted = "{:,.2f}".format(amount_decimal)
-        # Reemplazar la coma del formato en-US (miles) por 'X' temporalmente, el punto (decimal) por coma, y luego 'X' por punto.
         return formatted.replace(",", "X").replace(".", ",").replace("X", ".")
     except Exception:
         return "0,00"
@@ -65,10 +63,8 @@ def draw_centered_text_right(canvas_obj, y_pos, text, x_start, width, font_name=
     x = x_start + (width - text_width) / 2
     canvas_obj.drawString(x, y_pos, text.upper())
 
-# La función generate_receipt_pdf se mantiene sin cambios en su lógica.
 def generate_receipt_pdf(recibo_obj):
     """Genera el contenido del PDF individual para un recibo."""
-    #...(Se mantiene la lógica original de tu código para ReportLab)...
     nombre = recibo_obj.nombre
     cedula = recibo_obj.rif_cedula_identidad
     direccion = recibo_obj.direccion_inmueble
@@ -77,7 +73,11 @@ def generate_receipt_pdf(recibo_obj):
     fecha = recibo_obj.fecha.strftime("%d/%m/%Y")
     concepto = recibo_obj.concepto
     estado = recibo_obj.estado
-    num_recibo = str(recibo_obj.numero_recibo)
+
+    if recibo_obj.numero_recibo:
+        num_recibo = str(recibo_obj.numero_recibo).zfill(4)
+    else:
+        num_recibo = 'N/A'
 
     categorias = {
         f'categoria{i}': getattr(recibo_obj, f'categoria{i}') for i in range(1, 11)
@@ -92,7 +92,6 @@ def generate_receipt_pdf(recibo_obj):
     current_y = height - 50
     y_top = height - 50
 
-    # Lógica de carga de imagen de encabezado
     if os.path.exists(HEADER_IMAGE):
         try:
             img = ImageReader(HEADER_IMAGE)
@@ -218,7 +217,7 @@ def generate_receipt_pdf(recibo_obj):
             current_y = draw_text_line(c, "Número de unidades establecidas en el contrato, ancladas a la moneda de mayor valor estipulada por el BCV", X1_TITLE, current_y, font_size=8, is_bold=False)
             current_y -= 5
 
-        current_y -= 70
+    current_y -= 70
 
     if current_y < 150:
         c.showPage()
@@ -256,9 +255,8 @@ def generate_receipt_pdf(recibo_obj):
     buffer.seek(0)
     return buffer
 
-
 def generar_pdf_recibo(request, pk):
-    """Genera y devuelve el PDF puro para la descarga."""
+    """Genera y devuelve el PDF puro para la descarga (para uso individual)."""
     recibo_obj = get_object_or_404(Recibo, pk=pk)
     buffer = generate_receipt_pdf(recibo_obj)
     filename = f"Recibo_N_{recibo_obj.numero_recibo}.pdf"
@@ -270,6 +268,53 @@ def generar_pdf_recibo(request, pk):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
+def generar_zip_recibos(request):
+    """
+    Toma una lista de PKs de recibos, genera el PDF de cada uno y los comprime en un ZIP.
+    """
+    pks_str = request.GET.get('pks')
+    if not pks_str:
+        messages.error(request, "No se encontraron IDs de recibos para generar el ZIP.")
+        return redirect(reverse('recibos:dashboard'))
+
+    try:
+        pks = [int(pk) for pk in pks_str.split(',')]
+        recibos = Recibo.objects.filter(pk__in=pks)
+    except ValueError:
+        messages.error(request, "Error en el formato de los IDs de recibos.")
+        return redirect(reverse('recibos:dashboard'))
+    except Exception as e:
+        messages.error(request, f"Error al buscar recibos: {e}")
+        return redirect(reverse('recibos:dashboard'))
+
+
+    zip_buffer = io.BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for recibo in recibos:
+            try:
+                pdf_buffer = generate_receipt_pdf(recibo)
+                
+                num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
+                filename = f"Recibo_N_{num_recibo_zfill}_{recibo.rif_cedula_identidad}.pdf"
+                
+                zipf.writestr(filename, pdf_buffer.getvalue())
+            except Exception as e:
+                logger.error(f"Error al generar el PDF para el recibo PK={recibo.pk}: {e}")
+                
+
+    zip_buffer.seek(0)
+    
+    filename_zip = f"Recibos_Masivos_{timezone.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    response = HttpResponse(
+        zip_buffer.getvalue(),
+        content_type='application/zip'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename_zip}"'
+    
+    return response
+
+
 def init_download_and_refresh(request, pk):
     """Renderiza una plantilla con JS que inicia la descarga y redirige."""
     context = {
@@ -279,25 +324,20 @@ def init_download_and_refresh(request, pk):
     return render(request, 'recibos/download_init.html', context)
 
 
-# --- VISTA BASADA EN CLASES (ListView) ---
 class ReciboListView(ListView):
     model = Recibo
     template_name = 'recibos/dashboard.html'
     context_object_name = 'recibos'
-    paginate_by = 20 # FIJADO a 20 como requerido
+    paginate_by = 20
 
     def post(self, request, *args, **kwargs):
         """Maneja todas las acciones POST: Carga de Excel, Anulación, Limpieza."""
         action = request.POST.get('action')
 
-        # 1. ANULACIÓN (Nota: Esta lógica es redundante si solo usas el botón en modificar_recibo)
-        # Se recomienda usar la función modificar_recibo para anular y eliminar esta lógica de aquí,
-        # pero la mantenemos si tienes botones de anulación en el dashboard.
         if action == 'anular':
             recibo_id = request.POST.get('recibo_id')
             if recibo_id:
                 recibo = get_object_or_404(Recibo, pk=recibo_id)
-                # Aplicamos la lógica de anulación aquí
                 if not recibo.anulado:
                     recibo.anulado = True
                     recibo.save()
@@ -305,37 +345,42 @@ class ReciboListView(ListView):
                 else:
                     messages.warning(request, "Este recibo ya estaba anulado.")
             else:
-                messages.error(request, "No se proporcionó el ID del recibo a anular.")
+                messages.error(request, "No se proporcionó el ID del recibo a anular.") # Añadido 'request'
             return redirect(reverse('recibos:dashboard'))
 
-        # 2. CLEAR LOGS (ELIMINACIÓN TOTAL)
-        elif action == 'clear_logs': 
-            # ADVERTENCIA: Esta acción borra *todos* los recibos de la BD, no solo los logs visuales.
+        elif action == 'clear_logs':
             Recibo.objects.all().delete()
             messages.success(request, "Todos los recibos han sido eliminados de la base de datos.")
             return redirect(reverse('recibos:dashboard'))
 
-        # 3. UPLOAD (Importación de Excel)
         elif action == 'upload':
             archivo_excel = request.FILES.get('archivo_recibo')
             if not archivo_excel:
                 messages.error(request, "Por favor, sube un archivo Excel.")
             else:
                 try:
-                    # Asegúrate de que 'importar_recibos_desde_excel' esté disponible/importada
-                    success, message, nuevo_recibo_id = importar_recibos_desde_excel(archivo_excel)
+                    success, message, recibos_pks = importar_recibos_desde_excel(archivo_excel)
 
-                    if success and nuevo_recibo_id:
-                        messages.success(request, f"Importación exitosa. Recibo N°{Recibo.objects.get(pk=nuevo_recibo_id).numero_recibo}. Generado")
-                        return redirect(reverse('recibos:init_download', kwargs={'pk': nuevo_recibo_id}))
+                    if success and recibos_pks and isinstance(recibos_pks, list):
+                        messages.success(request, message)
+                        
+                        if len(recibos_pks) == 1:
+                            # Caso 1: Solo un recibo -> Descarga individual
+                            return redirect(reverse('recibos:init_download', kwargs={'pk': recibos_pks[0]}))
+                        else:
+                            # Caso 2: Múltiples recibos (>1) -> Descarga del ZIP
+                            pks_str = ','.join(map(str, recibos_pks))
+                            return redirect(reverse('recibos:generar_zip_recibos') + f'?pks={pks_str}')
 
                     elif success:
-                        messages.warning(request, "Importación exitosa, pero no se generó un nuevo recibo para descargar.")
+                        messages.warning(request, message)
+
                     else:
-                        messages.error(request, f"Fallo en la carga de Excel: {message}")
+                        messages.error(request, f"Fallo en la carga de Excel: {message}") # Añadido 'request'
+
                 except Exception as e:
                     logger.error(f"Error al ejecutar la importación de Excel: {e}")
-                    messages.error(request, f"Error interno en la lógica de importación: {e}")
+                    messages.error(request, f"Error interno en la lógica de importación: {e}") # Añadido 'request'
 
             return redirect(reverse('recibos:dashboard'))
 
@@ -343,28 +388,22 @@ class ReciboListView(ListView):
 
 
     def get_queryset(self):
-        
-        # 🌟🌟🌟 CAMBIO CLAVE: APLICAR FILTRO DE ANULADO=FALSE 🌟🌟🌟
-        # La tabla principal SÓLO debe mostrar los recibos que NO han sido anulados.
-        queryset = Recibo.objects.filter(anulado=False).order_by('-fecha', '-numero_recibo') 
-        # NOTA: Eliminamos super().get_queryset() porque queremos partir del filtro inicial.
-        
-        # 2. FILTRO: Búsqueda General y Selectiva (q y field) 
+
+        queryset = Recibo.objects.filter(anulado=False).order_by('-fecha', '-numero_recibo')
+
         search_query = self.request.GET.get('q')
-        search_field = self.request.GET.get('field', '') # Captura el campo a buscar
+        search_field = self.request.GET.get('field', '') 
 
         if search_query:
             query_normalizado = search_query.strip()
-            
-            # Lógica para la Búsqueda Selectiva (si se eligió un campo)
-            if search_field and search_field != 'todos': 
+
+            if search_field and search_field != 'todos':
                 try:
                     filtro = {f'{search_field}__icontains': query_normalizado}
                     queryset = queryset.filter(**filtro)
                 except Exception as e:
                     logger.error(f"Error al filtrar por campo dinámico {search_field}: {e}")
-                    
-            # Lógica para la Búsqueda General
+
             else:
                 q_objects = (
                     Q(nombre__icontains=query_normalizado) |
@@ -373,8 +412,7 @@ class ReciboListView(ListView):
                     Q(numero_transferencia__icontains=query_normalizado) |
                     Q(estado__icontains=query_normalizado)
                 )
-                
-                # Intenta buscar por ID si el query es un número
+
                 try:
                     recibo_id = int(query_normalizado)
                     q_objects |= Q(id=recibo_id)
@@ -383,12 +421,10 @@ class ReciboListView(ListView):
 
                 queryset = queryset.filter(q_objects)
 
-        # 3. FILTRO: Estado (dropdown)
         estado_seleccionado = self.request.GET.get('estado')
         if estado_seleccionado and estado_seleccionado != "":
             queryset = queryset.filter(estado__iexact=estado_seleccionado)
 
-        # 4. FILTRO: Rango de Fechas
         fecha_inicio_str = self.request.GET.get('fecha_inicio')
         fecha_fin_str = self.request.GET.get('fecha_fin')
 
@@ -400,7 +436,6 @@ class ReciboListView(ListView):
         except ValueError:
             pass
 
-        # 5. FILTRO: Categorías (Checkboxes)
         category_filters = Q()
         for codigo, _ in CATEGORY_CHOICES:
             if self.request.GET.get(codigo) == 'on':
@@ -414,9 +449,7 @@ class ReciboListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Datos para los filtros en el template (Mantenidos)
-        # Nota: Aquí también se debería considerar filtrar por anulado=False si los estados son generados dinámicamente.
-        context['estados_db'] = Recibo.objects.filter(anulado=False).exclude( # <--- Filtro agregado aquí también
+        context['estados_db'] = Recibo.objects.filter(anulado=False).exclude(
             estado__isnull=True
         ).exclude(
             estado__exact=''
@@ -429,12 +462,10 @@ class ReciboListView(ListView):
         context['current_start_date'] = self.request.GET.get('fecha_inicio')
         context['current_end_date'] = self.request.GET.get('fecha_fin')
 
-        # Lógica corregida para pasar request_get excluyendo 'page'
         request_get_copy = self.request.GET.copy()
         if 'page' in request_get_copy:
             del request_get_copy['page']
-        
-        # Eliminamos 'q' y 'field' si están solos, para asegurar que la paginación no los repita incorrectamente.
+
         if 'q' in request_get_copy and not request_get_copy['q']:
             del request_get_copy['q']
         if 'field' in request_get_copy and not request_get_copy['field']:
@@ -444,30 +475,21 @@ class ReciboListView(ListView):
 
         return context
 
-# =======================================================
-# FUNCIONES AUXILIARES (Modificar, Anulados, Reportes)
-# =======================================================
 
 def generar_reporte_view(request):
-    # 🌟🌟 CAMBIO CLAVE: FILTRAR PARA EXCLUIR ANULADOS 🌟🌟
-    # Aseguramos que solo se consideren los recibos que NO están anulados.
     recibos_queryset = Recibo.objects.filter(anulado=False).order_by('-fecha', '-numero_recibo')
-    
+
     filters = Q()
     filtros_aplicados = {}
     periodo_str = 'Todas las fechas'
-    
-    # 1. Filtro de Estado
-    estado_seleccionado = request.GET.get('estado')
-    # ... (El resto de la lógica de filtros se mantiene igual) ...
 
-    # 1. Filtro de Estado
+    estado_seleccionado = request.GET.get('estado')
+
     estado_seleccionado = request.GET.get('estado')
     if estado_seleccionado and estado_seleccionado != "":
         filters &= Q(estado__iexact=estado_seleccionado)
-    filtros_aplicados['estado'] = estado_seleccionado if estado_seleccionado else 'Todos los estados'
+        filtros_aplicados['estado'] = estado_seleccionado if estado_seleccionado else 'Todos los estados'
 
-    # 2. Filtro de Rango de Fechas
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')
 
@@ -487,14 +509,12 @@ def generar_reporte_view(request):
         pass
 
     filtros_aplicados['periodo'] = periodo_str.replace('Todas las fechas Hasta: None', 'Todas las fechas')
-    
-    # 3. Filtro de Categorías
+
     selected_categories_names = []
     category_filters = Q()
     category_count = 0
 
-    # Nota: CATEGORY_CHOICES debe estar importado
-    for codigo, nombre_display in CATEGORY_CHOICES: 
+    for codigo, nombre_display in CATEGORY_CHOICES:
         if request.GET.get(codigo) == 'on':
             category_filters |= Q(**{f'{codigo}': True})
             selected_categories_names.append(nombre_display)
@@ -502,25 +522,22 @@ def generar_reporte_view(request):
 
     if category_count > 0:
         filters &= category_filters
-        filtros_aplicados['categorias'] = ', '.join(selected_categories_names)
+        filtros_aplicados['categorias'] = ','.join(selected_categories_names)
     else:
         filtros_aplicados['categorias'] = 'Todas las categorías'
-        
-    # 4. Filtro de Búsqueda (q y field)
+
     search_query = request.GET.get('q')
-    search_field = request.GET.get('field', '') 
+    search_field = request.GET.get('field', '')
 
     if search_query:
         query_normalizado = search_query.strip()
-        
-        # Búsqueda Selectiva
+
         if search_field and search_field != 'todos':
             try:
                 filtro = {f'{search_field}__icontains': query_normalizado}
                 filters &= Q(**filtro)
             except Exception:
                 pass
-        # Búsqueda General
         else:
             q_objects = (
                 Q(nombre__icontains=query_normalizado) |
@@ -535,7 +552,7 @@ def generar_reporte_view(request):
             except ValueError:
                 pass
             filters &= q_objects
-        
+
         filtros_aplicados['busqueda'] = search_query
     else:
         filtros_aplicados['busqueda'] = 'Ninguna'
@@ -547,7 +564,6 @@ def generar_reporte_view(request):
 
     if action == 'excel':
         try:
-            # Asegúrate de que generar_reporte_excel esté disponible/importado
             return generar_reporte_excel(request.GET, recibos_filtrados, filtros_aplicados)
         except Exception as e:
             logger.error(f"Error al generar el reporte Excel: {e}")
@@ -556,7 +572,7 @@ def generar_reporte_view(request):
 
     elif action == 'pdf':
         try:
-            # Asegúrate de que generar_pdf_reporte esté disponible/importado
+            # 💡 NOTA: Si esto falla, el error está dentro de la función generar_pdf_reporte en utils.py
             return generar_pdf_reporte(recibos_filtrados, filtros_aplicados)
         except Exception as e:
             logger.error(f"Error al generar el reporte PDF: {e}")
@@ -564,78 +580,60 @@ def generar_reporte_view(request):
             return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
 
     else:
-        messages.error(request, "Acción de reporte no válida.")
+        messages.error(request, "Acción de reporte no válida.") # Añadido 'request'
         return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
 
-# ----------------------------------------------------------------------
-# Funciones para la descarga individual (asume que ya existen)
-# ----------------------------------------------------------------------
-# def init_download_and_refresh(request, pk): ...
-# def generar_pdf_recibo(request, pk): ...
-
-# ----------------------------------------------------------------------
-# Modificar Recibo y Anulación (Mantenido y Reconfirmado)
-# ----------------------------------------------------------------------
 
 def modificar_recibo(request, pk):
     """
-    Permite modificar un Recibo existente (si no está anulado) o anularlo.
+    Permite modificar un Recibo existente (sino está anulado) o anularlo.
     """
     recibo = get_object_or_404(Recibo, pk=pk)
-    
-    # 1. REGLA DE INMUTABILIDAD: NO PERMITIR MODIFICAR NI PROCESAR SI ESTÁ ANULADO
+
     if recibo.anulado:
+        # Añadido 'request'
         messages.error(request, f"El recibo N°{recibo.numero_recibo} se encuentra ANULADO y es irreversible. No se pueden realizar cambios.")
-        # Se redirige a la tabla de anulados para que el usuario pueda ver el registro.
-        return redirect(reverse('recibos:recibos_anulados')) 
+        return redirect(reverse('recibos:recibos_anulados'))
 
     if request.method == 'POST':
-        action = request.POST.get('action') # 'modificar' o 'anular'
+        action = request.POST.get('action')
 
-        # =======================================================
-        # ACCIÓN 1: ANULAR EL RECIBO (Eliminación Lógica)
-        # =======================================================
         if action == 'anular':
-            recibo.anulado = True   # Campo 'anulado' en True
-            # Opcional: Establecer un estado de 'Anulado' para reportes o rastreo
-            # recibo.estado = 'Anulado' 
+            recibo.anulado = True
             recibo.save()
+            # Añadido 'request'
             messages.warning(request, f"¡Recibo N°{recibo.numero_recibo} ha sido ANULADO exitosamente! (Acción irreversible)")
-            return redirect(reverse('recibos:recibos_anulados')) 
+            return redirect(reverse('recibos:recibos_anulados'))
 
-        # =======================================================
-        # ACCIÓN 2: MODIFICAR EL RECIBO
-        # =======================================================
-        else: # Si action es 'modificar' o no está definido
+        else:
             form = ReciboForm(request.POST, instance=recibo)
-            
+
             if form.is_valid():
                 form.save()
+                # 🛑 CORRECCIÓN CRÍTICA: Se agregó 'request' como primer argumento
                 messages.success(request, f"¡Recibo N°{recibo.numero_recibo} modificado exitosamente!")
                 return redirect(reverse('recibos:dashboard'))
             else:
+                # Añadido 'request'
                 messages.error(request, "Error al guardar los cambios. Por favor, revisa los campos.")
 
-    # Manejo del GET
+
     else:
         form = ReciboForm(instance=recibo)
 
     context = {
-        'recibo': recibo, 
-        'form': form,     
+        'recibo': recibo,
+        'form': form,
     }
-    
+
     return render(request, 'recibos/modificar_recibo.html', context)
 
-# ----------------------------------------------------------------------
-# Vista de Recibos Anulados (Mantenido y Reconfirmado)
-# ----------------------------------------------------------------------
 def recibos_anulados(request):
     """
     Muestra exclusivamente la tabla de recibos que han sido anulados (anulado=True).
     """
     recibos_anulados_list = Recibo.objects.filter(anulado=True).order_by('-fecha_creacion')
-    
+
     context = {
         'recibos': recibos_anulados_list,
         'titulo': 'Recibos Anulados (Irreversibles)',

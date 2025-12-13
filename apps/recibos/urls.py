@@ -3,6 +3,7 @@
 from django.urls import path
 from . import views # Asegúrese de que views.py contenga la clase ReciboListView
 from apps.recibos.views import PaginaBaseView
+from .views import generar_zip_recibos
 app_name = 'recibos'
 
 urlpatterns = [
@@ -41,4 +42,5 @@ urlpatterns = [
     # 💥 RUTA FALTANTE AGREGADA (Soluciona el NoReverseMatch)
     path('anulados/', views.recibos_anulados, name='recibos_anulados'), 
     path('', PaginaBaseView.as_view(), name='base'),
+    path('generar-zip-recibos/', views.generar_zip_recibos, name='generar_zip_recibos'),
 ]
