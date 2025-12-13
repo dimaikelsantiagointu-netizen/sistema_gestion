@@ -12,16 +12,16 @@ from reportlab.platypus import SimpleDocTemplate, Table, Paragraph
 from decimal import Decimal
 import logging
 from django.urls import reverse
-# Asegúrate de que importar_recibos_desde_excel devuelva una lista de PKs
-from .utils import importar_recibos_desde_excel, generar_reporte_excel, generar_pdf_reporte
+# 🛑 IMPORTACIÓN CORREGIDA: Asegúrate de importar la utilidad de recibo unitario
+from .utils import importar_recibos_desde_excel, generar_reporte_excel, generar_pdf_reporte, generar_pdf_recibo_unitario 
 from django.conf import settings
 from django.views.generic import ListView, TemplateView
 from .forms import ReciboForm
 from .constants import CATEGORY_CHOICES_MAP, CATEGORY_CHOICES, ESTADO_CHOICES_MAP
 import zipfile
-from django.utils import timezone  # Import necesario para el nombre del ZIP
-import pandas as pd  # Import añadido por contexto de reporte
-from reportlab.lib.styles import getSampleStyleSheet  # Import añadido por contexto de reporte
+from django.utils import timezone
+import pandas as pd
+from reportlab.lib.styles import getSampleStyleSheet
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,21 @@ except AttributeError:
 class PaginaBaseView(TemplateView):
     template_name = 'base.html'
 
+# ❌ LÓGICA DE GENERACIÓN DE PDF ELIMINADA:
+# Se ha movido a .utils.generar_pdf_recibo_unitario para centralizar.
+# Las funciones de dibujo y formateo auxiliar (draw_text_line, format_currency, draw_centered_text_right)
+# deben ser revisadas si se usan en generate_receipt_pdf. Si no se usan en otro lugar, también deben eliminarse.
+# Si se usan en utils.py, se deben mover a utils.py o mantenerse aquí si utils.py las importa desde aquí.
+# Por simplicidad, he dejado las funciones auxiliares aquí, asumiendo que generate_receipt_pdf fue eliminada.
+
+def format_currency(amount):
+    """Formatea el monto como moneda (ej: 1.234,56)."""
+    try:
+        amount_decimal = Decimal(amount)
+        formatted = "{:,.2f}".format(amount_decimal)
+        return formatted.replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception:
+        return "0,00"
 
 def draw_text_line(canvas_obj, text, x_start, y_start, font_name="Helvetica", font_size=10, is_bold=False):
     """Dibuja una línea de texto y ajusta la posición Y."""
@@ -50,18 +65,6 @@ def draw_text_line(canvas_obj, text, x_start, y_start, font_name="Helvetica", fo
     canvas_obj.setFont(font, font_size)
     canvas_obj.drawString(x_start, y_start, str(text))
     return y_start - 15
-
-
-def format_currency(amount):
-    """Formatea el monto como moneda (ej: 1.234,56)."""
-    try:
-        amount_decimal = Decimal(amount)
-        # Formato que asegura dos decimales y separadores correctos para Venezuela (., y ,)
-        formatted = "{:,.2f}".format(amount_decimal)
-        return formatted.replace(",", "X").replace(".", ",").replace("X", ".")
-    except Exception:
-        return "0,00"
-
 
 def draw_centered_text_right(canvas_obj, y_pos, text, x_start, width, font_name="Helvetica", font_size=10, is_bold=False):
     """Centra el texto dentro de un ancho específico."""
@@ -71,245 +74,23 @@ def draw_centered_text_right(canvas_obj, y_pos, text, x_start, width, font_name=
     x = x_start + (width - text_width) / 2
     canvas_obj.drawString(x, y_pos, text.upper())
 
+# ❌ FUNCIÓN generate_receipt_pdf ELIMINADA
 
-def generate_receipt_pdf(recibo_obj):
-    """Genera el contenido del PDF individual para un recibo."""
-    nombre = recibo_obj.nombre
-    cedula = recibo_obj.rif_cedula_identidad
-    direccion = recibo_obj.direccion_inmueble
-    monto = recibo_obj.total_monto_bs
-    num_transf = recibo_obj.numero_transferencia if recibo_obj.numero_transferencia else ''
-    fecha = recibo_obj.fecha.strftime("%d/%m/%Y")
-    concepto = recibo_obj.concepto
-    estado = recibo_obj.estado # ✅ VARIABLE ESTADO DEFINIDA AQUÍ
-
-    # Aplicar zfill(4) al número de recibo individual aquí
-    if recibo_obj.numero_recibo:
-        num_recibo = str(recibo_obj.numero_recibo).zfill(4)
-    else:
-        num_recibo = 'N/A'
-
-    categorias = {
-        f'categoria{i}': getattr(recibo_obj, f'categoria{i}') for i in range(1, 11)
-    }
-
-    monto_formateado = format_currency(monto)
-
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
-
-    current_y = height - 50
-    y_top = height - 50
-
-    if os.path.exists(HEADER_IMAGE):
-        try:
-            img = ImageReader(HEADER_IMAGE)
-            img_width, img_height = img.getSize()
-            scale = min(1.0, 480 / img_width)
-            draw_width = img_width * scale
-            draw_height = img_height * scale
-            x_center = (width - draw_width) / 2
-            y_top = height - draw_height - 20
-            c.drawImage(HEADER_IMAGE, x=x_center, y=y_top, width=draw_width, height=draw_height)
-            current_y = y_top - 25
-        except Exception as e:
-            logger.error(f"⚠️ Error cargando encabezado: {e}")
-
-    c.setFont("Helvetica-Bold", 13)
-    titulo_texto = "RECIBO DE PAGO"
-    titulo_width = c.stringWidth(titulo_texto, "Helvetica-Bold", 13)
-    titulo_x = (width - titulo_width) / 2
-    c.drawString(titulo_x, current_y, titulo_texto)
-    current_y -= 25
-
-    X1_TITLE = 60
-    X1_DATA = 160
-    X2_TITLE = 310
-    X2_DATA = 470
-
-    # ----------------------------------------------------
-    # BLOQUE 1: Estado y Nº Recibo
-    # ----------------------------------------------------
-    # Guardamos la posición Y que vamos a usar en este bloque
-    y_line = current_y 
-
-    draw_text_line(c, "Estado:", X1_TITLE, y_line, is_bold=True)
-    draw_text_line(c, estado, X1_DATA, y_line, is_bold=False) # ✅ Usamos la posición original y_line
-    draw_text_line(c, "Nº Recibo:", X2_TITLE, y_line, is_bold=True)
-    draw_text_line(c, num_recibo, X2_DATA, y_line, is_bold=False)
-    
-    current_y -= 20 # Ajustamos current_y una sola vez al terminar el bloque
-
-    # ----------------------------------------------------
-    # BLOQUE 2: Recibí de y Monto
-    # ----------------------------------------------------
-    y_line = current_y
-
-    draw_text_line(c, "Recibí de:", X1_TITLE, y_line, is_bold=True)
-    draw_text_line(c, nombre, X1_DATA, y_line, is_bold=False)
-    draw_text_line(c, "Monto Recibido (Bs.):", X2_TITLE, y_line, is_bold=True)
-    draw_text_line(c, monto_formateado, X2_DATA, y_line, is_bold=False)
-    current_y -= 20
-
-    # ----------------------------------------------------
-    # BLOQUE 3: Rif/C.I y Nº Transferencia
-    # ----------------------------------------------------
-    y_line = current_y
-
-    draw_text_line(c, "Rif/C.I:", X1_TITLE, y_line, is_bold=True)
-    draw_text_line(c, cedula, X1_DATA, y_line, is_bold=False)
-    draw_text_line(c, "Nº Transferencia:", X2_TITLE, y_line, is_bold=True)
-    draw_text_line(c, num_transf, X2_DATA, y_line, is_bold=False)
-    current_y -= 20
-
-    # ----------------------------------------------------
-    # BLOQUE 4: Dirección y Fecha
-    # ----------------------------------------------------
-    y_line = current_y
-
-    draw_text_line(c, "Dirección:", X1_TITLE, y_line, is_bold=True)
-    draw_text_line(c, direccion, X1_DATA, y_line, is_bold=False)
-    draw_text_line(c, "Fecha:", X2_TITLE, y_line, is_bold=True)
-    draw_text_line(c, fecha, X2_DATA, y_line, is_bold=False)
-    current_y -= 20
-
-    # ----------------------------------------------------
-    # BLOQUE 5: Concepto
-    # ----------------------------------------------------
-    y_line = current_y
-
-    draw_text_line(c, "Concepto:", X1_TITLE, y_line, is_bold=True)
-    draw_text_line(c, concepto, X1_DATA, y_line, is_bold=False)
-    current_y -= 35
-
-    # ... (Resto de la lógica de categorías y pie de página permanece igual)
-
-    hay_categorias = any(categorias.values())
-
-    if hay_categorias:
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(X1_TITLE, current_y, "FORMA DE PAGO Y DESCRIPCION DE LA REGULARIZACION")
-        current_y -= 25
-
-        if categorias.get('categoria1', False):
-            current_y = draw_text_line(c, "TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION EN PROPIEDAD", X1_TITLE, current_y, font_size=9, is_bold=True)
-            c.drawString(520, current_y + 15, "X")
-            current_y = draw_text_line(c, "Una milésima de Bolívar, Art. 58 de la Ley Especial de Regularización", X1_TITLE, current_y, font_size=8, is_bold=False)
-            current_y -= 5
-
-        if categorias.get('categoria2', False):
-            current_y = draw_text_line(c, "TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION MAS VIVIENDA", X1_TITLE, current_y, font_size=9, is_bold=True)
-            c.drawString(520, current_y + 15, "X")
-            current_y = draw_text_line(c, "Una milésima de Bolívar, más gastos administrativos (140 unidades ancladas a la moneda de mayor valor estipulada por el BCV)", X1_TITLE, current_y, font_size=8, is_bold=False)
-            current_y -= 5
-
-        if categorias.get('categoria3', False):
-            current_y = draw_text_line(c, "VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA:", X1_TITLE, current_y, font_size=9, is_bold=True)
-            current_y = draw_text_line(c, "Municipal", X1_TITLE, current_y, font_size=9, is_bold=True)
-            c.drawString(520, current_y + 15, "X")
-            current_y = draw_text_line(c, "Precio: Gastos Administrativos (140 unidades ancladas a la moneda de mayor valor estipulada por el BCV)", X1_TITLE, current_y, font_size=8, is_bold=False)
-            current_y -= 5
-
-        if categorias.get('categoria4', False):
-            current_y = draw_text_line(c, "VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA:", X1_TITLE, current_y, font_size=9, is_bold=True)
-            current_y = draw_text_line(c, "Tierra Privada", X1_TITLE, current_y, font_size=9, is_bold=True)
-            c.drawString(520, current_y + 15, "X")
-            current_y = draw_text_line(c, "Precio: Gastos Administrativos (140 unidades ancladas a la moneda de mayor valor estipulada por el BCV)", X1_TITLE, current_y, font_size=8, is_bold=False)
-            current_y -= 5
-
-        if categorias.get('categoria5', False):
-            current_y = draw_text_line(c, "VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA:", X1_TITLE, current_y, font_size=9, is_bold=True)
-            current_y = draw_text_line(c, "Tierra INAVI o de cualquier Ente transferido al INTU", X1_TITLE, current_y, font_size=9, is_bold=True)
-            c.drawString(520, current_y + 15, "X")
-            current_y = draw_text_line(c, "Precio: Gastos Administrativos (140 unidades ancladas a la moneda de mayor valor estipulada por el BCV)", X1_TITLE, current_y, font_size=8, is_bold=False)
-            current_y -= 5
-
-        if categorias.get('categoria6', False):
-            current_y = draw_text_line(c, "EXCEDENTES:", X1_TITLE, current_y, font_size=9, is_bold=True)
-            current_y = draw_text_line(c, "Con título de Tierra Urbana, hasta 400 mt2 una milésima por mt2", X1_TITLE, current_y, font_size=9, is_bold=True)
-            c.drawString(520, current_y + 15, "X")
-            current_y = draw_text_line(c, "Según el Art 33 de la Ley Especial de Regularización", X1_TITLE, current_y, font_size=8, is_bold=False)
-            current_y -= 5
-
-        if categorias.get('categoria7', False):
-            current_y = draw_text_line(c, "Con Título INAVI (Gastos Administrativos):", X1_TITLE, current_y, font_size=9, is_bold=True)
-            c.drawString(520, current_y + 15, "X")
-            current_y = draw_text_line(c, "140 unidades ancladas a la moneda de mayor valor estipulada por el BCV)", X1_TITLE, current_y, font_size=8, is_bold=False)
-            current_y -= 5
-
-        if categorias.get('categoria8', False):
-            current_y = draw_text_line(c, "ESTUDIOS TÉCNICO:", X1_TITLE, current_y, font_size=9, is_bold=True)
-            c.drawString(520, current_y + 15, "X")
-            current_y = draw_text_line(c, "Medición detallada de la parcela para obtener representación gráfica (plano)", X1_TITLE, current_y, font_size=8, is_bold=False)
-            current_y -= 5
-
-        if categorias.get('categoria9', False):
-            current_y = draw_text_line(c, "ARRENDAMIENTOS DE LOCALES COMERCIALES:", X1_TITLE, current_y, font_size=9, is_bold=True)
-            c.drawString(520, current_y + 15, "X")
-            current_y = draw_text_line(c, "Número de unidades establecidas en el contrato, ancladas a la moneda de mayor valor estipulada por el BCV", X1_TITLE, current_y, font_size=8, is_bold=False)
-            current_y -= 5
-
-        if categorias.get('categoria10', False):
-            current_y = draw_text_line(c, "ARRENDAMIENTOS DE TERRENOS", X1_TITLE, current_y, font_size=9, is_bold=True)
-            c.drawString(520, current_y + 15, "X")
-            current_y = draw_text_line(c, "Número de unidades establecidas en el contrato, ancladas a la moneda de mayor valor estipulada por el BCV", X1_TITLE, current_y, font_size=8, is_bold=False)
-            current_y -= 5
-
-    current_y -= 70
-
-    if current_y < 150:
-        c.showPage()
-        current_y = height - 100
-
-    line_width = 200
-    left_line_x = (width / 2 - line_width - 20)
-    right_line_x = (width / 2 + 20)
-
-    c.line(left_line_x, current_y, left_line_x + line_width, current_y)
-    c.line(right_line_x, current_y, right_line_x + line_width, current_y)
-
-    y_sig = current_y - 15
-    draw_centered_text_right(c, y_sig, "Firma", left_line_x, line_width)
-    y_sig -= 13
-    draw_centered_text_right(c, y_sig, nombre, left_line_x, line_width, is_bold=True)
-    y_sig -= 12
-    draw_centered_text_right(c, y_sig, f"C.I./RIF: {cedula}", left_line_x, line_width, font_size=9)
-
-    y_sig_inst = current_y - 15
-    draw_centered_text_right(c, y_sig_inst, "Recibido por:", right_line_x, line_width)
-    y_sig_inst -= 13
-    draw_centered_text_right(c, y_sig_inst, "PRESLEY ORTEGA", right_line_x, line_width, is_bold=True)
-    y_sig_inst -= 12
-    draw_centered_text_right(c, y_sig_inst, "GERENTE DE ADMINISTRACIÓN Y SERVICIOS", right_line_x, line_width, font_size=9)
-    y_sig_inst -= 15
-    draw_centered_text_right(c, y_sig_inst, "Designado según gaceta oficial n° 43.062 de fecha", right_line_x, line_width, font_size=8)
-    y_sig_inst -= 10
-    draw_centered_text_right(c, y_sig_inst, "16 de febrero de 2025 y Providencia de", right_line_x, line_width, font_size=8)
-    y_sig_inst -= 10
-    draw_centered_text_right(c, y_sig_inst, "n° 016-2024 de fecha 16 de diciembre de 2024", right_line_x, line_width, font_size=8)
-
-    c.showPage()
-    c.save()
-    buffer.seek(0)
-    return buffer
-
-
+# 🛑 FUNCIÓN CORREGIDA
 def generar_pdf_recibo(request, pk):
-    """Genera y devuelve el PDF puro para la descarga (parauso individual)."""
-    recibo_obj = get_object_or_404(Recibo, pk=pk)
-    buffer = generate_receipt_pdf(recibo_obj)
+    """
+    Genera el PDF de un recibo específico y retorna el HttpResponse para
+    la descarga directa (Usada por el botón del dashboard).
+    """
+    try:
+        recibo = get_object_or_404(Recibo, pk=pk)
+        
+        # ✅ CORRECCIÓN CLAVE: Llama a la utilidad de descarga y retorna su respuesta.
+        return generar_pdf_recibo_unitario(recibo)
 
-    # Aplicar zfill(4) al nombre del archivo descargado
-    num_recibo_zfill = str(recibo_obj.numero_recibo).zfill(4) if recibo_obj.numero_recibo else '0000'
-    filename = f"Recibo_N_{num_recibo_zfill}.pdf"
-
-    response = HttpResponse(
-        buffer.getvalue(),
-        content_type='application/pdf'
-    )
-    response['Content-Disposition'] = f'attachment;filename="{filename}"'
-    return response
+    except Exception as e:
+        logger.error(f"Error al generar PDF unitario para PK={pk}: {e}")
+        return HttpResponse(f"Error al generar el PDF: {e}", status=500)
 
 
 def generar_zip_recibos(request):
@@ -337,13 +118,16 @@ def generar_zip_recibos(request):
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for recibo in recibos:
             try:
-                pdf_buffer = generate_receipt_pdf(recibo)
+                # 🛑 CORRECCIÓN: Usar la nueva utilidad de generación PDF unitaria
+                pdf_response = generar_pdf_recibo_unitario(recibo) 
+                
+                # Extraer el contenido (bytes) del HttpResponse
+                pdf_buffer_value = pdf_response.content 
 
-                # Aplicar zfill(4) al nombre del archivo dentro del ZIP
                 num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
                 filename = f"Recibo_N_{num_recibo_zfill}_{recibo.rif_cedula_identidad}.pdf"
 
-                zipf.writestr(filename, pdf_buffer.getvalue())
+                zipf.writestr(filename, pdf_buffer_value)
             except Exception as e:
                 logger.error(f"Error al generar el PDF para el recibo PK={recibo.pk}: {e}")
 
@@ -358,15 +142,6 @@ def generar_zip_recibos(request):
     response['Content-Disposition'] = f'attachment;filename="{filename_zip}"'
 
     return response
-
-
-def init_download_and_refresh(request, pk):
-    """Renderiza una plantilla con JS que inicializa la descarga y redirige."""
-    context = {
-        'recibo_pk': pk,
-        'pdf_url': reverse('recibos:generar_pdf_recibo', kwargs={'pk': pk})
-    }
-    return render(request, 'recibos/download_init.html', context)
 
 
 class ReciboListView(ListView):
@@ -385,7 +160,6 @@ class ReciboListView(ListView):
                 recibo = get_object_or_404(Recibo, pk=recibo_id)
                 if not recibo.anulado:
 
-                    # Aplicar zfill(4) al mensaje de anulación en el dashboard
                     num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
 
                     recibo.anulado = True
@@ -414,10 +188,9 @@ class ReciboListView(ListView):
                         messages.success(request, message)
 
                         if len(recibos_pks) == 1:
-                            # Caso 1: Solo un recibo -> Descarga individual
-                            return redirect(reverse('recibos:init_download', kwargs={'pk': recibos_pks[0]}))
+                            # ✅ CORRECCIÓN CLAVE: Redirigir a la vista de descarga directa (generar_pdf_recibo)
+                            return redirect(reverse('recibos:generar_pdf_recibo', kwargs={'pk': recibos_pks[0]})) 
                         else:
-                            # Caso 2: Múltiples recibos (>1) -> Descarga del ZIP
                             pks_str = ','.join(map(str, recibos_pks))
                             return redirect(reverse('recibos:generar_zip_recibos') + f'?pks={pks_str}')
 
@@ -536,7 +309,7 @@ def generar_reporte_view(request):
 
     if estado_seleccionado and estado_seleccionado != "":
         filters &= Q(estado__iexact=estado_seleccionado)
-        filtros_aplicados['estado'] = estado_seleccionado if estado_seleccionado else 'Todos los estados'
+    filtros_aplicados['estado'] = estado_seleccionado if estado_seleccionado else 'Todos los estados'
 
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')
@@ -586,14 +359,14 @@ def generar_reporte_view(request):
                 filters &= Q(**filtro)
             except Exception:
                 pass
-            else:
-                q_objects = (
-                    Q(nombre__icontains=query_normalizado) |
-                    Q(rif_cedula_identidad__icontains=query_normalizado) |
-                    Q(numero_recibo__iexact=query_normalizado) |
-                    Q(numero_transferencia__icontains=query_normalizado) |
-                    Q(estado__icontains=query_normalizado)
-                )
+        else:
+            q_objects = (
+                Q(nombre__icontains=query_normalizado) |
+                Q(rif_cedula_identidad__icontains=query_normalizado) |
+                Q(numero_recibo__iexact=query_normalizado) |
+                Q(numero_transferencia__icontains=query_normalizado) |
+                Q(estado__icontains=query_normalizado)
+            )
             try:
                 recibo_id = int(query_normalizado)
                 q_objects |= Q(id=recibo_id)
@@ -606,13 +379,12 @@ def generar_reporte_view(request):
         filtros_aplicados['busqueda'] = 'Ninguna'
 
 
-    recibos_filtrados = recibos_queryset.filter(filters) # Aplica todos los filtros adicionales
+    recibos_filtrados = recibos_queryset.filter(filters)
 
     action = request.GET.get('action')
 
     if action == 'excel':
         try:
-            # NOTA: La lógica de formateo para Excel está en utils.py
             return generar_reporte_excel(request.GET, recibos_filtrados, filtros_aplicados)
         except Exception as e:
             logger.error(f"Error al generar el reporte Excel: {e}")
@@ -621,11 +393,8 @@ def generar_reporte_view(request):
 
     elif action == 'pdf':
         try:
-            # NOTA: La lógica de formateo para PDF está en utils.py
-            # Si esto falla, el error NO está aquí, sino en utils.py o en un dato.
             return generar_pdf_reporte(recibos_filtrados, filtros_aplicados)
         except Exception as e:
-            # ESTA ES LA CAPTURA DE ERROR QUE DEBE MOSTRAR EL MENSAJE DETALLADO
             logger.error(f"Error al generar el reporte PDF: {e}")
             messages.error(request, f"Error al generar el reporte PDF. Consulte la consola del servidor: {e}")
             return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
@@ -637,11 +406,10 @@ def generar_reporte_view(request):
 
 def modificar_recibo(request, pk):
     """
-    Permite modificar un Recibo existente (si no está anulado) o anularlo.
+    Permite modificar un Recibo existente (sino está anulado) o anularlo.
     """
     recibo = get_object_or_404(Recibo, pk=pk)
 
-    # Aplicar formato zfill(4) para mensajes
     num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
 
     if recibo.anulado:
@@ -654,7 +422,6 @@ def modificar_recibo(request, pk):
         if action == 'anular':
             recibo.anulado = True
             recibo.save()
-            # Aplicar zfill(4) al mensaje de anulación en la vista de modificación
             messages.warning(request, f"¡Recibo N°{num_recibo_zfill} ha sido ANULADO exitosamente! (Acción irreversible)")
             return redirect(reverse('recibos:recibos_anulados'))
 

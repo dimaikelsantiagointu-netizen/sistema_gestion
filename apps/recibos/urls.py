@@ -23,11 +23,7 @@ urlpatterns = [
     ),
 
     # 3. Flujo de Descarga Individual de PDF 
-    path(
-        'descargar-init/<int:pk>/',
-        views.init_download_and_refresh,
-        name='init_download'
-    ),
+   
 
     # 4. Generación y Envío del PDF Individual Puro
     path(

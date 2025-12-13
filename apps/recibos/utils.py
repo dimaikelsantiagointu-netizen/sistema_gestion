@@ -16,7 +16,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.lib.units import inch # Necesario para definir anchos de columna
+from reportlab.lib.units import inch
 from django.conf import settings
 from unidecode import unidecode
 from .constants import CATEGORY_CHOICES_MAP
@@ -45,7 +45,6 @@ def limpiar_y_convertir_decimal(value):
     s_final = s_limpio.replace(',', '.')
 
     if s_final.count('.') > 1:
-        # Si hay más de un punto, asume que el último es el decimal y el resto son separadores de miles
         partes = s_final.rsplit('.', 1)
         s_final = partes[0].replace('.', '') + '.' + partes[1]
 
@@ -63,8 +62,9 @@ def format_currency(amount):
     """Formatea el monto como moneda (ej: 1.234,56)."""
     try:
         amount_decimal = Decimal(amount)
-        # Formato que asegura dos decimales y separadores correctos
-        return "{:,.2f}".format(amount_decimal).replace(",", "X").replace(".", ",").replace("X", ".")
+        # Usa el formato español para miles y decimales
+        formatted = "{:,.2f}".format(amount_decimal).replace(",", "X").replace(".", ",").replace("X", ".")
+        return formatted
     except Exception:
         return "0,00"
 
@@ -179,8 +179,9 @@ def importar_recibos_desde_excel(archivo_excel):
 
             if recibos_creados_pks:
                 total_creados = len(recibos_creados_pks)
-                primer_num = str(consecutivo_actual - total_creados).zfill(4) # Aplicado zfill(4)
-                ultimo_num = str(consecutivo_actual - 1).zfill(4) # Aplicado zfill(4)
+                # ✅ CORRECCIÓN: Usar el número de inicio y fin correctamente formateado con zfill
+                primer_num = str(consecutivo_actual - total_creados).zfill(4)
+                ultimo_num = str(consecutivo_actual - 1).zfill(4)
 
                 mensaje = f"Importación masiva exitosa. Se generaron {total_creados} recibos, desde N°{primer_num} hasta N°{ultimo_num}."
 
@@ -228,9 +229,7 @@ def generar_reporte_excel(request_filters, queryset, filtros_aplicados):
 
         categorias_concatenadas = ','.join(categoria_detalle_nombres)
 
-        # Se corrigió la lista de 'row' para coincidir con 'headers'
         row = [
-            # Aplicado zfill(4) para el formato 0001
             "{:04d}".format(recibo.numero_recibo), 
             recibo.nombre,
             recibo.rif_cedula_identidad,
@@ -273,7 +272,6 @@ def generar_reporte_excel(request_filters, queryset, filtros_aplicados):
         money_format = workbook.add_format({'num_format': '#,##0.00', 'align': 'right'})
         bold_format = workbook.add_format({'bold': True, 'bg_color': '#EAEAEA'})
 
-        # Ajuste de ancho de columnas
         worksheet_recibos.set_column('A:A', 15)
         worksheet_recibos.set_column('B:C', 25)
         worksheet_recibos.set_column('D:D', 12)
@@ -283,11 +281,9 @@ def generar_reporte_excel(request_filters, queryset, filtros_aplicados):
         worksheet_recibos.set_column('H:H', 40)
         worksheet_recibos.set_column('I:I', 50)
 
-        # Formato de encabezados
         for col_num, value in enumerate(headers):
             worksheet_recibos.write(0, col_num, value, bold_format)
 
-        # Formato de info_reporte
         worksheet_info = writer.sheets['info_reporte']
         worksheet_info.set_column('A:A', 30)
         worksheet_info.set_column('B:B', 40)
@@ -323,9 +319,257 @@ except AttributeError:
 CUSTOM_BLUE_DARK_TABLE = colors.HexColor("#427FBB")
 CUSTOM_GREY_VERY_LIGHT = colors.HexColor("#F7F7F7")
 
+# --- FUNCIONES AUXILIARES PARA EL PDF UNITARIO (COPIADAS Y ADAPTADAS DE VIEWS.PY) ---
 
-# El callback de ReportLab solo acepta canvas y doc
+def draw_text_line_unit(canvas_obj, text, x_start, y_start, font_name="Helvetica", font_size=10, is_bold=False):
+    """Dibuja una línea de texto y ajusta la posición Y."""
+    font = font_name + "-Bold" if is_bold else font_name
+    canvas_obj.setFont(font, font_size)
+    canvas_obj.drawString(x_start, y_start, str(text))
+    return y_start - 15
+
+def draw_centered_text_right_unit(canvas_obj, y_pos, text, x_start, width, font_name="Helvetica", font_size=10, is_bold=False):
+    """Centra el texto dentro de un ancho específico."""
+    font = font_name + "-Bold" if is_bold else font_name
+    canvas_obj.setFont(font, font_size)
+    text_width = canvas_obj.stringWidth(text, font, font_size)
+    x = x_start + (width - text_width) / 2
+    canvas_obj.drawString(x, y_pos, text.upper())
+
+# ---------------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------------
+# 🚀 FUNCIÓN CLAVE AÑADIDA: DESCARGA DIRECTA DE RECIBO UNITARIO
+# ---------------------------------------------------------------------------------
+def generar_pdf_recibo_unitario(recibo_obj):
+    """
+    Genera el contenido del PDF individual para un recibo (similar a generate_receipt_pdf)
+    y retorna directamente el HttpResponse para forzar la descarga.
+    """
+    nombre = recibo_obj.nombre
+    cedula = recibo_obj.rif_cedula_identidad
+    direccion = recibo_obj.direccion_inmueble
+    monto = recibo_obj.total_monto_bs
+    num_transf = recibo_obj.numero_transferencia if recibo_obj.numero_transferencia else ''
+    fecha = recibo_obj.fecha.strftime("%d/%m/%Y")
+    concepto = recibo_obj.concepto
+    estado = recibo_obj.estado
+
+    if recibo_obj.numero_recibo:
+        num_recibo = str(recibo_obj.numero_recibo).zfill(4)
+    else:
+        num_recibo = 'N/A'
+
+    categorias = {
+        f'categoria{i}': getattr(recibo_obj, f'categoria{i}') for i in range(1, 11)
+    }
+
+    monto_formateado = format_currency(monto)
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    current_y = height - 50
+    y_top = height - 50
+
+    # DIBUJAR ENCABEZADO
+    if os.path.exists(HEADER_IMAGE):
+        try:
+            img = ImageReader(HEADER_IMAGE)
+            img_width, img_height = img.getSize()
+            scale = min(1.0, 480 / img_width)
+            draw_width = img_width * scale
+            draw_height = img_height * scale
+            x_center = (width - draw_width) / 2
+            y_top = height - draw_height - 20
+            c.drawImage(HEADER_IMAGE, x=x_center, y=y_top, width=draw_width, height=draw_height)
+            current_y = y_top - 25
+        except Exception as e:
+            logger.error(f"⚠️ Error cargando encabezado: {e}")
+
+    c.setFont("Helvetica-Bold", 13)
+    titulo_texto = "RECIBO DE PAGO"
+    titulo_width = c.stringWidth(titulo_texto, "Helvetica-Bold", 13)
+    titulo_x = (width - titulo_width) / 2
+    c.drawString(titulo_x, current_y, titulo_texto)
+    current_y -= 25
+
+    # Coordenadas
+    X1_TITLE = 60
+    X1_DATA = 160
+    X2_TITLE = 310
+    X2_DATA = 470
+
+    y_line = current_y
+
+    # FILA 1
+    y_line = draw_text_line_unit(c, "Estado:", X1_TITLE, y_line, is_bold=True)
+    draw_text_line_unit(c, estado, X1_DATA, y_line + 15, is_bold=False)
+    draw_text_line_unit(c, "Nº Recibo:", X2_TITLE, y_line, is_bold=True)
+    draw_text_line_unit(c, num_recibo, X2_DATA, y_line + 15, is_bold=False)
+    y_line -= 5
+
+    # FILA 2
+    y_line = draw_text_line_unit(c, "Recibí de:", X1_TITLE, y_line, is_bold=True)
+    draw_text_line_unit(c, nombre, X1_DATA, y_line + 15, is_bold=False)
+    draw_text_line_unit(c, "Monto Recibido (Bs.):", X2_TITLE, y_line, is_bold=True)
+    draw_text_line_unit(c, monto_formateado, X2_DATA, y_line + 15, is_bold=False)
+    y_line -= 5
+
+    # FILA 3
+    y_line = draw_text_line_unit(c, "Rif/C.I:", X1_TITLE, y_line, is_bold=True)
+    draw_text_line_unit(c, cedula, X1_DATA, y_line + 15, is_bold=False)
+    draw_text_line_unit(c, "Nº Transferencia:", X2_TITLE, y_line, is_bold=True)
+    draw_text_line_unit(c, num_transf, X2_DATA, y_line + 15, is_bold=False)
+    y_line -= 5
+
+    # FILA 4
+    y_line = draw_text_line_unit(c, "Dirección:", X1_TITLE, y_line, is_bold=True)
+    draw_text_line_unit(c, direccion, X1_DATA, y_line + 15, is_bold=False)
+    draw_text_line_unit(c, "Fecha:", X2_TITLE, y_line, is_bold=True)
+    draw_text_line_unit(c, fecha, X2_DATA, y_line + 15, is_bold=False)
+    y_line -= 5
+
+    # FILA 5
+    y_line = draw_text_line_unit(c, "Concepto:", X1_TITLE, y_line, is_bold=True)
+    draw_text_line_unit(c, concepto, X1_DATA, y_line + 15, is_bold=False)
+    current_y = y_line - 25
+
+    # Sección de Categorías
+    hay_categorias = any(categorias.values())
+
+    if hay_categorias:
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(X1_TITLE, current_y, "FORMA DE PAGO Y DESCRIPCION DE LA REGULARIZACION")
+        current_y -= 25
+
+        # (Manteniendo la estructura original para las 10 categorías)
+        
+        if categorias.get('categoria1', False):
+            current_y = draw_text_line_unit(c, "TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION EN PROPIEDAD", X1_TITLE, current_y, font_size=9, is_bold=True)
+            c.drawString(520, current_y + 15, "X")
+            current_y = draw_text_line_unit(c, "Una milésima de Bolívar, Art. 58 de la Ley Especial de Regularización", X1_TITLE, current_y, font_size=8, is_bold=False)
+            current_y -= 5
+
+        if categorias.get('categoria2', False):
+            current_y = draw_text_line_unit(c, "TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION MAS VIVIENDA", X1_TITLE, current_y, font_size=9, is_bold=True)
+            c.drawString(520, current_y + 15, "X")
+            current_y = draw_text_line_unit(c, "Una milésima de Bolívar, más gastos administrativos (140 unidades ancladas a la moneda de mayor valor estipulada por el BCV)", X1_TITLE, current_y, font_size=8, is_bold=False)
+            current_y -= 5
+
+        if categorias.get('categoria3', False):
+            current_y = draw_text_line_unit(c, "VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA:", X1_TITLE, current_y, font_size=9, is_bold=True)
+            current_y = draw_text_line_unit(c, "Municipal", X1_TITLE, current_y, font_size=9, is_bold=True)
+            c.drawString(520, current_y + 15, "X")
+            current_y = draw_text_line_unit(c, "Precio: Gastos Administrativos (140 unidades ancladas a la moneda de mayor valor estipulada por el BCV)", X1_TITLE, current_y, font_size=8, is_bold=False)
+            current_y -= 5
+
+        if categorias.get('categoria4', False):
+            current_y = draw_text_line_unit(c, "VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA:", X1_TITLE, current_y, font_size=9, is_bold=True)
+            current_y = draw_text_line_unit(c, "Tierra Privada", X1_TITLE, current_y, font_size=9, is_bold=True)
+            c.drawString(520, current_y + 15, "X")
+            current_y = draw_text_line_unit(c, "Precio: Gastos Administrativos (140 unidades ancladas a la moneda de mayor valor estipulada por el BCV)", X1_TITLE, current_y, font_size=8, is_bold=False)
+            current_y -= 5
+
+        if categorias.get('categoria5', False):
+            current_y = draw_text_line_unit(c, "VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA:", X1_TITLE, current_y, font_size=9, is_bold=True)
+            current_y = draw_text_line_unit(c, "Tierra INAVI o de cualquier Ente transferido al INTU", X1_TITLE, current_y, font_size=9, is_bold=True)
+            c.drawString(520, current_y + 15, "X")
+            current_y = draw_text_line_unit(c, "Precio: Gastos Administrativos (140 unidades ancladas a la moneda de mayor valor estipulada por el BCV)", X1_TITLE, current_y, font_size=8, is_bold=False)
+            current_y -= 5
+
+        if categorias.get('categoria6', False):
+            current_y = draw_text_line_unit(c, "EXCEDENTES:", X1_TITLE, current_y, font_size=9, is_bold=True)
+            current_y = draw_text_line_unit(c, "Con título de Tierra Urbana, hasta 400 mt2 una milésima por mt2", X1_TITLE, current_y, font_size=9, is_bold=True)
+            c.drawString(520, current_y + 15, "X")
+            current_y = draw_text_line_unit(c, "Según el Art 33 de la Ley Especial de Regularización", X1_TITLE, current_y, font_size=8, is_bold=False)
+            current_y -= 5
+
+        if categorias.get('categoria7', False):
+            current_y = draw_text_line_unit(c, "Con Título INAVI (Gastos Administrativos):", X1_TITLE, current_y, font_size=9, is_bold=True)
+            c.drawString(520, current_y + 15, "X")
+            current_y = draw_text_line_unit(c, "140 unidades ancladas a la moneda de mayor valor estipulada por el BCV)", X1_TITLE, current_y, font_size=8, is_bold=False)
+            current_y -= 5
+
+        if categorias.get('categoria8', False):
+            current_y = draw_text_line_unit(c, "ESTUDIOS TÉCNICOS:", X1_TITLE, current_y, font_size=9, is_bold=True)
+            c.drawString(520, current_y + 15, "X")
+            current_y = draw_text_line_unit(c, "Medición detallada de la parcela para obtener representación gráfica (plano)", X1_TITLE, current_y, font_size=8, is_bold=False)
+            current_y -= 5
+
+        if categorias.get('categoria9', False):
+            current_y = draw_text_line_unit(c, "ARRENDAMIENTOS DE LOCALES COMERCIALES:", X1_TITLE, current_y, font_size=9, is_bold=True)
+            c.drawString(520, current_y + 15, "X")
+            current_y = draw_text_line_unit(c, "Número de unidades establecidas en el contrato, ancladas a la moneda de mayor valor estipulada por el BCV", X1_TITLE, current_y, font_size=8, is_bold=False)
+            current_y -= 5
+
+        if categorias.get('categoria10', False):
+            current_y = draw_text_line_unit(c, "ARRENDAMIENTOS DE TERRENOS", X1_TITLE, current_y, font_size=9, is_bold=True)
+            c.drawString(520, current_y + 15, "X")
+            current_y = draw_text_line_unit(c, "Número de unidades establecidas en el contrato, ancladas a la moneda de mayor valor estipulada por el BCV", X1_TITLE, current_y, font_size=8, is_bold=False)
+            current_y -= 5
+
+        current_y -= 70
+
+    # Si hay desborde, crear una nueva página (aunque es poco probable para un recibo)
+    if current_y < 150:
+        c.showPage()
+        current_y = height - 100
+
+    # SECCIÓN DE FIRMAS
+    line_width = 200
+    left_line_x = (width / 2 - line_width - 20)
+    right_line_x = (width / 2 + 20)
+
+    # LÍNEAS
+    c.line(left_line_x, current_y, left_line_x + line_width, current_y)
+    c.line(right_line_x, current_y, right_line_x + line_width, current_y)
+
+    # FIRMA CLIENTE
+    y_sig = current_y - 15
+    draw_centered_text_right_unit(c, y_sig, "Firma", left_line_x, line_width)
+    y_sig -= 13
+    draw_centered_text_right_unit(c, y_sig, nombre, left_line_x, line_width, is_bold=True)
+    y_sig -= 12
+    draw_centered_text_right_unit(c, y_sig, f"C.I./RIF: {cedula}", left_line_x, line_width, font_size=9)
+
+    # FIRMA INSTITUCIÓN
+    y_sig_inst = current_y - 15
+    draw_centered_text_right_unit(c, y_sig_inst, "Recibido por:", right_line_x, line_width)
+    y_sig_inst -= 13
+    draw_centered_text_right_unit(c, y_sig_inst, "PRESLEY ORTEGA", right_line_x, line_width, is_bold=True)
+    y_sig_inst -= 12
+    draw_centered_text_right_unit(c, y_sig_inst, "GERENTE DE ADMINISTRACIÓN Y SERVICIOS", right_line_x, line_width, font_size=9)
+    y_sig_inst -= 15
+    draw_centered_text_right_unit(c, y_sig_inst, "Designado según gaceta oficial n°43.062 de fecha", right_line_x, line_width, font_size=8)
+    y_sig_inst -= 10
+    draw_centered_text_right_unit(c, y_sig_inst, "16 de febrero de 2025 y Providencia de", right_line_x, line_width, font_size=8)
+    y_sig_inst -= 10
+    draw_centered_text_right_unit(c, y_sig_inst, "n°016-2024 de fecha 16 de diciembre de 2024", right_line_x, line_width, font_size=8)
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    
+    # 🛑 RETORNA EL HTTPRESPONSE PARA DESCARGA DIRECTA 🛑
+    filename = f"Recibo_N_{num_recibo}_{cedula}.pdf"
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type='application/pdf'
+    )
+    # EL Content-Disposition: attachment FUERZA LA DESCARGA
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+# ---------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------
+
+
 def draw_report_logo_and_page_number(canvas, doc):
+    # ... (Esta función se mantiene igual)
+
     canvas.saveState()
     width, height = doc.pagesize
 
@@ -371,10 +615,8 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     Story = []
     styles = getSampleStyleSheet()
 
-    # Definición de estilos de ReportLab
     styles.add(ParagraphStyle(name='CenteredTitle', alignment=TA_CENTER, fontSize=16, fontName='Helvetica-Bold'))
 
-    # ESTILO PRINCIPAL PARA TEXTO DE FILTROS/RESUMEN
     styles.add(ParagraphStyle(
         name='FilterTextLeft',
         alignment=TA_LEFT,
@@ -391,11 +633,9 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     total_registros = queryset.count()
     total_monto_bs = queryset.aggregate(total=Sum('total_monto_bs'))['total'] or Decimal(0)
 
-    # --- TÍTULO ---
     Story.append(Paragraph("REPORTE DE RECIBOS DE PAGO", styles['CenteredTitle']))
     Story.append(Spacer(1, 10))
 
-    # --- FILTROS APLICADOS (Corregida sintaxis ReportLab) ---
     periodo_str = filtros_aplicados.get('periodo', 'Todos los períodos')
     estado_str = filtros_aplicados.get('estado', 'Todos los estados')
     categorias_str = filtros_aplicados.get('categorias', 'Todas las categorías')
@@ -414,7 +654,6 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     Story.append(Spacer(1, 8))
 
 
-    # --- TABLA DE DATOS ---
     table_data = []
     table_headers = [
         'Recibo', 'Nombre', 'Cédula/RIF', 'Monto (Bs)', 'Fecha', 'Estado',
@@ -422,23 +661,18 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     ]
     table_data.append(table_headers)
 
-    # **🛑 CORRECCIÓN DE ANCHO DE COLUMNAS (Usando 'inch' para asegurar el ajuste)**
-    # El ancho de la página horizontal es 11 pulgadas, con márgenes de 36 puntos (0.5 in) a cada lado.
-    # Ancho utilizable es 10 pulgadas.
     col_widths = [
-        0.7 * inch,  # Recibo 
-        1.7 * inch,  # Nombre 
-        1.1 * inch,  # Cédula/RIF 
-        1.0 * inch,  # Monto (Bs) 
-        0.8 * inch,  # Fecha 
-        0.9 * inch,  # Estado 
-        1.3 * inch,  # Transferencia 
-        2.5 * inch   # Concepto 
+        0.7 * inch, # Recibo 
+        1.7 * inch, # Nombre 
+        1.1 * inch, # Cédula/RIF 
+        1.0 * inch, # Monto (Bs) 
+        0.8 * inch, # Fecha 
+        0.9 * inch, # Estado 
+        1.3 * inch, # Transferencia 
+        2.5 * inch  # Concepto 
     ]
-    # Suma de anchos: 10.0 pulgadas (720 puntos), que cabe perfecto.
 
     for recibo in queryset:
-        # Usamos el estilo FilterTextLeft (tamaño 9) para el contenido del concepto
         concepto_paragrah = Paragraph(recibo.concepto.strip() if recibo.concepto else '', styles['FilterTextLeft']) 
         
         table_data.append([
@@ -449,17 +683,16 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
             recibo.fecha.strftime('%d/%m/%Y'),
             recibo.estado,
             recibo.numero_transferencia if recibo.numero_transferencia else '',
-            concepto_paragrah # Campo Paragraph
+            concepto_paragrah 
         ])
 
-    # **🛑 CORRECCIÓN: Se usa la lista de anchos en pulgadas directamente.**
     table = Table(table_data, colWidths=col_widths) 
 
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), CUSTOM_BLUE_DARK_TABLE),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (3, 1), (3, -1), 'RIGHT'), # Monto alineado a la derecha
+        ('ALIGN', (3, 1), (3, -1), 'RIGHT'), 
         ('ALIGN', (4, 1), (4, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
@@ -468,7 +701,6 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
         ('BACKGROUND', (0, 2), (-1, -1), CUSTOM_GREY_VERY_LIGHT),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.black),
-        # Alineación del contenido del Concepto (que es un Paragraph)
         ('VALIGN', (7, 1), (7, -1), 'MIDDLE'),
         ('ALIGN', (7, 1), (7, -1), 'LEFT'),
     ]))
@@ -477,7 +709,6 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     Story.append(Spacer(1, 20))
 
 
-    # --- RESUMEN DEL REPORTE ---
     Story.append(Paragraph("RESUMEN DEL REPORTE:", styles['ResumenTitleLeft']))
 
 
@@ -508,7 +739,6 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
         styles['FilterTextLeft']
     ))
 
-    # Llamada al constructor con el callback corregido
     logo_footer_callback = lambda canvas, doc: draw_report_logo_and_page_number(
         canvas, doc
     )

@@ -381,7 +381,7 @@
                                                 <div class="flex space-x-2 justify-center">
 
                                                     {# 1. DESCARGAR (PDF) - Icono de flecha abajo #}
-                                                    <a href="{% url 'recibos:init_download' recibo.pk %}"
+                                                    <a href="{% url 'recibos:generar_pdf_recibo' recibo.pk %}"
                                                         title="Descargar PDF"
                                                         class="text-green-600 hover:text-green-900 transition duration-150 p-1 rounded hover:bg-green-50">
                                                         <i class="fas fa-file-pdf text-xl"></i>
