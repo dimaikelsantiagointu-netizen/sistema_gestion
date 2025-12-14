@@ -8,9 +8,9 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-clave-temporal-cambiar-en-produccion')
 
-DEBUG = os.getenv('DEBUG', 'False') == 'True' # 'True' o 'False' se convierte a bool.
+DEBUG = os.getenv('DEBUG', 'False') == 'True' 
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost'] # Añadimos hosts comunes
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost'] 
 
 INSTALLED_APPS = [
     # APPS ESTÁNDAR DE DJANGO
@@ -21,7 +21,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    # NUEVAS APPS: Añade aquí las nuevas apps que vayas creando
+    # NUEVAS APPS:
     'apps.recibos.apps.RecibosConfig',
 ]
 
@@ -58,7 +58,7 @@ WSGI_APPLICATION = 'sistema_gestion.wsgi.application'
 
 DATABASES = {
     'default': {
-        # Motor PostgreSQL. Esta configuración SOBREESCRIBE la de base.py/default.
+        # Motor PostgreSQL.
         'ENGINE': 'django.db.backends.postgresql', 
         
         'NAME': os.environ.get('DB_NAME', 'django_default_db'), 
@@ -70,22 +70,15 @@ DATABASES = {
     }
 }
 
-# -----------------------------------------------------------------
 # 3. AUTENTICACIÓN Y LOCALIZACIÓN
-# -----------------------------------------------------------------
 
-# Configuración de URLs de autenticación
-# Se usan los valores predeterminados de Django
 LOGIN_URL = '/accounts/login/' 
 
-# Se usan los valores predeterminados de Django
 LOGIN_REDIRECT_URL = '/'
 
-# Se usan los valores predeterminados de Django
 LOGOUT_REDIRECT_URL = '/' 
 
 AUTH_PASSWORD_VALIDATORS = [
-    # ... (Sin cambios)
     { 'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator', },
     { 'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', },
     { 'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator', },
@@ -98,11 +91,8 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
-# -----------------------------------------------------------------
 # 4. ARCHIVOS ESTÁTICOS Y MEDIA
-# -----------------------------------------------------------------
 STATIC_URL = 'static/'
-# Usamos la sintaxis moderna con Path
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),]
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
