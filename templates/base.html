@@ -1,5 +1,4 @@
 {% load static %}
-<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -26,7 +25,7 @@
                 {# SECCIÓN DE USUARIO SIMPLIFICADA #}
                 <span class="hidden sm:inline text-sm text-indigo-300">Hola, Admin</span>
                 
-                {# BOTÓN CERRAR SESIÓN (Anteriormente 'Salir') #}
+                {# BOTÓN CERRAR SESIÓN NO FUNCIONAL#}
                 <a href="#" 
                    class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition duration-150">
                    <i class="fas fa-sign-out-alt mr-1"></i> Cerrar Sesión
@@ -46,9 +45,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             
-            {# ======================================================= #}
-            {# 1. MÓDULO ACTIVO: Recibos #}
-            {# ======================================================= #}
+            {# 1. APP ACTIVA: Recibos #}
             <a href="{% url 'recibos:dashboard' %}" 
                title="Ingresar al módulo de Recibos"
                class="bg-white border-2 border-indigo-500 rounded-xl p-8 shadow-2xl hover:shadow-indigo-300/50 hover:scale-[1.02] transform transition duration-300 cursor-pointer flex flex-col items-center text-center">
@@ -62,9 +59,7 @@
                 <span class="text-base text-gray-600">Creación, anulación y seguimiento de pagos.</span>
             </a>
 
-            {# ======================================================= #}
-            {# 2. MÓDULO INACTIVO: Gestión de Clientes #}
-            {# ======================================================= #}
+            {# 2.  APP INACTIVO: Gestión de Clientes #}
             <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
                 
                 {# Icono: Usuarios/Clientes #}
@@ -76,9 +71,7 @@
                 <span class="text-base text-gray-500">Próximamente.</span>
             </div>
             
-            {# ======================================================= #}
-            {# 3. MÓDULO INACTIVO: Sistema de Pagos (Nuevo) #}
-            {# ======================================================= #}
+            {# 3.  APP INACTIVO: Sistema de Pagos #}
             <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
                 
                 {# Icono: Tarjeta o Dinero #}
@@ -90,9 +83,7 @@
                 <span class="text-base text-gray-500">Próximamente.</span>
             </div>
 
-            {# ======================================================= #}
-            {# 4. MÓDULO INACTIVO: Gestión de Contratos (Nuevo) #}
-            {# ======================================================= #}
+            {# 4.  APP INACTIVO: Gestión de Contratos #}
             <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
                 
                 {# Icono: Contrato/Documento #}
@@ -104,9 +95,7 @@
                 <span class="text-base text-gray-500">Próximamente.</span>
             </div>
 
-            {# ======================================================= #}
-            {# 5. MÓDULO INACTIVO: Sellos Dorados (Nuevo) #}
-            {# ======================================================= #}
+            {# 5.  APP INACTIVO: Sellos Dorados#}
             <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
                 
                 {# Icono: Sello/Medalla #}
@@ -118,9 +107,7 @@
                 <span class="text-base text-gray-500">Próximamente.</span>
             </div>
             
-            {# ======================================================= #}
-            {# 6. MÓDULO INACTIVO: Gestión Documental (Reemplaza Reportes) #}
-            {# ======================================================= #}
+            {# 6.  APP INACTIVO: Gestión Documental  #}
             <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
                 
                 {# Icono: Documento / Folder #}
