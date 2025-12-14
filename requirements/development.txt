@@ -5,6 +5,7 @@ reportlab
 pandas
 openpyxl
 python-dotenv
+# Nuevos paquetes necesarios
 djangorestframework
 django-crispy-forms
 reportlab
