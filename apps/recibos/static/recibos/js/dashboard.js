@@ -17,21 +17,140 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmButton = document.getElementById('confirm-action-button');
     const anularReciboIdInput = document.getElementById('anular-recibo-id');
 
+    // Componentes Específicos para Modificar Recibo
+    const formActionInput = document.getElementById('form-action'); 
+    const anularReciboModificarBtn = document.getElementById('anular-recibo-btn-modificar');
+
+    // Componentes de Filtros
+    const filterForm = document.getElementById('filter-form'); 
+
     // =========================================================
-    // 2. LÓGICA DE CARGA DE ARCHIVOS
+    // 3. LÓGICA DE LOGS (Persistencia con LocalStorage)
+    // =========================================================
+    const LOG_STORAGE_KEY = 'receipt_logs';
+
+    /**
+     * Guarda el log en localStorage.
+     */
+    function saveLog(message, type) {
+        const logs = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || '[]');
+        logs.push({ message, type });
+        localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(logs));
+    }
+    
+    /**
+     * Añade un mensaje al área visual de logs y lo persiste si es necesario.
+     * @param {string} message - El mensaje a mostrar.
+     * @param {string} type - 'success', 'error', 'warning', 'info', 'action', 'client'.
+     * @param {boolean} persist - Si el log debe guardarse en localStorage.
+     */
+    function appendLog(message, type = 'info', persist = true) {
+        const logItem = document.createElement('p');
+        const timestamp = new Date().toLocaleTimeString();
+        let colorClass = 'text-gray-700';
+        let icon = '•';
+
+        switch (type) {
+            case 'success':
+                colorClass = 'text-green-700 font-bold';
+                icon = '🟢 RESULTADO:';
+                break;
+            case 'error':
+                colorClass = 'text-red-700 font-bold';
+                icon = '🔴 ERROR:';
+                break;
+            case 'warning':
+                colorClass = 'text-yellow-700 font-semibold';
+                icon = '⚠️ ADVERTENCIA:';
+                break;
+            case 'action':
+                colorClass = 'text-blue-600 font-semibold';
+                icon = '🚀 INICIANDO:';
+                break;
+            case 'client':
+                colorClass = 'text-gray-600';
+                icon = '💻 CLIENTE:';
+                break;
+            default: // info
+                colorClass = 'text-indigo-700';
+                icon = 'ℹ️ INFO:';
+                break;
+        }
+
+        logItem.className = `${colorClass} py-0.5 text-sm`;
+        logItem.innerHTML = `[${timestamp}] ${icon} ${message}`;
+        logDisplay.appendChild(logItem);
+
+        logDisplay.scrollTop = logDisplay.scrollHeight;
+
+        if (persist) {
+            saveLog(message, type);
+        }
+    }
+
+    /**
+     * Carga y muestra los logs persistentes al iniciar la página.
+     */
+    function loadPersistedLogs() {
+        const logs = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || '[]');
+        
+        if (logs.length === 0) {
+             appendLog('Módulo de logs cargado. Esperando acción.', 'info', false);
+        } else {
+            appendLog(`--- Logs Anteriores (${logs.length} entradas) ---`, 'info', false);
+            logs.forEach(log => {
+                appendLog(log.message, log.type, false);
+            });
+            appendLog('--- Fin de Logs Anteriores. Listo para nuevas acciones. ---', 'info', false);
+        }
+    }
+
+
+    // Capturar y mostrar mensajes de Django (El resultado final del servidor)
+    const djangoMessageCatcher = document.getElementById('django-message-catcher');
+    if (djangoMessageCatcher) {
+        const messages = djangoMessageCatcher.querySelectorAll('.message-django');
+        messages.forEach(msg => {
+            let type = msg.dataset.type.split(' ').pop();
+            if (type === 'success') type = 'success';
+            if (type === 'error') type = 'error';
+            if (type === 'warning') type = 'warning';
+            
+            appendLog(msg.textContent.trim(), type, true); 
+        });
+        
+        if (messages.length > 0) {
+            generationStatus.textContent = 'Proceso finalizado. Revisa los logs.';
+            triggerUploadButton.textContent = 'Subir Nuevo Archivo';
+            triggerUploadButton.classList.remove('bg-gray-500');
+            triggerUploadButton.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
+            excelFileInput.value = ''; 
+            uploadStatus.textContent = 'Ningún archivo seleccionado.';
+        }
+    }
+
+
+    // =========================================================
+    // 2. LÓGICA DE CARGA DE ARCHIVOS (Logs Dinámicos)
     // =========================================================
 
     // Manejar la selección de archivos
     excelFileInput.addEventListener('change', function() {
         if (this.files.length > 0) {
             const fileName = this.files[0].name;
+            
+            appendLog(`Archivo detectado: "${fileName}". Interfaz lista para subida.`, 'client', false);
+
             uploadStatus.textContent = `Archivo seleccionado: ${fileName}`;
             triggerUploadButton.disabled = false;
             triggerUploadButton.textContent = 'Generar Recibos Ahora';
             triggerUploadButton.classList.remove('bg-yellow-600', 'hover:bg-yellow-700', 'bg-gray-400');
             triggerUploadButton.classList.add('bg-green-600', 'hover:bg-green-700');
             generationStatus.textContent = '¡Listo para procesar!';
+            
         } else {
+            appendLog('Selección de archivo cancelada.', 'client', false);
+
             uploadStatus.textContent = 'Ningún archivo seleccionado.';
             triggerUploadButton.disabled = true;
             triggerUploadButton.textContent = 'Esperando Archivo';
@@ -50,95 +169,93 @@ document.addEventListener('DOMContentLoaded', function() {
             triggerUploadButton.classList.remove('bg-green-600', 'hover:bg-green-700');
             triggerUploadButton.classList.add('bg-gray-500');
             generationStatus.textContent = 'El procesamiento puede tardar unos segundos...';
+            
+            // Log Dinámico 2: Inicio de Proceso (Tipo Action - PERSISTE)
+            appendLog('Solicitud de REGISTRO: Enviando archivo. El servidor está procesando la creación de recibos y planillas.', 'action', true);
 
             // Enviar el formulario
             uploadForm.submit();
         }
     });
-
-
+    
     // =========================================================
-    // 3. LÓGICA DE LOGS (Muestra logs de Django y Logs Visuales)
+    // 5. LÓGICA DE FILTROS Y REPORTES (Logs Dinámicos - CORRECCIÓN)
     // =========================================================
 
-    /**
-     * Añade un mensaje al área visual de logs.
-     * @param {string} message - El mensaje a mostrar.
-     * @param {string} type - 'success', 'error', 'warning', 'info'.
-     */
-    function appendLog(message, type = 'info') {
-        const logItem = document.createElement('p');
-        const timestamp = new Date().toLocaleTimeString();
-        let colorClass = 'text-gray-700';
-        let icon = '•';
+    if (filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            
+            const formData = new FormData(filterForm);
+            // Capturamos el valor 'action'. Si no hay 'action' es probable que se haya presionado Enter.
+            const action = formData.get('action'); 
 
-        switch (type) {
-            case 'success':
-                colorClass = 'text-green-700 font-semibold';
-                icon = '✅';
-                break;
-            case 'error':
-                colorClass = 'text-red-700 font-semibold';
-                icon = '❌';
-                break;
-            case 'warning':
-                colorClass = 'text-yellow-700';
-                icon = '⚠️';
-                break;
-            default:
-                colorClass = 'text-indigo-700';
-                icon = 'ℹ️';
-                break;
-        }
+            // --- CASO 1: APLICAR FILTROS (Activado por 'filter' o por envío sin acción específica) ---
+            if (action === 'filter' || !action) {
+                
+                // --- Lógica para construir el mensaje de filtros ---
+                const searchQ = formData.get('q') || '';
+                const estado = formData.get('estado') || '';
+                const fechaInicio = formData.get('fecha_inicio') || '';
+                const fechaFin = formData.get('fecha_fin') || '';
+                
+                const categories = [];
+                filterForm.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+                    categories.push(checkbox.dataset.label || checkbox.name);
+                });
+                
+                let detalles = [];
+                if (searchQ) detalles.push(`Búsqueda: "${searchQ}"`);
+                if (estado) detalles.push(`Estado: ${estado}`);
+                if (fechaInicio || fechaFin) {
+                    detalles.push(`Período: ${fechaInicio || 'Inicio'} a ${fechaFin || 'Fin'}`);
+                }
+                if (categories.length > 0) {
+                    detalles.push(`Categorías: ${categories.join(', ')}`);
+                }
+                
+                let logMessage = '';
 
-        logItem.className = `${colorClass} py-0.5`;
-        logItem.innerHTML = `[${timestamp}] ${icon} ${message}`;
-        logDisplay.appendChild(logItem);
+                if (detalles.length > 0) {
+                    logMessage = `APLICANDO FILTROS: ${detalles.join(' | ')}. Recargando tabla...`;
+                } else {
+                    logMessage = 'Filtros de búsqueda vacíos. Se está recargando la tabla principal (sin filtros).';
+                }
 
-        // Auto-scroll al final del log
-        logDisplay.scrollTop = logDisplay.scrollHeight;
-    }
-
-    // Capturar y mostrar mensajes de Django
-    const djangoMessageCatcher = document.getElementById('django-message-catcher');
-    if (djangoMessageCatcher) {
-        const messages = djangoMessageCatcher.querySelectorAll('.message-django');
-        messages.forEach(msg => {
-            // El tipo de Django es "success", "error", etc.
-            const type = msg.dataset.type.split(' ').pop(); 
-            appendLog(msg.textContent.trim(), type);
+                // Log Dinámico: Filtros Aplicados
+                appendLog(logMessage, 'action', true);
+            } 
+            
+            // --- CASO 2: GENERAR REPORTE EXCEL ---
+            else if (action === 'excel') {
+                 // Log Dinámico: Solicitud de Excel
+                appendLog('SOLICITUD DE REPORTE: Generando archivo Excel (XLSX) con los filtros actuales...', 'action', true);
+            }
+            
+            // --- CASO 3: GENERAR REPORTE PDF ---
+            else if (action === 'pdf') {
+                 // Log Dinámico: Solicitud de PDF
+                appendLog('SOLICITUD DE REPORTE: Generando documento PDF con los filtros actuales...', 'action', true);
+            }
+            
+            // El formulario se envía automáticamente ya que no llamamos a e.preventDefault().
+            // El log es persistente, por lo que aparecerá después de la recarga del dashboard
+            // o antes de la descarga del reporte.
         });
-        
-        // Si se procesó un archivo, actualizar el estado
-        if (messages.length > 0) {
-            generationStatus.textContent = 'Proceso finalizado. Revisa los logs.';
-            triggerUploadButton.textContent = 'Subir Nuevo Archivo';
-            triggerUploadButton.classList.remove('bg-gray-500');
-            triggerUploadButton.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
-            excelFileInput.value = ''; // Limpiar el input para permitir la subida de un nuevo archivo
-            uploadStatus.textContent = 'Ningún archivo seleccionado.';
-        }
     }
 
 
     // =========================================================
-    // 4. LÓGICA DEL MODAL DE CONFIRMACIÓN
+    // 4. LÓGICA DEL MODAL DE CONFIRMACIÓN (Anulación)
     // =========================================================
 
     /**
-     * Muestra el modal de confirmación.
-     * @param {string} message - El mensaje HTML a mostrar.
-     * @param {string} confirmText - Texto para el botón de confirmación.
-     * @param {string} color - 'red', 'gray', 'indigo' para el botón.
-     * @param {string} formTarget - ID del formulario a enviar (ej: 'anular-form').
-     * @param {number|null} reciboId - PK del recibo si la acción es anular.
+     * Muestra el modal de confirmación. (Sin cambios)
      */
-    function showModal(message, confirmText, color, formTarget, reciboId = null) {
-        // 1. Rellenar contenido del modal
+    window.showModal = function(message, confirmText, color, formTarget, reciboId = null) {
+        // ... Lógica para mostrar modal (se mantiene) ...
         modalMessage.innerHTML = message;
         confirmButton.textContent = confirmText;
         
-        // 2. Limpiar y establecer color del botón
         confirmButton.className = 'px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white transition duration-150';
         
         switch (color) {
@@ -152,19 +269,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 confirmButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
         }
 
-        // 3. Establecer el formulario destino
         confirmButton.dataset.targetForm = formTarget;
 
-        // 4. *** CORRECCIÓN CLAVE: Asignar el ID del recibo si existe ***
         if (reciboId && formTarget === 'anular-form') {
             anularReciboIdInput.value = reciboId;
         } else {
-            // Asegurarse de que el input esté limpio para otras acciones
             anularReciboIdInput.value = ''; 
         }
-        // -------------------------------------------------------------
 
-        // 5. Mostrar el modal con transiciones
         modal.style.display = 'block';
         setTimeout(() => {
             modal.style.opacity = '1';
@@ -173,8 +285,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 10);
     }
 
-    // Oculta el modal
-    window.hideModal = function() { // Exponer globalmente para el botón 'Cancelar'
+    // Oculta el modal (Sin cambios)
+    window.hideModal = function() { 
         modal.style.opacity = '0';
         modalContent.classList.remove('scale-100', 'opacity-100');
         modalContent.classList.add('scale-95', 'opacity-0');
@@ -183,16 +295,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     }
 
-    // Manejar clic en el botón de confirmación
+    // Manejar clic en el botón de confirmación (Logs Dinámicos para Anulación)
     confirmButton.addEventListener('click', function() {
         const targetFormId = this.dataset.targetForm;
+
         if (targetFormId) {
-            // Si es 'clear-visual-logs-button', limpiamos solo el DOM, no enviamos POST
-            if (targetFormId === 'clear-logs-form') {
-                logDisplay.innerHTML = '<p class="text-gray-400">Log inicial: Listo para cargar archivo.</p>';
-                appendLog('Logs visuales han sido limpiados.', 'warning');
-            } else {
-                // Para las acciones que sí requieren POST (ej: anular)
+            // Caso 1: Anulación desde modificar_recibo.html
+            if (targetFormId === 'modificar-recibo-form') {
+                
+                appendLog('Solicitud de ANULACIÓN: Confirmación recibida. Enviando al servidor para la cancelación del recibo.', 'action', true);
+
+                if (formActionInput) {
+                    formActionInput.value = 'anular';
+                }
+                
+                document.getElementById('modificar-recibo-form').submit();
+            }
+
+            // Caso 2: Limpiar Logs Visuales (Dashboard)
+            else if (targetFormId === 'clear-logs-form') {
+                localStorage.removeItem(LOG_STORAGE_KEY);
+                
+                logDisplay.innerHTML = ''; 
+                appendLog('Logs visuales y persistentes han sido limpiados.', 'client', false);
+            } 
+            
+            // Caso 3: Anulación desde el Dashboard ('anular-form')
+            else {
+                const reciboId = anularReciboIdInput.value;
+                
+                appendLog(`Solicitud de ANULACIÓN: Confirmación recibida. Procesando Recibo ID ${reciboId}...`, 'action', true);
+                
                 document.getElementById(targetFormId).submit();
             }
         }
@@ -200,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // =========================================================
-    // 5. LISTENERS DE ACCIÓN (Botones que activan el modal)
+    // 6. LISTENERS DE ACCIÓN (Sin cambios)
     // =========================================================
 
     // Listener para el botón de ANULAR RECIBO (Tabla del Dashboard)
@@ -210,11 +343,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.dataset.message,
                 this.dataset.confirmText,
                 this.dataset.color,
-                'anular-form', // ID del formulario de anulación oculto
-                this.dataset.reciboId // El PK del recibo
+                'anular-form', 
+                this.dataset.reciboId 
             );
         });
     });
+
+    // Listener para el botón de ANULAR RECIBO (Página Modificar Recibo)
+     if (anularReciboModificarBtn) {
+        anularReciboModificarBtn.addEventListener('click', function() {
+            showModal(
+                this.dataset.message,
+                this.dataset.confirmText,
+                this.dataset.color,
+                'modificar-recibo-form', 
+                null 
+            );
+        });
+    }
 
     // Listener para el botón de LIMPIAR LOGS (Visual)
     document.getElementById('clear-visual-logs-button').addEventListener('click', function() {
@@ -222,19 +368,12 @@ document.addEventListener('DOMContentLoaded', function() {
             this.dataset.message,
             this.dataset.confirmText,
             this.dataset.color,
-            'clear-logs-form' // Usamos un nombre de formulario ficticio para activar el manejo de logs en el confirmButton
+            'clear-logs-form' 
         );
     });
 
-    // Si quieres un botón de limpiar logs de la BD (asume que existe un endpoint de Django):
-    // document.getElementById('clear-db-logs-button').addEventListener('click', function() {
-    //     showModal(
-    //         this.dataset.message,
-    //         this.dataset.confirmText,
-    //         this.dataset.color,
-    //         'clear-logs-db-form' // Asume un formulario oculto para la limpieza de BD
-    //     );
-    // });
-
-
+    // =========================================================
+    // 7. INICIALIZACIÓN
+    // =========================================================
+    loadPersistedLogs();
 });

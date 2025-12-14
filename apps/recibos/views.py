@@ -24,6 +24,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from datetime import datetime
 import pytz # Importación necesaria para manejar la zona horaria
 from django.core.paginator import Paginator
+
 logger = logging.getLogger(__name__)
 
 
@@ -141,7 +142,7 @@ class ReciboListView(ListView):
     def post(self, request, *args, **kwargs):
         """Maneja todas las acciones POST: Carga de Excel, Anulación, Limpieza."""
         action = request.POST.get('action')
-        
+
         # Obtener la zona horaria del proyecto de Django para manejar la fecha de anulación
         try:
             current_timezone = pytz.timezone(settings.TIME_ZONE)
@@ -153,15 +154,11 @@ class ReciboListView(ListView):
             if recibo_id:
                 recibo = get_object_or_404(Recibo, pk=recibo_id)
                 num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
-                
+
                 if not recibo.anulado:
-                    
-                    # === INICIO CORRECCIÓN CLAVE ===
                     recibo.anulado = True
-                    recibo.fecha_anulacion = datetime.now(current_timezone) # <-- ¡Aquí está la corrección!
+                    recibo.fecha_anulacion = datetime.now(current_timezone)
                     recibo.save()
-                    # === FIN CORRECCIÓN CLAVE ===
-                    
                     messages.success(request, f"El recibo N°{num_recibo_zfill} ha sido ANULADO correctamente.")
                 else:
                     messages.warning(request, "Este recibo ya estaba anulado.")
@@ -381,21 +378,45 @@ def generar_reporte_view(request):
 
     action = request.GET.get('action')
 
+    # =========================================================
+    # INICIO: MODIFICACIÓN CLAVE PARA LOGS DE REPORTE
+    # =========================================================
     if action == 'excel':
         try:
-            return generar_reporte_excel(request.GET, recibos_filtrados, filtros_aplicados)
+            # 1. Ejecutar la generación del reporte (debe devolver HttpResponse con el archivo)
+            response = generar_reporte_excel(request.GET, recibos_filtrados, filtros_aplicados)
+            
+            # 2. Configurar el mensaje de éxito (se mostrará en la próxima carga de página)
+            messages.success(request, f"El reporte Excel ({len(recibos_filtrados)} recibos) ha sido generado con éxito y la descarga debería comenzar.")
+            
+            # 3. Devolver la respuesta de descarga
+            return response
+            
         except Exception as e:
             logger.error(f"Error al generar el reporte Excel: {e}")
-            messages.error(request, f"Error al generar el reporte Excel: {e}")
+            messages.error(request, f"Error al generar el reporte Excel. Detalles: {e}")
+            # En caso de error, redirigir al dashboard con los filtros originales
             return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
 
     elif action == 'pdf':
         try:
-            return generar_pdf_reporte(recibos_filtrados, filtros_aplicados)
+            # 1. Ejecutar la generación del reporte (debe devolver HttpResponse con el archivo)
+            response = generar_pdf_reporte(recibos_filtrados, filtros_aplicados)
+            
+            # 2. Configurar el mensaje de éxito
+            messages.success(request, f"El reporte PDF ({len(recibos_filtrados)} recibos) ha sido generado con éxito y la descarga debería comenzar.")
+            
+            # 3. Devolver la respuesta de descarga
+            return response
+            
         except Exception as e:
             logger.error(f"Error al generar el reporte PDF: {e}")
             messages.error(request, f"Error al generar el reporte PDF. Consulte la consola del servidor: {e}")
+            # En caso de error, redirigir al dashboard con los filtros originales
             return redirect(reverse('recibos:dashboard') + '?' + request.GET.urlencode())
+    # =========================================================
+    # FIN: MODIFICACIÓN CLAVE
+    # =========================================================
 
     else:
         messages.error(request, "Acción de reporte no válida.")
@@ -404,7 +425,7 @@ def generar_reporte_view(request):
 
 def modificar_recibo(request, pk):
     """
-    Permite modificar un Recibo existente (sino está anulado) o anularlo.
+    Permite modificar un Recibo existente (si no está anulado) o anularlo.
     """
     recibo = get_object_or_404(Recibo, pk=pk)
 
@@ -418,7 +439,7 @@ def modificar_recibo(request, pk):
         action = request.POST.get('action')
 
         if action == 'anular':
-            
+
             # Obtener la zona horaria del proyecto de Django
             try:
                 current_timezone = pytz.timezone(settings.TIME_ZONE)
@@ -429,10 +450,9 @@ def modificar_recibo(request, pk):
             recibo.fecha_anulacion = datetime.now(current_timezone)
             recibo.save()
             messages.warning(request, f"¡Recibo N°{num_recibo_zfill} ha sido ANULADO exitosamente! (Acción irreversible)")
-            
-            # === REDIRECCIÓN CORREGIDA ===
-            return redirect(reverse('recibos:dashboard')) # <-- ¡Cambiado de recibos_anulados a dashboard!
-            # =============================
+
+            # Redirigir al dashboard
+            return redirect(reverse('recibos:dashboard'))
 
         else:
             form = ReciboForm(request.POST, instance=recibo)
@@ -457,10 +477,10 @@ def modificar_recibo(request, pk):
 
 
 def recibos_anulados(request):
-    
+
     # 1. Obtener todos los recibos anulados
     queryset = Recibo.objects.filter(anulado=True).order_by('-fecha_anulacion')
-    
+
     # 2. Manejar la Búsqueda (Filtro por q)
     query = request.GET.get('q')
     if query:
@@ -469,14 +489,14 @@ def recibos_anulados(request):
             Q(nombre__icontains=query) |
             Q(rif_cedula_identidad__icontains=query)
         )
-    
+
     # 3. Manejar la Paginación (20 ítems por página)
-    paginator = Paginator(queryset, 20)  # <-- Tu límite de 20
+    paginator = Paginator(queryset, 20)
     page_number = request.GET.get('page')
     recibos_page = paginator.get_page(page_number)
-    
+
     context = {
         'titulo': 'Recibos Anulados',
-        'recibos': recibos_page,  # <-- ¡Pasar el objeto Page!
+        'recibos': recibos_page,
     }
     return render(request, 'recibos/recibos_anulados.html', context)
