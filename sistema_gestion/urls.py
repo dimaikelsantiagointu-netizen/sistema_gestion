@@ -1,16 +1,14 @@
-# Sistema_gestion-main/urls.py
-
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import TemplateView # 👈 Correcto: usar TemplateView directamente
+from django.views.generic import TemplateView
 
 urlpatterns = [
     # URLs de Administración de Django
     path('admin/', admin.site.urls),
     
-    # URL de la Aplicación Recibos (Namespace: 'recibos')
+    # URL de la Aplicación Recibos
     path('recibos/', include('apps.recibos.urls', namespace='recibos')),     
     
-    # 🎯 URL RAÍZ CORREGIDA: Servir base.html con el nombre 'base'
-    path('', TemplateView.as_view(template_name='base.html'), name='base'), # <-- ¡CAMBIADO a name='base'!
+    # URL RAÍZ base.html
+    path('', TemplateView.as_view(template_name='base.html'), name='base'),
 ]
