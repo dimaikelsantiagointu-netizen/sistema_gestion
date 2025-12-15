@@ -1,15 +1,14 @@
 from django.contrib import admin
-from django.urls import path
-from django.contrib.auth import views as auth_views
+from django.urls import path, include
+from django.views.generic import TemplateView
 
 urlpatterns = [
+    # URLs de Administración de Django
     path('admin/', admin.site.urls),
-    # Las demás URLs se agregarán según se desarrollen las apps
+    
+    # URL de la Aplicación Recibos
+    path('recibos/', include('apps.recibos.urls', namespace='recibos')),     
+    
+    # URL RAÍZ base.html
+    path('', TemplateView.as_view(template_name='base.html'), name='base'),
 ]
-
-# Para desarrollo
-from django.conf import settings
-from django.conf.urls.static import static
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

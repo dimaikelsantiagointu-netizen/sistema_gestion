@@ -1,0 +1,279 @@
+{% extends 'recibos/dashboard.html' %} 
+{% load static %}
+
+{% block title %}Modificar Recibo N°{{ recibo.numero_recibo }}{% endblock title %}
+
+{% block main_content %}
+
+<div class="max-w-6xl mx-auto w-full">
+    
+    <header class="mb-8 p-4 bg-white rounded-xl shadow-lg border-b-4 border-indigo-600">
+        <h1 class="text-3xl font-extrabold text-gray-900 flex items-center">
+            <i class="fas fa-edit mr-3 text-indigo-600"></i>
+            Gestión de Recibo <span class="text-indigo-600 ml-2">N°{{ recibo.numero_recibo|stringformat:"04d" }}</span>
+        </h1>
+        <p class="text-gray-500 text-sm mt-1">
+            Registro ID: <span class="font-mono text-gray-700 font-semibold">{{ recibo.pk }}</span> 
+        </p>
+    </header>
+
+    <div class="bg-white p-8 rounded-xl shadow-2xl border border-gray-100">
+        
+        {% for message in messages %}
+        <div class="mb-6 p-4 rounded-lg text-sm {% if message.tags == 'success' %}bg-green-100 text-green-800{% elif message.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+            <p class="font-semibold">{{ message }}</p>
+        </div>
+        {% endfor %}
+
+        <form method="POST" action="{% url 'recibos:modificar_recibo' pk=recibo.pk %}">
+            {% csrf_token %}
+            
+            <input type="hidden" name="action" id="form-action" value="modificar">
+
+            <div class="space-y-12">
+
+                {# DATOS DEL CLIENTE Y GENERALES #}
+                <div class="border-b border-gray-200 pb-10">
+                    <h2 class="text-2xl font-bold leading-7 text-gray-900 flex items-center mb-6">
+                        <i class="fas fa-user-tag mr-3 text-indigo-500"></i>
+                        Información Básica y Datos del Cliente
+                    </h2>
+
+                    <div class="mt-4 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-6">
+                        
+                        {# Campo numero_recibo (Readonly) #}
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.numero_recibo.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.numero_recibo.label }}:</label>
+                            <div class="mt-1">{{ form.numero_recibo }}</div>
+                            {% if form.numero_recibo.errors %} <p class="text-red-500 text-xs mt-1">{{ form.numero_recibo.errors.as_text }}</p> {% endif %}
+                        </div>
+
+                        {# Campo estado #}
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.estado.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.estado.label }}:</label>
+                            <div class="mt-1">{{ form.estado }}</div>
+                            {% if form.estado.errors %} <p class="text-red-500 text-xs mt-1">{{ form.estado.errors.as_text }}</p> {% endif %}
+                        </div>
+
+                        {# Campo ente_liquidado #}
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.ente_liquidado.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.ente_liquidado.label }}:</label>
+                            <div class="mt-1">{{ form.ente_liquidado }}</div>
+                            {% if form.ente_liquidado.errors %} <p class="text-red-500 text-xs mt-1">{{ form.ente_liquidado.errors.as_text }}</p> {% endif %}
+                        </div>
+                        
+                        {# Campo nombre #}
+                        <div class="sm:col-span-3">
+                            <label for="{{ form.nombre.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.nombre.label }}:</label>
+                            <div class="mt-1">{{ form.nombre }}</div>
+                            {% if form.nombre.errors %} <p class="text-red-500 text-xs mt-1">{{ form.nombre.errors.as_text }}</p> {% endif %}
+                        </div>
+
+                        {# Campo rif_cedula_identidad #}
+                        <div class="sm:col-span-3">
+                            <label for="{{ form.rif_cedula_identidad.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.rif_cedula_identidad.label }}:</label>
+                            <div class="mt-1">{{ form.rif_cedula_identidad }}</div>
+                            {% if form.rif_cedula_identidad.errors %} <p class="text-red-500 text-xs mt-1">{{ form.rif_cedula_identidad.errors.as_text }}</p> {% endif %}
+                        </div>
+                        
+                        {# Campo direccion_inmueble #}
+                        <div class="sm:col-span-6">
+                            <label for="{{ form.direccion_inmueble.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.direccion_inmueble.label }}:</label>
+                            <div class="mt-1">{{ form.direccion_inmueble }}</div>
+                            {% if form.direccion_inmueble.errors %} <p class="text-red-500 text-xs mt-1">{{ form.direccion_inmueble.errors.as_text }}</p> {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {#MONTOS Y TASAS #}
+                <div class="border-b border-gray-200 pb-10">
+                    <h2 class="text-2xl font-bold leading-7 text-gray-900 flex items-center mb-6">
+                        <i class="fas fa-money-bill-wave mr-3 text-green-600"></i>
+                        2. Valores Monetarios y Tasa
+                    </h2>
+
+                    <div class="mt-4 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-6">
+                        
+                        {# Campo gastos_administrativos #}
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.gastos_administrativos.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.gastos_administrativos.label }} (Bs):</label>
+                            <div class="mt-1">{{ form.gastos_administrativos }}</div>
+                            {% if form.gastos_administrativos.errors %} <p class="text-red-500 text-xs mt-1">{{ form.gastos_administrativos.errors.as_text }}</p> {% endif %}
+                        </div>
+
+                        {# Campo tasa_dia #}
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.tasa_dia.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.tasa_dia.label }}:</label>
+                            <div class="mt-1">{{ form.tasa_dia }}</div>
+                            {% if form.tasa_dia.errors %} <p class="text-red-500 text-xs mt-1">{{ form.tasa_dia.errors.as_text }}</p> {% endif %}
+                        </div>
+                        
+                        {# Campo total_monto_bs #}
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.total_monto_bs.id_for_label }}" class="block text-sm font-bold leading-6 text-gray-900">{{ form.total_monto_bs.label }} (Bs):</label>
+                            <div class="mt-1">{{ form.total_monto_bs }}</div>
+                            {% if form.total_monto_bs.errors %} <p class="text-red-500 text-xs mt-1">{{ form.total_monto_bs.errors.as_text }}</p> {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {# CATEGORÍAS (CHECKBOXES CON ETIQUETAS) #}
+                <div class="border-b border-gray-200 pb-10">
+                    <h2 class="text-2xl font-bold leading-7 text-gray-900 flex items-center mb-6">
+                        <i class="fas fa-tags mr-3 text-purple-600"></i>
+                        3. Categorías (Marque las que aplican)
+                    </h2>
+                    
+                    <div class="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-y-4 gap-x-8">
+                        
+                        {% for field in form %}
+                            {% if field.name|slice:":9" == 'categoria' %}
+                            <div class="relative flex items-start">
+                                <div class="flex items-center h-6">
+                                    {{ field }}
+                                </div>
+                                <div class="ml-3 text-sm leading-6">
+                                    <label for="{{ field.id_for_label }}" class="font-medium text-gray-700">{{ field.label }}</label>
+                                </div>
+                                {% if field.errors %} <p class="text-red-500 text-xs mt-1">{{ field.errors.as_text }}</p> {% endif %}
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                        
+                    </div>
+                </div>
+
+                {# CONCILIACIÓN Y PAGO #}
+                <div class="pb-2">
+                    <h2 class="text-2xl font-bold leading-7 text-gray-900 flex items-center mb-6">
+                        <i class="fas fa-clipboard-check mr-3 text-blue-600"></i>
+                        4. Detalles de Pago y Conciliación
+                    </h2>
+
+                    <div class="mt-4 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-6">
+                        
+                        {# Campo fecha #}
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.fecha.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.fecha.label }}:</label>
+                            <div class="mt-1">
+                                <input type="date" name="{{ form.fecha.name }}" id="{{ form.fecha.id_for_label }}" 
+                                    value="{{ recibo.fecha|date:'Y-m-d' }}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                            {% if form.fecha.errors %} <p class="text-red-500 text-xs mt-1">{{ form.fecha.errors.as_text }}</p> {% endif %}
+                        </div>
+
+                        {# Campo numero_transferencia #}
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.numero_transferencia.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.numero_transferencia.label }}:</label>
+                            <div class="mt-1">{{ form.numero_transferencia }}</div>
+                            {% if form.numero_transferencia.errors %} <p class="text-red-500 text-xs mt-1">{{ form.numero_transferencia.errors.as_text }}</p> {% endif %}
+                        </div>
+                        
+                        {# Campo conciliado #}
+                        <div class="sm:col-span-2 flex items-end pb-1">
+                            <div class="relative flex items-start">
+                                <div class="flex items-center h-6 mt-1">
+                                    {{ form.conciliado }}
+                                </div>
+                                <div class="ml-3 text-base leading-6">
+                                    <label for="{{ form.conciliado.id_for_label }}" class="font-semibold text-gray-900">{{ form.conciliado.label }}</label>
+                                </div>
+                            </div>
+                            {% if form.conciliado.errors %} <p class="text-red-500 text-xs mt-1">{{ form.conciliado.errors.as_text }}</p> {% endif %}
+                        </div>
+
+                        {# Campo concepto #}
+                        <div class="sm:col-span-6">
+                            <label for="{{ form.concepto.id_for_label }}" class="block text-sm font-medium leading-6 text-gray-900">{{ form.concepto.label }}:</label>
+                            <div class="mt-1">{{ form.concepto }}</div>
+                            {% if form.concepto.errors %} <p class="text-red-500 text-xs mt-1">{{ form.concepto.errors.as_text }}</p> {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {# BOTONES DE ACCIÓN #}
+            <div class="flex flex-wrap justify-between items-center pt-6 border-t border-gray-200 gap-4 mt-8">
+                
+                {# Botón 3: ANULAR  #}
+                <button type="button" 
+                    id="anular-recibo-btn"
+                    title="Anular el recibo de forma permanente (acción irreversible)"
+                    data-recibo-num="{{ recibo.numero_recibo|stringformat:"04d" }}"
+                    class="order-1 w-full md:w-auto px-6 py-3 border border-transparent rounded-lg shadow-md text-base font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
+                    <i class="fas fa-ban mr-2"></i> Anular Recibo
+                </button>
+
+                <div class="flex gap-4 w-full md:w-auto md:order-2">
+                    {# Botón 2: CANCELAR / VOLVER #}
+                    <a href="{% url 'recibos:dashboard' %}"
+                        class="flex-1 px-6 py-3 text-center border border-gray-300 rounded-lg shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 transition duration-150">
+                        <i class="fas fa-arrow-left mr-2"></i> Cancelar
+                    </a>
+                    
+                    {# Botón 1: MODIFICAR (Guardar Cambios) #}
+                    <button type="submit" 
+                        title="Guardar los cambios realizados en el formulario"
+                        class="flex-1 px-6 py-3 border border-transparent rounded-lg shadow-md text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
+                        <i class="fas fa-save mr-2"></i> Guardar Cambios
+                    </button>
+                </div>
+
+            </div>
+        </form>
+
+    </div>
+</div>
+
+{% endblock main_content %}
+
+{% block extra_js %}
+{# Script para manejar la Anulación del Recibo #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const anularBtn = document.getElementById('anular-recibo-btn'); 
+    const formAction = document.getElementById('form-action');
+    const confirmButton = document.getElementById('confirm-action-button'); 
+
+    // 1. Manejador para mostrar el modal al hacer clic en ANULAR
+    if (anularBtn) {
+        anularBtn.addEventListener('click', function() {
+            const reciboNum = this.dataset.reciboNum;
+            
+            if (window.showModal) {
+                window.showModal(
+                    'Confirmación de Anulación',
+                    `¿Estás seguro que deseas **ANULAR** el recibo N°${reciboNum}? Esta acción es irreversible y archivará el recibo.`,
+                    'Sí, ANULAR',
+                    'anular_confirm', 
+                    'red'
+                );
+            } else {
+                if (confirm(`¿Estás seguro que deseas ANULAR el recibo N°${reciboNum}?`)) {
+                    formAction.value = 'anular';
+                    document.querySelector('form').submit();
+                }
+            }
+        });
+    }
+
+    // 2. Manejador para procesar la confirmación del modal global
+    if (confirmButton) {
+        confirmButton.onclick = function() {
+            const actionType = this.getAttribute('data-action-type');
+            
+            if (actionType === 'anular_confirm') {
+                formAction.value = 'anular'; 
+                
+                if (window.hideModal) {
+                    window.hideModal();
+                }
+                
+                document.querySelector('form').submit();
+            } 
+        };
+    }
+});
+</script>
+{% endblock extra_js %}
