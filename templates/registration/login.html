@@ -1,31 +1,127 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Acceso al Sistema</title>
-    </head>
-<body>
-    <div style="max-width: 400px; margin: 100px auto; text-align: center;">
-        <h2>🔐 Sistema de Gestión</h2>
-        <hr>
-        <form method="post">
-            {% csrf_token %}
-            <div>
-                <label>Usuario:</label><br>
-                {{ form.username }}
-            </div>
-            <br>
-            <div>
-                <label>Contraseña:</label><br>
-                {{ form.password }}
-            </div>
-            <br>
-            <button type="submit">Iniciar Sesión</button>
-        </form>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso al Sistema | SG</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .input-focus:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+        /* Estilo para el acordeón de ayuda */
+        #help-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        #help-content.open {
+            max-height: 100px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
 
-        {% if form.errors %}
-            <p style="color: red;">Usuario o contraseña incorrectos.</p>
-        {% endif %}
-    </div>
+    <header class="bg-indigo-900 shadow-lg w-full">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center">
+            <div class="text-white text-xl font-extrabold tracking-wide flex items-center">
+                <i class="fas fa-cubes mr-3 text-indigo-400"></i> SISTEMA GESTIÓN
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex items-center justify-center p-6">
+        <div class="max-w-md w-full">
+            <div class="glass-card rounded-3xl shadow-2xl overflow-hidden border border-gray-200">
+                
+                <div class="p-8 text-center border-b border-gray-100">
+                    <h2 class="text-3xl font-black text-gray-900 tracking-tight">Bienvenido</h2>
+                    <p class="text-gray-500 mt-2 font-medium text-sm text-indigo-600/80">Introduce tus credenciales de acceso</p>
+                </div>
+
+                <div class="p-8">
+                    <form method="post" class="space-y-5">
+                        {% csrf_token %}
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Usuario</label>
+                            <div class="relative group">
+                                <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 group-focus-within:text-indigo-500 transition-colors">
+                                    <i class="fas fa-id-badge"></i>
+                                </span>
+                                <input type="text" name="username" required 
+                                       class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm transition-all outline-none input-focus" 
+                                       placeholder="Nombre de usuario">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Contraseña</label>
+                            <div class="relative group">
+                                <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 group-focus-within:text-indigo-500 transition-colors">
+                                    <i class="fas fa-key"></i>
+                                </span>
+                                <input type="password" name="password" required 
+                                       class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm transition-all outline-none input-focus" 
+                                       placeholder="••••••••">
+                            </div>
+                        </div>
+
+                        <button type="submit" 
+                                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-100 transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 uppercase tracking-wide text-xs">
+                            Acceder al Sistema <i class="fas fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </form>
+
+                    <div class="mt-8 border-t border-gray-100 pt-6">
+                        <button onclick="toggleHelp()" class="w-full flex items-center justify-between text-gray-500 hover:text-indigo-600 transition-colors group">
+                            <span class="text-sm font-semibold">¿No puedes iniciar sesión?</span>
+                            <i id="help-chevron" class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
+                        </button>
+                        
+                        <div id="help-content" class="bg-indigo-50/50 rounded-2xl mt-3 transition-all duration-300">
+                            <div class="p-4 flex items-center gap-4">
+                                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                    <i class="fas fa-headset text-indigo-500"></i>
+                                </div>
+                                <div>
+                                    <p class="text-[11px] font-bold text-gray-400 uppercase">Soporte Técnico</p>
+                                    <p class="text-sm font-bold text-gray-700">INTU@gobierno.com.ve </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if form.errors %}
+                    <div class="mt-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+                        <div class="flex items-center">
+                            <i class="fas fa-circle-exclamation text-red-500 mr-2"></i>
+                            <p class="text-xs font-bold text-red-700">Credenciales inválidas.</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function toggleHelp() {
+            const content = document.getElementById('help-content');
+            const chevron = document.getElementById('help-chevron');
+            content.classList.toggle('open');
+            chevron.style.transform = content.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+    </script>
 </body>
 </html>

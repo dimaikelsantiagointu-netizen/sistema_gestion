@@ -4,21 +4,18 @@ from django.contrib.auth.admin import UserAdmin
 from .models import Usuario
 
 class UsuarioAdmin(UserAdmin):
-    list_display = ('username', 'email', 'rol', 'is_staff', 'is_superuser')
+    # Campos que se ven en la tabla principal
+    list_display = ('username', 'cedula', 'rol', 'is_staff', 'is_superuser')
     
-    # Esto permite que los permisos se vean mejor en el admin
-    filter_horizontal = ('groups', 'user_permissions') 
-    
+    # Campos al editar un usuario
     fieldsets = UserAdmin.fieldsets + (
-        ('Configuración de Acceso', {'fields': ('rol',)}),
+        ('Información Personal Extra', {'fields': ('cedula', 'telefono')}),
+        ('Configuración de Sistema', {'fields': ('rol',)}),
     )
     
+    # Campos al crear un usuario nuevo
     add_fieldsets = UserAdmin.add_fieldsets + (
-        ('Configuración de Acceso', {'fields': ('rol',)}),
+        ('Información Extra', {'fields': ('cedula', 'telefono', 'rol')}),
     )
-
-# Si ya estaba registrado, lo quitamos para evitar errores de duplicado
-if admin.site.is_registered(Usuario):
-    admin.site.unregister(Usuario)
 
 admin.site.register(Usuario, UsuarioAdmin)

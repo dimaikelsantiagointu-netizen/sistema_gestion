@@ -16,7 +16,7 @@
             <a href="{% url 'home' %}" class="text-white text-xl font-extrabold tracking-wide flex items-center">
                 <i class="fas fa-cubes mr-3 text-indigo-400"></i> SISTEMA GESTIÓN
             </a>
-            
+        
             <div class="flex items-center space-x-4">
                 {# BOTÓN DE ADMIN GLOBAL: Solo para Superusuarios #}
                 {% if user.is_superuser %}
@@ -27,9 +27,17 @@
                 </a>
                 {% endif %}
 
-                <span class="hidden sm:inline text-sm text-indigo-300">
-                    Hola, {{ user.username }} 
-                    <span class="ml-1 px-2 py-0.5 bg-indigo-800 rounded-full text-[10px] uppercase font-bold text-white">
+                <span class="hidden sm:inline text-sm text-indigo-100">
+                    Bienvenido, 
+                    <span class="font-bold text-white">
+                        {# Si tiene 'first_name', lo muestra. Si no, usa el 'username' #}
+                        {{ user.first_name|default:user.username|capfirst }}
+                    </span>
+                    
+                    <span class="ml-1 px-2 py-0.5 rounded-full text-[11px] uppercase font-bold text-white 
+                        {% if user.rol == 'superadmin' %} 
+                        {% elif user.rol == 'admin' %} 
+                        {% else %}  {% endif %}">
                         {{ user.get_rol_display }}
                     </span>
                 </span>
@@ -46,12 +54,7 @@
 
     <main class="max-w-7xl mx-auto p-8 sm:p-12 flex-grow w-full">
         
-        {# BLOQUE DE DEBUG (Bórralo cuando todo funcione) #}
-        {% if user.is_authenticated and not user.is_superuser %}
-        <div class="mb-6 p-2 bg-gray-800 text-green-400 text-xs font-mono rounded">
-            Permisos detectados: {{ user.get_all_permissions }}
-        </div>
-        {% endif %}
+        
 
         {% block content %}
         <h1 class="text-4xl sm:text-5xl font-extrabold text-center text-gray-900 mb-2 mt-4">Centro de Control</h1>
@@ -67,10 +70,27 @@
                 <span class="text-base text-gray-600">Creación y seguimiento de pagos.</span>
             </a>
             {% else %}
-            <div class="bg-gray-100 border border-gray-300 rounded-xl p-8 opacity-50 flex flex-col items-center text-center grayscale cursor-not-allowed">
-                <i class="fas fa-lock text-4xl mb-4 text-gray-400"></i>
-                <span class="text-2xl font-bold text-gray-500">Gestión de Recibos</span>
-                <span class="text-xs text-red-500 font-bold uppercase mt-2 italic">Acceso Restringido</span>
+            <div class="relative overflow-hidden bg-white border-2 border-red-200 rounded-2xl p-8 flex flex-col items-center text-center opacity-70 shadow-inner group transition-all duration-300">
+                {# 2. Icono con "glow" rojo suave #}
+                <div class="relative mb-4">
+                    <i class="fas fa-lock text-4xl text-red-400"></i>
+                    <div class="absolute inset-0 bg-red-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                </div>
+
+                {# 3. Textos #}
+                <span class="text-xl font-black text-gray-400 tracking-tight uppercase">Gestión de Recibos</span>
+            
+             <div class="mt-3 flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
+                <span class="flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <span class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Acceso no autorizado</span>
+            </div>
+
+                <p class="mt-4 text-xs text-gray-400 italic font-medium px-4">
+                    Contacte al administrador para solicitar acceso a este gestor.
+                </p>
             </div>
             {% endif %}
 
@@ -82,10 +102,27 @@
                 <span class="text-base text-gray-600">Base de datos de clientes.</span>
             </a>
             {% else %}
-            <div class="bg-gray-100 border border-gray-300 rounded-xl p-8 opacity-50 flex flex-col items-center text-center grayscale">
-                <i class="fas fa-lock text-4xl mb-4 text-gray-400"></i>
-                <span class="text-2xl font-bold text-gray-500">Gestión de Clientes</span>
-                <span class="text-xs text-gray-400 mt-2">No disponible</span>
+            <div class="relative overflow-hidden bg-white border-2 border-red-200 rounded-2xl p-8 flex flex-col items-center text-center opacity-70 shadow-inner group transition-all duration-300">
+                {# 2. Icono con "glow" rojo suave #}
+                <div class="relative mb-4">
+                    <i class="fas fa-lock text-4xl text-red-400"></i>
+                    <div class="absolute inset-0 bg-red-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                </div>
+
+                {# 3. Textos #}
+                <span class="text-xl font-black text-gray-400 tracking-tight uppercase">Gestión de Clientes</span>
+            
+             <div class="mt-3 flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
+                <span class="flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <span class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Acceso no autorizado</span>
+            </div>
+
+                <p class="mt-4 text-xs text-gray-400 italic font-medium px-4">
+                    Contacte al administrador para solicitar acceso a este gestor.
+                </p>
             </div>
             {% endif %}
 
@@ -97,9 +134,27 @@
                 <span class="text-base text-gray-600">Módulo de transacciones.</span>
             </a>
             {% else %}
-            <div class="bg-gray-100 border border-gray-300 rounded-xl p-8 opacity-50 flex flex-col items-center text-center grayscale">
-                <i class="fas fa-lock text-4xl mb-4 text-gray-400"></i>
-                <span class="text-2xl font-bold text-gray-500">Sistema de Pagos</span>
+            <div class="relative overflow-hidden bg-white border-2 border-red-200 rounded-2xl p-8 flex flex-col items-center text-center opacity-70 shadow-inner group transition-all duration-300">
+                {# 2. Icono con "glow" rojo suave #}
+                <div class="relative mb-4">
+                    <i class="fas fa-lock text-4xl text-red-400"></i>
+                    <div class="absolute inset-0 bg-red-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                </div>
+
+                {# 3. Textos #}
+                <span class="text-xl font-black text-gray-400 tracking-tight uppercase">Sistemas de Pagos</span>
+            
+             <div class="mt-3 flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
+                <span class="flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <span class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Acceso no autorizado</span>
+            </div>
+
+                <p class="mt-4 text-xs text-gray-400 italic font-medium px-4">
+                    Contacte al administrador para solicitar acceso a este gestor.
+                </p>
             </div>
             {% endif %}
 
@@ -110,9 +165,27 @@
                 <span class="text-2xl font-bold text-orange-800 mb-2">Gestión de Contratos</span>
             </a>
             {% else %}
-            <div class="bg-gray-100 border border-gray-300 rounded-xl p-8 opacity-50 flex flex-col items-center text-center grayscale">
-                <i class="fas fa-lock text-4xl mb-4 text-gray-400"></i>
-                <span class="text-2xl font-bold text-gray-500">Gestión de Contratos</span>
+            <div class="relative overflow-hidden bg-white border-2 border-red-200 rounded-2xl p-8 flex flex-col items-center text-center opacity-70 shadow-inner group transition-all duration-300">
+                {# 2. Icono con "glow" rojo suave #}
+                <div class="relative mb-4">
+                    <i class="fas fa-lock text-4xl text-red-400"></i>
+                    <div class="absolute inset-0 bg-red-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                </div>
+
+                {# 3. Textos #}
+                <span class="text-xl font-black text-gray-400 tracking-tight uppercase">Gestión de Contratos</span>
+            
+             <div class="mt-3 flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
+                <span class="flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <span class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Acceso no autorizado</span>
+            </div>
+
+                <p class="mt-4 text-xs text-gray-400 italic font-medium px-4">
+                    Contacte al administrador para solicitar acceso a este gestor.
+                </p>
             </div>
             {% endif %}
 
@@ -123,9 +196,27 @@
                 <span class="text-2xl font-bold text-yellow-800 mb-2">Sellos Dorados</span>
             </a>
             {% else %}
-            <div class="bg-gray-100 border border-gray-300 rounded-xl p-8 opacity-50 flex flex-col items-center text-center grayscale">
-                <i class="fas fa-lock text-4xl mb-4 text-gray-400"></i>
-                <span class="text-2xl font-bold text-gray-500">Sellos Dorados</span>
+            <div class="relative overflow-hidden bg-white border-2 border-red-200 rounded-2xl p-8 flex flex-col items-center text-center opacity-70 shadow-inner group transition-all duration-300">
+                {# 2. Icono con "glow" rojo suave #}
+                <div class="relative mb-4">
+                    <i class="fas fa-lock text-4xl text-red-400"></i>
+                    <div class="absolute inset-0 bg-red-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                </div>
+
+                {# 3. Textos #}
+                <span class="text-xl font-black text-gray-400 tracking-tight uppercase">Sellos Dorados</span>
+            
+             <div class="mt-3 flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
+                <span class="flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <span class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Acceso no autorizado</span>
+            </div>
+
+                <p class="mt-4 text-xs text-gray-400 italic font-medium px-4">
+                    Contacte al administrador para solicitar acceso a este gestor.
+                </p>
             </div>
             {% endif %}
 
@@ -136,9 +227,28 @@
                 <span class="text-2xl font-bold text-purple-800 mb-2">Gestión Documental</span>
             </a>
             {% else %}
-            <div class="bg-gray-100 border border-gray-300 rounded-xl p-8 opacity-50 flex flex-col items-center text-center grayscale">
-                <i class="fas fa-lock text-4xl mb-4 text-gray-400"></i>
-                <span class="text-2xl font-bold text-gray-500">Gestión Documental</span>
+          
+            <div class="relative overflow-hidden bg-white border-2 border-red-200 rounded-2xl p-8 flex flex-col items-center text-center opacity-70 shadow-inner group transition-all duration-300">
+                {# 2. Icono con "glow" rojo suave #}
+                <div class="relative mb-4">
+                    <i class="fas fa-lock text-4xl text-red-400"></i>
+                    <div class="absolute inset-0 bg-red-400 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                </div>
+
+                {# 3. Textos #}
+                <span class="text-xl font-black text-gray-400 tracking-tight uppercase">Gestión Documental</span>
+            
+             <div class="mt-3 flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-100 rounded-full">
+                <span class="flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <span class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Acceso no autorizado</span>
+            </div>
+
+                <p class="mt-4 text-xs text-gray-400 italic font-medium px-4">
+                    Contacte al administrador para solicitar acceso a este gestor.
+                </p>
             </div>
             {% endif %}
 
