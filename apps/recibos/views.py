@@ -17,7 +17,8 @@ from django.utils import timezone
 from datetime import datetime
 import pytz 
 from django.core.paginator import Paginator
-
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.views.generic import ListView
 logger = logging.getLogger(__name__)
 
 # --- CONFIGURACIÓN DE RUTAS Y CONSTANTES (Mantener por si otras funciones lo usan) ---
@@ -37,7 +38,7 @@ except AttributeError:
 
 # --- CLASE BASE Y ELIMINACIÓN DE FUNCIONES REDUNDANTES ---
 
-class PaginaBaseView(TemplateView):
+class PaginaBaseView( TemplateView):
     template_name = 'base.html'
 
 # VISTAS DE DESCARGA Y LÓGICA DE PDF/ZIP
@@ -111,12 +112,16 @@ def generar_zip_recibos(request):
 
 # DASHBOARD Y FILTROS (ReciboListView)
 
-class ReciboListView(ListView):
+class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     model = Recibo
     template_name = 'recibos/dashboard.html'
     context_object_name = 'recibos'
     paginate_by = 20
 
+    def test_func(self):
+        # Solo entran si el rol es ADMIN o si es un USUARIO autorizado
+        return self.request.user.rol in ['admin', 'user'] or self.request.user.is_superuser
+    
     def post(self, request, *args, **kwargs):
         """Maneja todas las acciones POST: Carga de Excel, Anulación, Limpieza."""
         action = request.POST.get('action')

@@ -1,1 +1,31 @@
-.
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Acceso al Sistema</title>
+    </head>
+<body>
+    <div style="max-width: 400px; margin: 100px auto; text-align: center;">
+        <h2>🔐 Sistema de Gestión</h2>
+        <hr>
+        <form method="post">
+            {% csrf_token %}
+            <div>
+                <label>Usuario:</label><br>
+                {{ form.username }}
+            </div>
+            <br>
+            <div>
+                <label>Contraseña:</label><br>
+                {{ form.password }}
+            </div>
+            <br>
+            <button type="submit">Iniciar Sesión</button>
+        </form>
+
+        {% if form.errors %}
+            <p style="color: red;">Usuario o contraseña incorrectos.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
