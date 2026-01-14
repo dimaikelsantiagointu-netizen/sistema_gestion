@@ -27,11 +27,26 @@
 
     <header class="bg-indigo-700 shadow-lg z-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+            
             <a class="text-white text-xl font-bold flex items-center">
                 <i class="fas fa-receipt mr-3 text-indigo-300"></i>
                 App Recibos
             </a>
+            
             <div class="flex items-center space-x-4">
+                <span class="hidden sm:inline text-sm text-indigo-100"> 
+                    <span class="font-bold text-white">
+                        {# Si tiene 'first_name', lo muestra. Si no, usa el 'username' #}
+                        {{ user.first_name|default:user.username|capfirst }}
+                    </span>
+                    
+                    <span class="ml-1 px-2 py-0.5 rounded-full text-[11px] uppercase font-bold text-white 
+                        {% if user.rol == 'superadmin' %} 
+                        {% elif user.rol == 'admin' %} 
+                        {% else %}  {% endif %}">
+                        {{ user.get_rol_display }}
+                    </span>
+                </span>
                 <a href="{% url 'home' %}"
                     class="p-2 text-sm font-medium text-white bg-indigo-600 rounded-full hover:bg-indigo-700 transition duration-150 shadow-md flex items-center">
 
@@ -39,8 +54,12 @@
 
                     <span class="hidden sm:inline ml-2">Principal</span>
                 </a>
+                
             </div>
         </div>
+
+        
+
     </header>
 
     {#CONTENIDO PRINCIPAL (MAIN) #}
@@ -356,47 +375,63 @@
 
                                         {# BOTONES DE ACCIÓN #}
                                         <td class="px-3 py-2 whitespace-nowrap text-center text-sm font-medium">
-                                            <div class="flex space-x-2 justify-center">
+                                        <div class="flex space-x-2 justify-center">
 
-                                                {# DESCARGAR (PDF) - Icono de flecha abajo #}
-                                                <a href="{% url 'recibos:generar_pdf_recibo' recibo.pk %}"
-                                                    title="Descargar PDF"
-                                                    class="text-green-600 hover:text-green-900 transition duration-150 p-1 rounded hover:bg-green-50">
-                                                    <i class="fas fa-file-pdf text-xl"></i>
-                                                </a>
+                                            {# DESCARGAR (PDF) - Siempre visible para todos #}
+                                            <a href="{% url 'recibos:generar_pdf_recibo' recibo.pk %}"
+                                            title="Descargar PDF"
+                                            class="text-green-600 hover:text-green-900 transition duration-150 p-1 rounded hover:bg-green-50">
+                                                <i class="fas fa-file-pdf text-xl"></i>
+                                            </a>
 
-                                                {# MODIFICAR (Icono lápiz) - ENLACE DIRECTO #}
-                                                {% if not recibo.anulado %}
-                                                <a href="{% url 'recibos:modificar_recibo' pk=recibo.pk %}"
+                                            {# MODIFICAR (Icono lápiz) #}
+                                            {% if not recibo.anulado %}
+                                                {# REGLA: Solo si es dueño, admin o superadmin #}
+                                                {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' or recibo.usuario == user %}
+                                                    <a href="{% url 'recibos:modificar_recibo' pk=recibo.pk %}"
                                                     title="Modificar Recibo"
                                                     class="text-blue-600 hover:text-blue-900 transition duration-150 p-1 rounded hover:bg-blue-50">
-                                                    <i class="fas fa-edit text-xl"></i>
-                                                </a>
+                                                        <i class="fas fa-edit text-xl"></i>
+                                                    </a>
                                                 {% else %}
+                                                    {# Si no es dueño, mostramos el icono gris o un candado de 'Solo Lectura' #}
+                                                    <span title="No tienes permiso para editar este recibo ajeno" class="text-gray-300 p-1">
+                                                        <i class="fas fa-lock text-xl"></i>
+                                                    </span>
+                                                {% endif %}
+                                            {% else %}
                                                 <span title="Recibo Anulado, no se puede modificar" class="text-gray-300 p-1">
                                                     <i class="fas fa-edit text-xl"></i>
                                                 </span>
-                                                {% endif %}
+                                            {% endif %}
 
-                                                {# ANULAR (Icono de cruz) #}
-                                                {% if not recibo.anulado %}
-                                                <button type="button"
-                                                    data-message="¿Estás seguro que deseas **ANULAR el recibo N°{{ recibo.numero_recibo|stringformat:'04d' }}**? Esta acción no se puede deshacer."
-                                                    data-confirm-text="Sí, Anular"
-                                                    data-color="red"
-                                                    data-action-url="{% url 'recibos:dashboard' %}"
-                                                    data-recibo-id="{{ recibo.pk }}"
-                                                    class="anular-recibo-btn text-red-600 hover:text-red-900 transition duration-150 p-1 rounded hover:bg-red-50"
-                                                    title="Anular Recibo">
-                                                    <i class="fas fa-times-circle text-xl"></i>
-                                                </button>
+                                            {# ANULAR (Icono de cruz) #}
+                                            {% if not recibo.anulado %}
+                                                {# REGLA: El usuario común NO PUEDE anular nada #}
+                                                {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' %}
+                                                    <button type="button"
+                                                        data-message="¿Estás seguro que deseas **ANULAR el recibo N°{{ recibo.numero_recibo|stringformat:'04d' }}**? Esta acción no se puede deshacer."
+                                                        data-confirm-text="Sí, Anular"
+                                                        data-color="red"
+                                                        data-action-url="{% url 'recibos:dashboard' %}"
+                                                        data-recibo-id="{{ recibo.pk }}"
+                                                        class="anular-recibo-btn text-red-600 hover:text-red-900 transition duration-150 p-1 rounded hover:bg-red-50"
+                                                        title="Anular Recibo">
+                                                        <i class="fas fa-times-circle text-xl"></i>
+                                                    </button>
                                                 {% else %}
-                                                <span title="Recibo Anulado" class="text-gray-300 p-1">
+                                                    {# El usuario común no ve el botón de anular #}
+                                                    <span title="Solo administradores pueden anular registros" class="text-gray-200 p-1">
+                                                        <i class="fas fa-times-circle text-xl invisible"></i>
+                                                    </span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span title="Recibo ya Anulado" class="text-gray-300 p-1">
                                                     <i class="fas fa-times-circle text-xl"></i>
                                                 </span>
-                                                {% endif %}
-                                            </div>
-                                        </td>
+                                            {% endif %}
+                                        </div>
+                                    </td>
                                     </tr>
                                     {% empty %}
                                     <tr>

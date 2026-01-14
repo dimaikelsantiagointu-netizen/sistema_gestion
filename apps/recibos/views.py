@@ -1,3 +1,4 @@
+from urllib import request
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.db.models import Q, Sum 
@@ -156,15 +157,15 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
                 messages.error(request, "Por favor, sube un archivo Excel.")
             else:
                 try:
-                    success, message, recibos_pks = importar_recibos_desde_excel(archivo_excel)
-
-                    if success and recibos_pks and isinstance(recibos_pks, list):
+                    # En views.py
+                    success, message, pks = importar_recibos_desde_excel(archivo_excel, request.user)
+                    if success and pks and isinstance(pks, list):
                         messages.success(request, message)
 
-                        if len(recibos_pks) == 1:
-                            return redirect(reverse('recibos:generar_pdf_recibo', kwargs={'pk': recibos_pks[0]}))
+                        if len(pks) == 1:
+                            return redirect(reverse('recibos:generar_pdf_recibo', kwargs={'pk': pks[0]}))
                         else:
-                            pks_str = ','.join(map(str, recibos_pks))
+                            pks_str = ','.join(map(str, pks))
                             return redirect(reverse('recibos:generar_zip_recibos') + f'?pks={pks_str}')
 
                     elif success:
