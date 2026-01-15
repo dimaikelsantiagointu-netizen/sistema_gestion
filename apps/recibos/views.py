@@ -20,6 +20,7 @@ import pytz
 from django.core.paginator import Paginator
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import ListView
+from django.contrib.auth.decorators import login_required
 logger = logging.getLogger(__name__)
 
 # --- CONFIGURACIÓN DE RUTAS Y CONSTANTES (Mantener por si otras funciones lo usan) ---
@@ -45,10 +46,7 @@ class PaginaBaseView( TemplateView):
 # VISTAS DE DESCARGA Y LÓGICA DE PDF/ZIP
 
 def generar_pdf_recibo(request, pk):
-    """
-    Genera el PDF de un recibo específico y retorna el HttpResponse para
-    la descarga directa. Delega la lógica de generación a utils.py.
-    """
+
     try:
         recibo = get_object_or_404(Recibo, pk=pk)
         return generar_pdf_recibo_unitario(recibo)
@@ -58,9 +56,7 @@ def generar_pdf_recibo(request, pk):
         return redirect(reverse('recibos:dashboard')) 
 
 def generar_zip_recibos(request):
-    """
-    Toma una lista de PKs, genera el PDF de cada uno y los comprime en un ZIP.
-    """
+
     pks_str = request.GET.get('pks')
     if not pks_str:
         messages.error(request, "No se encontraron IDs de recibos para generar el ZIP.")
@@ -120,11 +116,9 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     paginate_by = 20
 
     def test_func(self):
-        # Solo entran si el rol es ADMIN o si es un USUARIO autorizado
         return self.request.user.rol in ['admin', 'user'] or self.request.user.is_superuser
     
     def post(self, request, *args, **kwargs):
-        """Maneja todas las acciones POST: Carga de Excel, Anulación, Limpieza."""
         action = request.POST.get('action')
         
         current_timezone = pytz.timezone(settings.TIME_ZONE) if hasattr(settings, 'TIME_ZONE') else timezone.get_current_timezone()
@@ -157,7 +151,6 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
                 messages.error(request, "Por favor, sube un archivo Excel.")
             else:
                 try:
-                    # En views.py
                     success, message, pks = importar_recibos_desde_excel(archivo_excel, request.user)
                     if success and pks and isinstance(pks, list):
                         messages.success(request, message)
@@ -277,10 +270,7 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
 # VISTAS DE REPORTE (Excel y PDF Masivo)
 
 def generar_reporte_view(request):
-    """
-    Función que maneja los filtros de reporte y delega la generación del archivo
-    (Excel o PDF) a las funciones auxiliares en utils.py.
-    """
+
     
     # 1. Preparación del Queryset base
     recibos_queryset = Recibo.objects.filter(anulado=False).order_by('-fecha', '-numero_recibo')
@@ -389,11 +379,9 @@ def generar_reporte_view(request):
 
 
 # VISTAS DE MODIFICACIÓN Y ANULACIÓN
-
+@login_required
 def modificar_recibo(request, pk):
-    """
-    Permite modificar un Recibo existente (si no está anulado) o anularlo.
-    """
+
     recibo = get_object_or_404(Recibo, pk=pk)
 
     num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
@@ -438,11 +426,8 @@ def modificar_recibo(request, pk):
 
     return render(request, 'recibos/modificar_recibo.html', context)
 
-
+@login_required
 def recibos_anulados(request):
-    """
-    Muestra la lista de recibos anulados con funcionalidad de búsqueda y paginación.
-    """
 
     # 1. Obtener todos los recibos anulados
     queryset = Recibo.objects.filter(anulado=True).order_by('-fecha_anulacion')
