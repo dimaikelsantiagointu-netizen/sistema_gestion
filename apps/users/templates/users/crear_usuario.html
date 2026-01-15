@@ -26,28 +26,56 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 {% for field in form %}
-                    <div class="flex flex-col">
-                        <label class="text-sm font-black text-gray-700 uppercase tracking-tighter mb-1 flex justify-between">
-                            {{ field.label }}
-                            {% if field.field.required %}
-                                <span class="text-red-500">*</span>
+                    {% if field.name == 'user_permissions' %}
+                        {# SECCIÓN ESPECIAL PARA PERMISOS (Ocupa las 2 columnas) #}
+                        <div class="md:col-span-2 mt-4">
+                            <label class="text-sm font-black text-indigo-900 uppercase tracking-widest mb-3 block border-b border-indigo-100 pb-2">
+                                <i class="fas fa-key mr-2"></i> PERMISOS DE MÓDULOS
+                            </label>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-gray-50 p-5 rounded-xl border border-gray-200">
+                                {% for checkbox in field %}
+                                    <label class="flex items-start p-2 hover:bg-white hover:shadow-sm rounded-lg transition cursor-pointer border border-transparent hover:border-indigo-100">
+                                        <div class="flex items-center h-5">
+                                            {{ checkbox.tag }}
+                                        </div>
+                                        <div class="ml-3 text-xs">
+                                            <span class="font-bold text-gray-700 uppercase tracking-tight">{{ checkbox.choice_label }}</span>
+                                        </div>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                            
+                            {% if field.errors %}
+                                <p class="text-red-600 text-[11px] font-bold mt-2">{{ field.errors.0 }}</p>
                             {% endif %}
-                        </label>
-                        
-                        {{ field }}
+                        </div>
 
-                        {% if field.errors %}
-                            <p class="text-red-600 text-[11px] font-bold mt-1">
-                                <i class="fas fa-times-circle mr-1"></i>{{ field.errors.0 }}
-                            </p>
-                        {% endif %}
+                    {% else %}
+                        {# CAMPOS NORMALES (Username, Email, etc.) #}
+                        <div class="flex flex-col">
+                            <label class="text-sm font-black text-gray-700 uppercase tracking-tighter mb-1 flex justify-between">
+                                {{ field.label }}
+                                {% if field.field.required %}
+                                    <span class="text-red-500">*</span>
+                                {% endif %}
+                            </label>
+                            
+                            {{ field }}
 
-                        {% if field.help_text %}
-                            <p class="text-gray-400 text-[10px] mt-1 leading-tight italic">
-                                {{ field.help_text|safe }}
-                            </p>
-                        {% endif %}
-                    </div>
+                            {% if field.errors %}
+                                <p class="text-red-600 text-[11px] font-bold mt-1">
+                                    <i class="fas fa-times-circle mr-1"></i>{{ field.errors.0 }}
+                                </p>
+                            {% endif %}
+
+                            {% if field.help_text %}
+                                <p class="text-gray-400 text-[10px] mt-1 leading-tight italic">
+                                    {{ field.help_text|safe }}
+                                </p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
                 {% endfor %}
             </div>
 
@@ -66,4 +94,13 @@
         Seguridad de nivel administrativo - Registro monitoreado por el Centro de Control
     </p>
 </div>
+
+{# Script opcional para mejorar visualmente los checkboxes #}
+<style>
+    input[type="checkbox"] {
+        @apply rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50;
+        width: 1.1rem;
+        height: 1.1rem;
+    }
+</style>
 {% endblock %}
