@@ -1,3 +1,4 @@
+from urllib import request
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.db.models import Q, Sum 
@@ -17,7 +18,9 @@ from django.utils import timezone
 from datetime import datetime
 import pytz 
 from django.core.paginator import Paginator
-
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
+from django.views.generic import ListView
+from django.contrib.auth.decorators import login_required
 logger = logging.getLogger(__name__)
 
 # --- CONFIGURACIÓN DE RUTAS Y CONSTANTES (Mantener por si otras funciones lo usan) ---
@@ -37,16 +40,13 @@ except AttributeError:
 
 # --- CLASE BASE Y ELIMINACIÓN DE FUNCIONES REDUNDANTES ---
 
-class PaginaBaseView(TemplateView):
+class PaginaBaseView( TemplateView):
     template_name = 'base.html'
 
 # VISTAS DE DESCARGA Y LÓGICA DE PDF/ZIP
 
 def generar_pdf_recibo(request, pk):
-    """
-    Genera el PDF de un recibo específico y retorna el HttpResponse para
-    la descarga directa. Delega la lógica de generación a utils.py.
-    """
+
     try:
         recibo = get_object_or_404(Recibo, pk=pk)
         return generar_pdf_recibo_unitario(recibo)
@@ -56,9 +56,7 @@ def generar_pdf_recibo(request, pk):
         return redirect(reverse('recibos:dashboard')) 
 
 def generar_zip_recibos(request):
-    """
-    Toma una lista de PKs, genera el PDF de cada uno y los comprime en un ZIP.
-    """
+
     pks_str = request.GET.get('pks')
     if not pks_str:
         messages.error(request, "No se encontraron IDs de recibos para generar el ZIP.")
@@ -111,14 +109,18 @@ def generar_zip_recibos(request):
 
 # DASHBOARD Y FILTROS (ReciboListView)
 
-class ReciboListView(ListView):
+class ReciboListView(LoginRequiredMixin, UserPassesTestMixin,PermissionRequiredMixin, ListView):
     model = Recibo
     template_name = 'recibos/dashboard.html'
+    permission_required = 'users.ver_gestor_recibos'
     context_object_name = 'recibos'
     paginate_by = 20
-
+    raise_exception = True
+    
+    def test_func(self):
+        return self.request.user.rol in ['admin', 'user'] or self.request.user.is_superuser
+    
     def post(self, request, *args, **kwargs):
-        """Maneja todas las acciones POST: Carga de Excel, Anulación, Limpieza."""
         action = request.POST.get('action')
         
         current_timezone = pytz.timezone(settings.TIME_ZONE) if hasattr(settings, 'TIME_ZONE') else timezone.get_current_timezone()
@@ -151,15 +153,14 @@ class ReciboListView(ListView):
                 messages.error(request, "Por favor, sube un archivo Excel.")
             else:
                 try:
-                    success, message, recibos_pks = importar_recibos_desde_excel(archivo_excel)
-
-                    if success and recibos_pks and isinstance(recibos_pks, list):
+                    success, message, pks = importar_recibos_desde_excel(archivo_excel, request.user)
+                    if success and pks and isinstance(pks, list):
                         messages.success(request, message)
 
-                        if len(recibos_pks) == 1:
-                            return redirect(reverse('recibos:generar_pdf_recibo', kwargs={'pk': recibos_pks[0]}))
+                        if len(pks) == 1:
+                            return redirect(reverse('recibos:generar_pdf_recibo', kwargs={'pk': pks[0]}))
                         else:
-                            pks_str = ','.join(map(str, recibos_pks))
+                            pks_str = ','.join(map(str, pks))
                             return redirect(reverse('recibos:generar_zip_recibos') + f'?pks={pks_str}')
 
                     elif success:
@@ -271,10 +272,7 @@ class ReciboListView(ListView):
 # VISTAS DE REPORTE (Excel y PDF Masivo)
 
 def generar_reporte_view(request):
-    """
-    Función que maneja los filtros de reporte y delega la generación del archivo
-    (Excel o PDF) a las funciones auxiliares en utils.py.
-    """
+
     
     # 1. Preparación del Queryset base
     recibos_queryset = Recibo.objects.filter(anulado=False).order_by('-fecha', '-numero_recibo')
@@ -383,11 +381,9 @@ def generar_reporte_view(request):
 
 
 # VISTAS DE MODIFICACIÓN Y ANULACIÓN
-
+@login_required
 def modificar_recibo(request, pk):
-    """
-    Permite modificar un Recibo existente (si no está anulado) o anularlo.
-    """
+
     recibo = get_object_or_404(Recibo, pk=pk)
 
     num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
@@ -432,11 +428,8 @@ def modificar_recibo(request, pk):
 
     return render(request, 'recibos/modificar_recibo.html', context)
 
-
+@login_required
 def recibos_anulados(request):
-    """
-    Muestra la lista de recibos anulados con funcionalidad de búsqueda y paginación.
-    """
 
     # 1. Obtener todos los recibos anulados
     queryset = Recibo.objects.filter(anulado=True).order_by('-fecha_anulacion')

@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'rest_framework',
     # NUEVAS APPS:
     'apps.recibos.apps.RecibosConfig',
+    'apps.users',
 ]
 
 MIDDLEWARE = [
@@ -72,12 +73,13 @@ DATABASES = {
 
 # 3. AUTENTICACIÓN Y LOCALIZACIÓN
 
-LOGIN_URL = '/accounts/login/' 
+LOGIN_URL = 'login' 
 
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = 'home'
 
-LOGOUT_REDIRECT_URL = '/' 
+LOGOUT_REDIRECT_URL = 'login' 
 
+AUTH_USER_MODEL = 'users.Usuario'
 AUTH_PASSWORD_VALIDATORS = [
     { 'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator', },
     { 'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', },

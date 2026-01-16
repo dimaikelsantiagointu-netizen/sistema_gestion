@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8">
+    <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
+        
+        <div class="bg-indigo-900 px-8 py-6 flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-white flex items-center">
+                    <i class="fas fa-user-shield mr-3 text-indigo-400"></i>
+                    REGISTRO DE PERSONAL
+                </h2>
+                <p class="text-indigo-200 text-xs mt-1 uppercase tracking-widest">Administración de acceso al sistema integral</p>
+            </div>
+            <i class="fas fa-cubes text-4xl text-indigo-800 opacity-50"></i>
+        </div>
+
+        <form method="post" class="p-8">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                {% for field in form %}
+                    {% if field.name == 'user_permissions' %}
+                        {# SECCIÓN ESPECIAL PARA PERMISOS (Ocupa las 2 columnas) #}
+                        <div class="md:col-span-2 mt-4">
+                            <label class="text-sm font-black text-indigo-900 uppercase tracking-widest mb-3 block border-b border-indigo-100 pb-2">
+                                <i class="fas fa-key mr-2"></i> PERMISOS DE MÓDULOS
+                            </label>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-gray-50 p-5 rounded-xl border border-gray-200">
+                                {% for checkbox in field %}
+                                    <label class="flex items-start p-2 hover:bg-white hover:shadow-sm rounded-lg transition cursor-pointer border border-transparent hover:border-indigo-100">
+                                        <div class="flex items-center h-5">
+                                            {{ checkbox.tag }}
+                                        </div>
+                                        <div class="ml-3 text-xs">
+                                            <span class="font-bold text-gray-700 uppercase tracking-tight">{{ checkbox.choice_label }}</span>
+                                        </div>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                            
+                            {% if field.errors %}
+                                <p class="text-red-600 text-[11px] font-bold mt-2">{{ field.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                    {% else %}
+                        {# CAMPOS NORMALES (Username, Email, etc.) #}
+                        <div class="flex flex-col">
+                            <label class="text-sm font-black text-gray-700 uppercase tracking-tighter mb-1 flex justify-between">
+                                {{ field.label }}
+                                {% if field.field.required %}
+                                    <span class="text-red-500">*</span>
+                                {% endif %}
+                            </label>
+                            
+                            {{ field }}
+
+                            {% if field.errors %}
+                                <p class="text-red-600 text-[11px] font-bold mt-1">
+                                    <i class="fas fa-times-circle mr-1"></i>{{ field.errors.0 }}
+                                </p>
+                            {% endif %}
+
+                            {% if field.help_text %}
+                                <p class="text-gray-400 text-[10px] mt-1 leading-tight italic">
+                                    {{ field.help_text|safe }}
+                                </p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="mt-10 pt-6 border-t border-gray-100 flex items-center justify-end space-x-4">
+                <a href="{% url 'home' %}" class="text-sm font-bold text-gray-400 hover:text-gray-600 transition">
+                    CANCELAR
+                </a>
+                <button type="submit" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm shadow-lg shadow-indigo-200 transition-all transform hover:scale-[1.02] active:scale-95 flex items-center">
+                    <i class="fas fa-save mr-2"></i> GUARDAR USUARIO
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <p class="text-center text-gray-400 text-[10px] mt-6 uppercase tracking-widest">
+        Seguridad de nivel administrativo - Registro monitoreado por el Centro de Control
+    </p>
+</div>
+
+{# Script opcional para mejorar visualmente los checkboxes #}
+<style>
+    input[type="checkbox"] {
+        @apply rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50;
+        width: 1.1rem;
+        height: 1.1rem;
+    }
+</style>
+{% endblock %}

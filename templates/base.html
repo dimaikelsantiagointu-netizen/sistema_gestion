@@ -1,126 +1,154 @@
 {% load static %}
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SG - Centro de Control Principal</title>
-    
+    <title>{% block title %}SG-INTU | Centro de Control{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        intu: {
+                            red: '#C8102E',
+                            blue: '#002855',
+                            dark: '#001a38'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+        .sidebar-gradient { background: linear-gradient(180deg, #002855 0%, #001a38 100%); }
+        
+        /* Control del acordeón de soporte */
+        #support-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease-in-out;
+            opacity: 0;
+        }
+        #support-content.open {
+            max-height: 100px;
+            opacity: 1;
+        }
+    </style>
 </head>
+<body class="min-h-screen flex flex-row">
 
-<body class="min-h-screen bg-gray-50 font-sans antialiased text-gray-800">
+    <aside class="w-72 sidebar-gradient text-white flex-shrink-0 flex flex-col sticky top-0 h-screen shadow-2xl">
+        
+        <div class="p-8 border-b border-white/5 flex items-center gap-4">
+            <div class="w-12 h-12 bg-white rounded-xl p-2 flex-shrink-0">
+                <img src="{% static 'images/sisi_logo.png' %}" class="w-full h-full object-contain" alt="Logo"> 
+            </div>
+            <div class="overflow-hidden">
+                <h3 class="font-black text-xs uppercase tracking-tight truncate">{{ user.first_name|default:user.username }}</h3>
+                <p class="text-[9px] text-indigo-300 font-bold uppercase tracking-wider">{{ user.get_rol_display }}</p>
+            </div>
+        </div>
 
-    <header class="bg-indigo-900 shadow-2xl sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+        <nav class="flex-grow p-4 space-y-1 overflow-y-auto">
             
-            <a href="{% url 'base' %}" class="text-white text-xl font-extrabold tracking-wide flex items-center">
-                <i class="fas fa-cubes mr-3 text-indigo-400"></i> SISTEMA GESTION
+            <p class="px-4 pt-4 pb-2 text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Menú Principal</p>
+
+            <a href="{% url 'home' %}" class="flex items-center gap-3 px-4 py-3 text-white bg-white/10 rounded-xl text-[11px] font-bold transition group">
+                <i class="fas fa-th-large w-5 text-intu-red"></i> 
+                <span>DASHBOARD</span>
             </a>
-            
-            <div class="flex items-center space-x-4">
-                
-                {# SECCIÓN DE USUARIO SIMPLIFICADA #}
-                <span class="hidden sm:inline text-sm text-indigo-300">Hola, Admin</span>
-                
-                {# BOTÓN CERRAR SESIÓN NO FUNCIONAL#}
-                <a href="#" 
-                   class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition duration-150">
-                   <i class="fas fa-sign-out-alt mr-1"></i> Cerrar Sesión
+
+            <div class="pt-6 pb-2">
+                <p class="px-4 text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Administración</p>
+            </div>
+
+            {% if user.is_superuser or user.rol == 'superadmin' %}
+                <a href="{% url 'users:usuario_list' %}" 
+                   class="flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl text-[11px] font-bold transition group">
+                    <i class="fas fa-users-cog w-5 group-hover:text-intu-red transition"></i> 
+                    <span>GESTIÓN DE USUARIOS</span>
                 </a>
                 
+                {% if user.is_superuser %}
+                    <a href="/admin/" target="_blank"
+                       class="flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl text-[11px] font-bold transition group">
+                        <i class="fas fa-shield-halved w-5 group-hover:text-intu-red transition"></i> 
+                        <span>ADMINISTRACIÓN (DJANGO)</span>
+                    </a>
+                {% endif %}
+            {% endif %}
+
+            <div class="pt-2">
+                <button onclick="toggleSupport()" 
+                        class="w-full flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl text-[11px] font-bold transition group text-left">
+                    <i class="fas fa-headset w-5 group-hover:text-intu-red transition"></i> 
+                    <span class="flex-grow">SOPORTE TÉCNICO</span>
+                    <i id="support-chevron" class="fas fa-chevron-right text-[8px] opacity-30 transition-transform duration-300"></i>
+                </button>
+                
+                <div id="support-content" class="ml-12 border-l border-white/10 mt-1">
+                    <div class="py-2 px-4">
+                        <p class="text-[10px] text-indigo-200 font-medium italic">soporte@intu.gob.ve</p>
+                    </div>
+                </div>
             </div>
+
+        </nav>
+
+        <div class="p-4 border-t border-white/5">
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 text-red-400/70 hover:text-red-400 hover:bg-red-400/5 rounded-xl text-[11px] font-bold transition group text-left">
+                    <i class="fas fa-power-off w-5"></i> 
+                    <span>CERRAR SESIÓN</span>
+                </button>
+            </form>
         </div>
-    </header>
+    </aside>
 
-    <main class="max-w-7xl mx-auto p-8 sm:p-12 flex-grow">
-        
-        <h1 class="text-4xl sm:text-5xl font-extrabold text-center text-gray-900 mb-2 mt-4">
-            Centro de Control
-        </h1>
-
-        <p class="text-lg text-center text-gray-600 mb-12">Selecciona el módulo de gestión que deseas utilizar. Los módulos inactivos estarán disponibles pronto.</p>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            
-            {# 1. APP ACTIVA: Recibos #}
-            <a href="{% url 'recibos:dashboard' %}" 
-               title="Ingresar al módulo de Recibos"
-               class="bg-white border-2 border-indigo-500 rounded-xl p-8 shadow-2xl hover:shadow-indigo-300/50 hover:scale-[1.02] transform transition duration-300 cursor-pointer flex flex-col items-center text-center">
-                
-                {# Icono: Recibo #}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-indigo-600 mb-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m-3.75 4.5H12M9 3v2.25M9 5.25v2.25m-2.25 0h7.5A2.25 2.25 0 0 0 16.5 7.5v11.25a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25V7.5A2.25 2.25 0 0 1 7.5 5.25h7.5" />
-                </svg>
-                
-                <span class="text-2xl font-bold text-indigo-800 mb-2">Gestión de Recibos</span>
-                <span class="text-base text-gray-600">Creación, anulación y seguimiento de pagos.</span>
-            </a>
-
-            {# 2.  APP INACTIVO: Gestión de Clientes #}
-            <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
-                
-                {# Icono: Usuarios/Clientes #}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-gray-500 mb-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                </svg>
-                
-                <span class="text-2xl font-bold text-gray-600 mb-2">Gestión de Clientes</span>
-                <span class="text-base text-gray-500">Próximamente.</span>
+    <div class="flex-grow flex flex-col min-w-0 h-screen overflow-y-auto bg-[#f8fafc]">
+        <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-10 sticky top-0 z-10">
+            <h2 class="text-intu-blue font-black uppercase tracking-tight text-sm">Sistema Integral de Seguimiento</h2>
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">INTU 2026</span>
+                <div class="w-8 h-8 bg-intu-blue rounded-lg flex items-center justify-center text-white">
+                    <i class="fas fa-cubes text-xs"></i>
+                </div>
             </div>
-            
-            {# 3.  APP INACTIVO: Sistema de Pagos #}
-            <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
-                
-                {# Icono: Tarjeta o Dinero #}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-gray-500 mb-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.063 60.063 0 0 1 15.794 2.155 3.001 3.001 0 0 0 3.712-1.748L22.28 16.5A.75.75 0 0 0 21.75 16H8.25a.75.75 0 0 0-.742.639l-.495 2.126a2.25 2.25 0 0 1-2.07 1.735h-3.24a.75.75 0 0 1 0-1.5h3.24a.75.75 0 0 0 .69-1.077L7.5 17.139a.75.75 0 0 0-.742-.639H2.25a.75.75 0 0 0 0 1.5h4.125a.75.75 0 0 1 .69 1.077l.495 2.126zM2.25 12a.75.75 0 0 0 0 1.5h18a.75.75 0 0 0 0-1.5h-18z" />
-                </svg>
-                
-                <span class="text-2xl font-bold text-gray-600 mb-2">Sistema de Pagos</span>
-                <span class="text-base text-gray-500">Próximamente.</span>
-            </div>
+        </header>
 
-            {# 4.  APP INACTIVO: Gestión de Contratos #}
-            <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
-                
-                {# Icono: Contrato/Documento #}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-gray-500 mb-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.25a.75.75 0 0 0-.75-.75h-2.25a.75.75 0 0 0-.75.75v2.25m4.5 0h-4.5m4.5 0a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1-.75-.75v-3.75a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 .75.75v3.75m-4.5-9h4.5m-4.5 0h4.5m-4.5 0h4.5m-4.5 0h4.5M6.75 6.75h.008v.008h-.008V6.75ZM6.75 10.5h.008v.008h-.008V10.5ZM6.75 14.25h.008v.008h-.008V14.25ZM6.75 18h.008v.008h-.008V18ZM11.25 6.75h.008v.008h-.008V6.75ZM11.25 10.5h.008v.008h-.008V10.5ZM11.25 14.25h.008v.008h-.008V14.25ZM11.25 18h.008v.008h-.008V18Z" />
-                </svg>
-                
-                <span class="text-2xl font-bold text-gray-600 mb-2">Gestión de Contratos</span>
-                <span class="text-base text-gray-500">Próximamente.</span>
-            </div>
+        <main class="p-10 flex-grow">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mb-6 p-4 rounded-xl border-l-4 bg-white shadow-sm flex items-center justify-between animate-fade-in
+                        {% if message.tags == 'success' %} border-green-500 text-green-800
+                        {% else %} border-red-500 text-red-800 {% endif %}">
+                        <span class="text-xs font-bold uppercase tracking-tight">{{ message }}</span>
+                        <button onclick="this.parentElement.remove()" class="opacity-30 hover:opacity-100"><i class="fas fa-times"></i></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
 
-            {# 5.  APP INACTIVO: Sellos Dorados#}
-            <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
-                
-                {# Icono: Sello/Medalla #}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-gray-500 mb-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21.75V15.75M12 15.75h3M12 15.75H9M12 15.75v-3m0 3v3m0-3h3m0 0H9m0 0v-3m0 3v3m0 0H9m0 0v-3m0 0v-3m0 0v-3M12 12V3m0 9v3m0-3h3m0 0H9m0 0v-3m0 3v3m0 0H9m0 0v-3m0 0v-3m0 0v-3M6 12h12M6 12v3m0-3v-3m0 3v3m0 0h12M6 12v3m0-3v-3m0 0H18m0 0v-3m0 3v3m0 0H6M6 12v3m0-3v-3m0 0H18m0 0v-3m0 3v3M6 12v3m0-3v-3m0 0H18m0 0v-3m0 3v3M12 21.75V15.75M12 15.75h3M12 15.75H9M12 15.75v-3m0 3v3m0 0H9M12 15.75v-3m0 3v3M12 15.75v-3m0 3v3M12 21.75V15.75M12 15.75h3M12 15.75H9M12 15.75v-3m0 3v3M12 15.75v-3m0 3v3M12 21.75V15.75M12 15.75h3M12 15.75H9M12 15.75v-3m0 3v3M12 15.75v-3m0 3v3" />
-                </svg>
+            {% block content %}{% endblock %}
+        </main>
 
-                <span class="text-2xl font-bold text-gray-600 mb-2">Sellos Dorados</span>
-                <span class="text-base text-gray-500">Próximamente.</span>
-            </div>
-            
-            {# 6.  APP INACTIVO: Gestión Documental  #}
-            <div title="Módulo inactivo" class="bg-gray-100 border border-gray-300 rounded-xl p-8 shadow-inner cursor-not-allowed flex flex-col items-center text-center opacity-70">
-                
-                {# Icono: Documento / Folder #}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-gray-500 mb-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12h18m-18 0a6 6 0 0 1 12 0v2.25a.75.75 0 0 0 .75.75h6.75a.75.75 0 0 0 .75-.75V12m-18 0a6 6 0 0 0 12 0v2.25a.75.75 0 0 0 .75.75h6.75a.75.75 0 0 0 .75-.75V12m-18 0a6 6 0 0 0 12 0v2.25a.75.75 0 0 0 .75.75h6.75a.75.75 0 0 0 .75-.75V12m-18 0a6 6 0 0 0 12 0v2.25a.75.75 0 0 0 .75.75h6.75a.75.75 0 0 0 .75-.75V12" />
-                </svg>
-                
-                <span class="text-2xl font-bold text-gray-600 mb-2">Gestión Documental</span>
-                <span class="text-base text-gray-500">Próximamente.</span>
-            </div>
+        <footer class="bg-white border-t border-gray-100 text-center py-6 text-gray-400 text-[9px] uppercase tracking-[0.4em]">
+            &copy; 2026 SIG-INTU
+        </footer>
+    </div>
 
-        </div>
-    </main>
-
+    <script>
+        function toggleSupport() {
+            const content = document.getElementById('support-content');
+            const chevron = document.getElementById('support-chevron');
+            content.classList.toggle('open');
+            chevron.style.transform = content.classList.contains('open') ? 'rotate(90deg)' : 'rotate(0deg)';
+        }
+    </script>
 </body>
 </html>

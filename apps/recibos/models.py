@@ -1,6 +1,6 @@
 from django.db import models
 from .constants import CATEGORY_CHOICES, CATEGORY_CHOICES_MAP
-
+from django.conf import settings
 
 class Recibo(models.Model):
     # 1. CAMPOS DE CONTROL Y SEGUIMIENTO
@@ -16,6 +16,13 @@ class Recibo(models.Model):
     # Fecha y hora de creación del registro en la DB (automático, no editable)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, # Apunta a tu modelo Usuario personalizado
+        on_delete=models.PROTECT, # Protegemos: No se borra el recibo si se borra el usuario
+        related_name='recibos_creados',
+        verbose_name="Creado por",
+        db_index=True
+    )
     # Indicador de anulación. Se usa como filtro principal en el dashboard (anulado=False).
     anulado = models.BooleanField(
         default=False, 

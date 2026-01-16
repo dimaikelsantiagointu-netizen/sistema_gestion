@@ -1,14 +1,18 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import TemplateView
+from apps.users.views import DashboardView
 
 urlpatterns = [
-    # URLs de Administración de Django
+    # 1. Administración
     path('admin/', admin.site.urls),
     
-    # URL de la Aplicación Recibos
-    path('recibos/', include('apps.recibos.urls', namespace='recibos')),     
+    # 2. Autenticación
+    path('accounts/', include('django.contrib.auth.urls')),
     
-    # URL RAÍZ base.html
-    path('', TemplateView.as_view(template_name='base.html'), name='base'),
+    # 3. El Dashboard (Home)
+    path('', DashboardView.as_view(), name='home'),
+    
+    # 4. Aplicaciones del sistema
+    path('users/', include('apps.users.urls', namespace='users')), # <-- AGREGA ESTA LÍNEA
+    path('recibos/', include('apps.recibos.urls', namespace='recibos')),
 ]

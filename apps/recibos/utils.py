@@ -27,10 +27,7 @@ logger = logging.getLogger(__name__)
 # I. FUNCIONES AUXILIARES DE DATOS (Decimales y Booleanos)
 
 def to_boolean(value):
-    """
-    Optimizado: Convierte valores de Excel a Booleano. 
-    Usa el conjunto de valores True directamente para velocidad.
-    """
+
     TRUE_VALUES = {'sí', 'si', 'true', '1', 'x', 'y', True, 1}
     
     if pd.isna(value) or value is None:
@@ -45,10 +42,7 @@ def to_boolean(value):
 
 
 def limpiar_y_convertir_decimal(value):
-    """
-    Optimizado: Limpia cualquier carácter no numérico y convierte a Decimal.
-    Más robusto en el manejo de formatos de moneda.
-    """
+
     if pd.isna(value) or value is None:
         return Decimal(0)
 
@@ -87,9 +81,7 @@ def limpiar_y_convertir_decimal(value):
 
 
 def format_currency(amount):
-    """
-    Optimizado: Formatea el monto como moneda (ej: 1.234,56) usando el formato español.
-    """
+
     try:
         amount_decimal = Decimal(amount).quantize(Decimal('0.01'))
         formatted = "{:,.2f}".format(amount_decimal) 
@@ -100,11 +92,7 @@ def format_currency(amount):
 
 # II. FUNCIÓN CLAVE: IMPORTACIÓN DE EXCEL
 
-def importar_recibos_desde_excel(archivo_excel):
-    """
-    Lee las filas del archivo Excel (a partir de la fila 4) y genera
-    un recibo por cada fila de datos válida, usando Pandas para el pre-procesamiento.
-    """
+def importar_recibos_desde_excel(archivo_excel, usuario):
     RIF_COL = 'rif_cedula_identidad'
     recibos_creados_pks = []
     
@@ -189,6 +177,7 @@ def importar_recibos_desde_excel(archivo_excel):
                     
                     'fecha': fila_datos['fecha_procesada'],
                     'conciliado': fila_datos['conciliado'],
+                    'usuario': usuario
                 }
                 
                 for i in range(1, 11):
@@ -222,10 +211,6 @@ def importar_recibos_desde_excel(archivo_excel):
 # III. GENERACIÓN DE REPORTES (Excel y PDF)
 
 def generar_reporte_excel(request_filters, queryset, filtros_aplicados):
-    """
-    Genera un reporte Excel (.xlsx) con datos detallados y totales.
-    Optimizado con campos adicionales y mejor formateo.
-    """
     
     data = []
 
@@ -318,12 +303,20 @@ def generar_reporte_excel(request_filters, queryset, filtros_aplicados):
         worksheet_info.set_column('A:A', 30)
         worksheet_info.set_column('B:B', 40)
 
+        # 1. Aplicamos el formato negrita a los encabezados
         worksheet_info.write(0, 0, 'Parámetro', bold_format)
         worksheet_info.write(0, 1, 'Valor', bold_format)
         
-        # Aplicar formato de moneda al total en la hoja de info
-        worksheet_info.write_number(5, 1, total_monto_bs, money_format)
-
+        # 2. Re-escribimos los valores numéricos con el formato correcto 
+        # para que no se vean como texto o con formatos cruzados.
+        
+        # El índice 4 de tu info_data (Total Registros) está en la FILA 5 de Excel 
+        # (porque la fila 0 es el encabezado)
+        worksheet_info.write_number(5, 1, total_registros)
+        
+        # El índice 5 de tu info_data (Monto Total) está en la FILA 6 de Excel
+        worksheet_info.write_number(6, 1, total_monto_bs, money_format)
+    
     output.seek(0)
 
     filename = f"Reporte_Recibos_Masivo_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
