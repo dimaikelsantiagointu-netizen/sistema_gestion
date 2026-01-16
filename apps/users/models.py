@@ -1,15 +1,17 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Permission
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class Usuario(AbstractUser):
     ADMIN = 'admin'
     USER = 'user'
-    SUPERADMIN = 'superadmin' # Nuevo Rol
+    SUPERADMIN = 'superadmin'
     
     ROLES_CHOICES = [
         (SUPERADMIN, 'SuperUsuario'),
         (ADMIN, 'Administrador'),
-        (USER, 'Usuario '),
+        (USER, 'Usuario'),
     ]
     
     rol = models.CharField(
@@ -19,7 +21,6 @@ class Usuario(AbstractUser):
         verbose_name="Rol del sistema"
     )
     
-    # Nuevos campos solicitados
     cedula = models.CharField(max_length=20, unique=True, verbose_name="Cédula/ID", null=True, blank=True)
     telefono = models.CharField(max_length=20, verbose_name="Teléfono", null=True, blank=True)
 
@@ -35,3 +36,21 @@ class Usuario(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.get_rol_display()})"
+
+# --- SEÑAL PARA AUTOMATIZAR SUPERUSUARIOS DE TERMINAL ---
+@receiver(post_save, sender=Usuario)
+def configurar_superusuario_nuevo(sender, instance, created, **kwargs):
+
+    if created and instance.is_superuser:
+        # 1. Asignar el rol visual
+        if instance.rol != Usuario.SUPERADMIN:
+            instance.rol = Usuario.SUPERADMIN
+            # Usamos update para evitar disparar la señal de nuevo infinitamente
+            Usuario.objects.filter(pk=instance.pk).update(rol=Usuario.SUPERADMIN)
+
+        # 2. Asignar todos tus permisos personalizados automáticamente
+        # Accedemos a los permisos definidos en el Meta de forma correcta:
+        codigos_permisos = [p[0] for p in instance._meta.permissions]
+        
+        permisos = Permission.objects.filter(codename__in=codigos_permisos)
+        instance.user_permissions.add(*permisos)

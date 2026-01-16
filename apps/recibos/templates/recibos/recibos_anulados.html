@@ -1,166 +1,143 @@
-{% extends 'recibos/dashboard.html' %} 
+{% extends 'recibos/dashboard.html' %}
+{% load custom_filters %}
 {% load static %}
 
-{% block title %}Recibos Anulados{% endblock title %}
+{% block title %}Recibos Anulados | Gestión de Recibos{% endblock %}
 
-{% block main_content %}
+{% block content %}
+<style>
+    /* Estilización de la barra de scroll para los Logs (Consistente con Dashboard) */
+    #log-display::-webkit-scrollbar {
+        width: 5px;
+    }
+    #log-display::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #log-display::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 10px;
+    }
+</style>
 
-<div class="max-w-full mx-auto p-4 sm:p-6 lg:p-8">
-    <header class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-extrabold text-gray-900 flex items-center">
-            <i class="fas fa-archive mr-3 text-red-600"></i>
-            {{ titulo }}
-        </h1>
-        <a href="{% url 'recibos:dashboard' %}" 
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition duration-150 flex items-center shadow-sm">
-            <i class="fas fa-arrow-left mr-2"></i> Volver al Dashboard
+{# --- ENCABEZADO CON BOTÓN DE RETORNO --- #}
+<div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div>
+        <span class="text-[10px] font-black text-red-600 uppercase tracking-[0.3em]">Módulo de Auditoría</span>
+        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Recibos Anulados</h1>
+        <p class="text-gray-500 font-medium italic text-sm">Historial de documentos invalidados y fuera de circulación.</p>
+    </div>
+    
+    <div class="flex gap-2">
+        <a href="{% url 'recibos:dashboard' %}" class="px-4 py-2 text-[10px] font-black bg-intu-blue text-white rounded-xl hover:bg-intu-dark shadow-lg shadow-blue-100 transition uppercase tracking-wider flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i> Volver a la Tabla Principal
         </a>
-    </header>
-
-    {#SECCIÓN: BARRA DE BÚSQUEDA #}
-    <div class="mb-4">
-        <form method="GET" action="." class="flex items-center space-x-2">
-            <div class="relative flex-grow">
-                <input type="text" 
-                       name="q"
-                       placeholder="Buscar por N° Recibo, Nombre, Cédula/RIF..."
-                       value="{{ request.GET.q }}"
-                       class="block w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm shadow-sm"
-                >
-                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <i class="fas fa-search text-gray-400"></i>
-                </div>
-            </div>
-            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition duration-150">
-                Buscar
-            </button>
-            {% if request.GET.q %}
-            <a href="{% url 'recibos:recibos_anulados' %}" class="text-sm text-gray-500 hover:text-gray-700 py-2">
-                <i class="fas fa-times-circle mr-1"></i> Limpiar
-            </a>
-            {% endif %}
-        </form>
     </div>
-
-
-    <div class="shadow-xl overflow-hidden border border-gray-200 sm:rounded-lg">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Recibo</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Recibo</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre/Cédula/RIF</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto Total (Bs)</th>
-                    
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Anulación</th> 
-                    
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th> 
-                    
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estatus</th> 
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for recibo in recibos %}
-                <tr class="hover:bg-red-100 transition duration-100">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-700">
-                        {{ recibo.numero_recibo|stringformat:"04d" }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ recibo.fecha|date:"d/m/Y" }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div class="font-semibold">{{ recibo.nombre|default:"N/A" }}</div>
-                        <div class="text-xs text-gray-500">{{ recibo.rif_cedula_identidad }}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-700">
-                        Bs {{ recibo.total_monto_bs|floatformat:2 }}
-                    </td>
-                    
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
-                        {% if recibo.fecha_anulacion %}
-                            {{ recibo.fecha_anulacion|date:"d/m/Y H:i" }} 
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </td>
-                    
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {{ recibo.estado|default:"N/A" }}
-                    </td>
-                    
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-200 text-red-800">
-                            ANULADO
-                        </span>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="px-6 py-8 text-center text-gray-500">
-                        <i class="fas fa-frown mr-2"></i> No hay recibos anulados que coincidan con la búsqueda.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    {# SECCIÓN: PAGINACIÓN #}
-    {% if recibos.has_other_pages %}
-    <div class="mt-4 flex justify-between items-center px-4 py-3 bg-white border border-gray-200 sm:rounded-lg shadow-md">
-        
-        {# Información de la página #}
-        <div class="text-sm text-gray-700">
-            Mostrando {{ recibos.start_index }} a {{ recibos.end_index }} de {{ recibos.paginator.count }} resultados.
-        </div>
-
-        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-            
-            {# Botón Anterior #}
-            {% if recibos.has_previous %}
-            <a href="?page={{ recibos.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" 
-               class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                <span class="sr-only">Anterior</span>
-                <i class="fas fa-chevron-left h-5 w-5"></i>
-            </a>
-            {% else %}
-            <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
-                <span class="sr-only">Anterior</span>
-                <i class="fas fa-chevron-left h-5 w-5"></i>
-            </span>
-            {% endif %}
-
-            {# Números de página #}
-            {% for i in recibos.paginator.page_range %}
-                {% if recibos.number == i %}
-                    <span aria-current="page" class="z-10 bg-red-50 border-red-500 text-red-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
-                        {{ i }}
-                    </span>
-                {% elif i > recibos.number|add:'-3' and i < recibos.number|add:'3' %}
-                    <a href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" 
-                       class="bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
-                        {{ i }}
-                    </a>
-                {% endif %}
-            {% endfor %}
-
-            {# Botón Siguiente #}
-            {% if recibos.has_next %}
-            <a href="?page={{ recibos.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" 
-               class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                <span class="sr-only">Siguiente</span>
-                <i class="fas fa-chevron-right h-5 w-5"></i>
-            </a>
-            {% else %}
-            <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
-                <span class="sr-only">Siguiente</span>
-                <i class="fas fa-chevron-right h-5 w-5"></i>
-            </span>
-            {% endif %}
-        </nav>
-    </div>
-    {% endif %}
-
 </div>
 
-{% endblock main_content %}
+<div class="flex flex-col lg:flex-row gap-8">
+
+    {# --- PANEL LATERAL INFORMATIVO --- #}
+    <aside class="w-full lg:w-1/3 xl:w-1/4 space-y-6">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+            <h2 class="text-xs font-black text-red-600 uppercase tracking-widest mb-4 flex items-center">
+                <i class="fas fa-exclamation-triangle mr-2"></i> Estado de Registros
+            </h2>
+            <p class="text-[10px] text-gray-500 leading-relaxed mb-4">
+                Los recibos listados en esta sección <b>no suman al total de recaudación</b> y se mantienen únicamente para fines de auditoría institucional.
+            </p>
+            <div class="p-4 bg-red-50 rounded-2xl border border-red-100">
+                <span class="text-[9px] font-black text-red-600 uppercase">Aviso de Seguridad</span>
+                <p class="text-[10px] text-red-500 mt-1 italic">Estos registros no pueden ser modificados ni reactivados.</p>
+            </div>
+        </div>
+    </aside>
+
+    {# --- SECCIÓN PRINCIPAL (TABLA DE ANULADOS) --- #}
+    <section class="flex-grow space-y-6">
+
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
+                <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest flex items-center">
+                    <i class="fas fa-history mr-2 text-red-500"></i> Histórico de Anulaciones
+                </h2>
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    Total: {{ recibos|length }} registros
+                </span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50/50">
+                        <tr>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nº Recibo</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nombre</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Cédula/RIF</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Monto (Bs.)</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-red-500 uppercase tracking-widest text-center">Fecha Anulado</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        {% for recibo in recibos %}
+                        <tr class="hover:bg-red-50/40 transition duration-150 bg-red-50/10">
+                            <td class="px-6 py-4">
+                                <span class="text-xs font-black text-red-700">
+                                    {{ recibo.numero_recibo|stringformat:"04d" }}
+                                </span>
+                            </td>
+
+                            <td class="px-6 py-4">
+                                <div class="text-[11px] font-bold text-gray-700 uppercase truncate max-w-[180px]">{{ recibo.nombre }}</div>
+                                <div class="text-[9px] text-gray-400">Fecha orig: {{ recibo.fecha|date:"d/m/Y" }}</div>
+                            </td>
+
+                            <td class="px-6 py-4 text-[11px] text-gray-500 font-medium">
+                                {{ recibo.rif_cedula_identidad }}
+                            </td>
+
+                            <td class="px-6 py-4 text-right font-black text-xs text-intu-blue">
+                                {{ recibo.total_monto_bs|floatformat:2 }}
+                            </td>
+
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-0.5 bg-red-100 text-red-600 text-[9px] font-black rounded-full uppercase border border-red-200">
+                                    Anulado
+                                </span>
+                            </td>
+
+                            <td class="px-6 py-4 text-center text-[10px] text-red-600 font-bold italic">
+                                {{ recibo.fecha_anulacion|date:"d/m/Y H:i" }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="p-20 text-center opacity-30">
+                                <i class="fas fa-search-minus text-5xl mb-4"></i>
+                                <p class="text-[10px] font-black uppercase tracking-widest">Sin registros anulados</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {# Paginación (Si aplica para la vista de anulados) #}
+            {% if is_paginated %}
+            <div class="p-6 bg-gray-50/50 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }}</span>
+                <nav class="flex shadow-sm rounded-xl overflow-hidden border border-gray-100">
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-white text-gray-500 hover:bg-gray-100 transition"><i class="fas fa-chevron-left text-xs"></i></a>
+                    {% endif %}
+                    <span class="px-4 py-2 bg-red-600 text-white text-[10px] font-black">{{ page_obj.number }}</span>
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-white text-gray-500 hover:bg-gray-100 transition"><i class="fas fa-chevron-right text-xs"></i></a>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+{% endblock %}

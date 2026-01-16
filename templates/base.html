@@ -4,88 +4,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}SG - Centro de Control{% endblock %}</title>
+    <title>{% block title %}SG-INTU | Centro de Control{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        intu: {
+                            red: '#C8102E',
+                            blue: '#002855',
+                            dark: '#001a38'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+        .sidebar-gradient { background: linear-gradient(180deg, #002855 0%, #001a38 100%); }
+        
+        /* Control del acordeón de soporte */
+        #support-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease-in-out;
+            opacity: 0;
+        }
+        #support-content.open {
+            max-height: 100px;
+            opacity: 1;
+        }
+    </style>
 </head>
+<body class="min-h-screen flex flex-row">
 
-<body class="min-h-screen bg-gray-50 font-sans antialiased text-gray-800 flex flex-col">
-
-    <header class="bg-indigo-900 shadow-2xl sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
-            
-            <a href="{% url 'home' %}" class="text-white text-xl font-extrabold tracking-wide flex items-center hover:text-indigo-200 transition">
-                <i class="fas fa-cubes mr-3 text-indigo-400"></i> SISTEMA GESTIÓN
-            </a>
-
-            <div class="flex items-center space-x-3">
-                
-                {# SECCIÓN ADMINISTRATIVA (Solo para Superadmins o Admins) #}
-                {% if user.is_superuser or user.rol == 'superadmin' %}
-                    <div class="hidden md:flex items-center bg-indigo-950/50 p-1 rounded-xl border border-indigo-700/50 space-x-2 mr-4">
-                        <a href="{% url 'users:usuario_list' %}" 
-                           class="flex items-center px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-[11px] font-black transition border border-gray-600 shadow-sm uppercase">
-                            <i class="fas fa-users-cog mr-1.5 text-indigo-400"></i> Usuarios
-                        </a>
-                        
-                        {% if user.is_superuser %}
-                        <a href="/admin/" 
-                           class="flex items-center px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[11px] font-black transition shadow-lg uppercase">
-                            <i class="fas fa-shield-halved mr-1.5"></i> Django Admin
-                        </a>
-                        {% endif %}
-                    </div>
-                {% endif %}
-
-                <div class="flex items-center space-x-3 border-l border-indigo-700 pl-4">
-                    <div class="text-right hidden sm:block">
-                        <p class="text-xs text-indigo-300 font-bold leading-none mb-1">Bienvenido,</p>
-                        <p class="text-sm text-white font-black leading-none uppercase tracking-tight">
-                            {{ user.first_name|default:user.username }}
-                        </p>
-                    </div>
-
-                    <span class="px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter
-                        {% if user.rol == 'superadmin' or user.is_superuser %} bg-purple-500 text-white shadow-lg shadow-purple-900/50
-                        {% elif user.rol == 'admin' %} bg-blue-500 text-white
-                        {% else %} bg-gray-600 text-gray-100 {% endif %}">
-                        {{ user.get_rol_display }}
-                    </span>
-                    
-                    <form action="{% url 'logout' %}" method="post" class="inline">
-                        {% csrf_token %}
-                        <button type="submit" class="p-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-600/30 rounded-lg transition duration-200">
-                           <i class="fas fa-power-off"></i>
-                        </button>
-                    </form>
-                </div>
+    <aside class="w-72 sidebar-gradient text-white flex-shrink-0 flex flex-col sticky top-0 h-screen shadow-2xl">
+        
+        <div class="p-8 border-b border-white/5 flex items-center gap-4">
+            <div class="w-12 h-12 bg-white rounded-xl p-2 flex-shrink-0">
+                <img src="{% static 'images/sisi_logo.png' %}" class="w-full h-full object-contain" alt="Logo"> 
+            </div>
+            <div class="overflow-hidden">
+                <h3 class="font-black text-xs uppercase tracking-tight truncate">{{ user.first_name|default:user.username }}</h3>
+                <p class="text-[9px] text-indigo-300 font-bold uppercase tracking-wider">{{ user.get_rol_display }}</p>
             </div>
         </div>
-    </header>
 
-    <main class="max-w-7xl mx-auto p-6 sm:p-10 flex-grow w-full"> 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="mb-6 p-4 rounded-xl border-l-4 shadow-md flex items-center justify-between
-                    {% if message.tags == 'success' %} bg-green-50 border-green-500 text-green-800
-                    {% elif message.tags == 'error' %} bg-red-50 border-red-500 text-red-800
-                    {% else %} bg-blue-50 border-blue-500 text-blue-800 {% endif %}">
-                    <span class="text-sm font-bold"><i class="fas fa-info-circle mr-2"></i> {{ message }}</span>
-                    <button onclick="this.parentElement.remove()" class="text-current opacity-50 hover:opacity-100">
-                        <i class="fas fa-times"></i>
-                    </button>
+        <nav class="flex-grow p-4 space-y-1 overflow-y-auto">
+            
+            <p class="px-4 pt-4 pb-2 text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Menú Principal</p>
+
+            <a href="{% url 'home' %}" class="flex items-center gap-3 px-4 py-3 text-white bg-white/10 rounded-xl text-[11px] font-bold transition group">
+                <i class="fas fa-th-large w-5 text-intu-red"></i> 
+                <span>DASHBOARD</span>
+            </a>
+
+            <div class="pt-6 pb-2">
+                <p class="px-4 text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Administración</p>
+            </div>
+
+            {% if user.is_superuser or user.rol == 'superadmin' %}
+                <a href="{% url 'users:usuario_list' %}" 
+                   class="flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl text-[11px] font-bold transition group">
+                    <i class="fas fa-users-cog w-5 group-hover:text-intu-red transition"></i> 
+                    <span>GESTIÓN DE USUARIOS</span>
+                </a>
+                
+                {% if user.is_superuser %}
+                    <a href="/admin/" target="_blank"
+                       class="flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl text-[11px] font-bold transition group">
+                        <i class="fas fa-shield-halved w-5 group-hover:text-intu-red transition"></i> 
+                        <span>ADMINISTRACIÓN (DJANGO)</span>
+                    </a>
+                {% endif %}
+            {% endif %}
+
+            <div class="pt-2">
+                <button onclick="toggleSupport()" 
+                        class="w-full flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl text-[11px] font-bold transition group text-left">
+                    <i class="fas fa-headset w-5 group-hover:text-intu-red transition"></i> 
+                    <span class="flex-grow">SOPORTE TÉCNICO</span>
+                    <i id="support-chevron" class="fas fa-chevron-right text-[8px] opacity-30 transition-transform duration-300"></i>
+                </button>
+                
+                <div id="support-content" class="ml-12 border-l border-white/10 mt-1">
+                    <div class="py-2 px-4">
+                        <p class="text-[10px] text-indigo-200 font-medium italic">soporte@intu.gob.ve</p>
+                    </div>
                 </div>
-            {% endfor %}
-        {% endif %}
+            </div>
 
-        {% block content %}
-            {# Aquí se inyectan tus botones de gestores.html o el formulario #}
-        {% endblock %}
-    </main>
+        </nav>
 
-    <footer class="bg-white border-t border-gray-200 text-center p-6 text-gray-400 text-[10px] uppercase tracking-[0.2em] mt-auto">
-        &copy; 2026 SISTEMA DE GESTIÓN INTEGRAL - CENTRO DE CONTROL PRINCIPAL
-    </footer>
+        <div class="p-4 border-t border-white/5">
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 text-red-400/70 hover:text-red-400 hover:bg-red-400/5 rounded-xl text-[11px] font-bold transition group text-left">
+                    <i class="fas fa-power-off w-5"></i> 
+                    <span>CERRAR SESIÓN</span>
+                </button>
+            </form>
+        </div>
+    </aside>
 
+    <div class="flex-grow flex flex-col min-w-0 h-screen overflow-y-auto bg-[#f8fafc]">
+        <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-10 sticky top-0 z-10">
+            <h2 class="text-intu-blue font-black uppercase tracking-tight text-sm">Sistema Integral de Seguimiento</h2>
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">INTU 2026</span>
+                <div class="w-8 h-8 bg-intu-blue rounded-lg flex items-center justify-center text-white">
+                    <i class="fas fa-cubes text-xs"></i>
+                </div>
+            </div>
+        </header>
+
+        <main class="p-10 flex-grow">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mb-6 p-4 rounded-xl border-l-4 bg-white shadow-sm flex items-center justify-between animate-fade-in
+                        {% if message.tags == 'success' %} border-green-500 text-green-800
+                        {% else %} border-red-500 text-red-800 {% endif %}">
+                        <span class="text-xs font-bold uppercase tracking-tight">{{ message }}</span>
+                        <button onclick="this.parentElement.remove()" class="opacity-30 hover:opacity-100"><i class="fas fa-times"></i></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="bg-white border-t border-gray-100 text-center py-6 text-gray-400 text-[9px] uppercase tracking-[0.4em]">
+            &copy; 2026 SIG-INTU
+        </footer>
+    </div>
+
+    <script>
+        function toggleSupport() {
+            const content = document.getElementById('support-content');
+            const chevron = document.getElementById('support-chevron');
+            content.classList.toggle('open');
+            chevron.style.transform = content.classList.contains('open') ? 'rotate(90deg)' : 'rotate(0deg)';
+        }
+    </script>
 </body>
 </html>

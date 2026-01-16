@@ -18,7 +18,7 @@ from django.utils import timezone
 from datetime import datetime
 import pytz 
 from django.core.paginator import Paginator
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
 from django.views.generic import ListView
 from django.contrib.auth.decorators import login_required
 logger = logging.getLogger(__name__)
@@ -109,12 +109,14 @@ def generar_zip_recibos(request):
 
 # DASHBOARD Y FILTROS (ReciboListView)
 
-class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+class ReciboListView(LoginRequiredMixin, UserPassesTestMixin,PermissionRequiredMixin, ListView):
     model = Recibo
     template_name = 'recibos/dashboard.html'
+    permission_required = 'users.ver_gestor_recibos'
     context_object_name = 'recibos'
     paginate_by = 20
-
+    raise_exception = True
+    
     def test_func(self):
         return self.request.user.rol in ['admin', 'user'] or self.request.user.is_superuser
     

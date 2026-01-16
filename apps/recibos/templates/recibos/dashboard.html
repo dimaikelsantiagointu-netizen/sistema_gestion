@@ -1,564 +1,287 @@
+{% extends 'base.html' %}
 {% load custom_filters %}
 {% load static %}
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Dashboard | Sistema de Gestión de Recibos{% endblock title %}</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config={
-            theme:{
-                extend:{
-                    fontFamily:{
-                        sans:['Inter','sans-serif'],
-                    },
-                },
-            },
-        }
-    </script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"/>
-    <link rel="stylesheet" href="{% static 'recibos/css/dashboard.css' %}">
+{% block title %}Dashboard | Gestión de Recibos{% endblock %}
 
-</head>
+{% block content %}
+<style>
+    /* Estilización de la barra de scroll para los Logs */
+    #log-display::-webkit-scrollbar {
+        width: 5px;
+    }
+    #log-display::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #log-display::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 10px;
+    }
+    #log-display::-webkit-scrollbar-thumb:hover {
+        background: #cbd5e1;
+    }
+</style>
 
-<body class="min-h-screen flex flex-col bg-gray-100">
+<div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div>
+        <span class="text-[10px] font-black text-intu-red uppercase tracking-[0.3em]">Módulo Operativo</span>
+        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Gestión de Recibos</h1>
+        <p class="text-gray-500 font-medium italic text-sm">Generación, seguimiento y auditoría de pagos institucionales.</p>
+    </div>
+    
+    <div class="flex gap-2">
+        <a href="{% url 'recibos:recibos_anulados' %}" class="px-4 py-2 text-[10px] font-black bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition uppercase tracking-wider flex items-center">
+            <i class="fas fa-archive mr-2"></i> Ver Recibos Anulados
+        </a>
+    </div>
+</div>
 
-    <header class="bg-indigo-700 shadow-lg z-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+{% if messages %}
+<div id="django-message-catcher" style="display:none;">
+    {% for message in messages %}
+    <div class="message-django" data-type="{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="flex flex-col lg:flex-row gap-8">
+
+    {# --- PANEL LATERAL (CARGA Y LOGS) --- #}
+    <aside class="w-full lg:w-1/3 xl:w-1/4 space-y-6">
+        
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+            <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-4 flex items-center">
+                <i class="fas fa-file-upload mr-2 text-intu-red"></i> Carga de Archivos Excel
+            </h2>
+            <form method="post" enctype="multipart/form-data" action="{% url 'recibos:dashboard' %}" id="upload-form" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="upload">
+                <label class="block">
+                    <input type="file" name="archivo_recibo" id="excel-file-input" accept=".xlsx" required
+                        class="block w-full text-[10px] text-gray-400
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-[10px] file:font-black file:uppercase
+                        file:bg-gray-100 file:text-gray-600
+                        hover:file:bg-intu-blue hover:file:text-white transition-all cursor-pointer">
+                </label>
+            </form>
+            <p id="upload-status" class="mt-4 text-[10px] text-gray-400 italic text-center">Ningún archivo seleccionado.</p>
             
-            <a class="text-white text-xl font-bold flex items-center">
-                <i class="fas fa-receipt mr-3 text-indigo-300"></i>
-                App Recibos
-            </a>
-            
-            <div class="flex items-center space-x-4">
-                <span class="hidden sm:inline text-sm text-indigo-100"> 
-                    <span class="font-bold text-white">
-                        {# Si tiene 'first_name', lo muestra. Si no, usa el 'username' #}
-                        {{ user.first_name|default:user.username|capfirst }}
-                    </span>
-                    
-                    <span class="ml-1 px-2 py-0.5 rounded-full text-[11px] uppercase font-bold text-white 
-                        {% if user.rol == 'superadmin' %} 
-                        {% elif user.rol == 'admin' %} 
-                        {% else %}  {% endif %}">
-                        {{ user.get_rol_display }}
-                    </span>
-                </span>
-                <a href="{% url 'home' %}"
-                    class="p-2 text-sm font-medium text-white bg-indigo-600 rounded-full hover:bg-indigo-700 transition duration-150 shadow-md flex items-center">
-
-                    <i class="fas fa-home"></i>
-
-                    <span class="hidden sm:inline ml-2">Principal</span>
-                </a>
-                
-            </div>
+            <button type="button" id="trigger-upload-button" disabled
+                class="mt-4 w-full py-3 bg-gray-100 text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex justify-center items-center">
+                <i class="fas fa-arrow-up mr-2"></i> Esperando Archivo
+            </button>
         </div>
 
-        
-
-    </header>
-
-    {#CONTENIDO PRINCIPAL (MAIN) #}
-    <main class="flex-grow p-4 sm:p-6 lg:p-8">
-        <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 bg-white/80 rounded-2xl shadow-xl">
-
-            <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">Generador de Recibos de Pago</h1>
-
-            {% if messages %}
-            <div id="django-message-catcher" style="display:none;">
-                {% for message in messages %}
-                <div class="message-django" data-type="{{ message.tags }}">
-                    {{ message }}
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
+            <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-4 flex items-center shrink-0">
+                <i class="fas fa-clipboard-list mr-2 text-intu-red"></i> Procesos y Logs
+            </h2>
+            
+            <div id="log-display" class="flex-grow overflow-y-auto bg-gray-50 p-4 rounded-2xl text-[10px] font-mono text-gray-600 border border-gray-100">
+                <div id="log-content-wrapper" class="space-y-2">
+                    <p class="text-gray-400 italic">Esperando actividad...</p>
                 </div>
-                {% endfor %}
+            </div>
+            
+            <button type="button" id="clear-visual-logs-button" 
+                data-message="¿Estás seguro que deseas LIMPIAR el contenido visual de los Logs?"
+                data-confirm-text="Sí, Limpiar" data-color="gray"
+                class="mt-4 w-full py-2 shrink-0 bg-gray-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-600 transition">
+                <i class="fas fa-broom mr-2"></i> Limpiar Logs
+            </button>
+        </div>
+    </aside>
+
+
+    {# --- SECCIÓN PRINCIPAL (FILTROS Y TABLA) --- #}
+    <section class="flex-grow space-y-6">
+
+        <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-6 flex items-center">
+                <i class="fas fa-filter mr-2 text-intu-red"></i> Módulo de Reportes y Filtrado
+            </h2>
+
+            <form method="get" action="{% url 'recibos:dashboard' %}" id="filter-form" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha Inicial</label>
+                        <input type="date" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha Final</label>
+                        <input type="date" name="fecha_fin" value="{{ request.GET.fecha_fin }}" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                    </div>
+                    <div class="md:col-span-4">
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado</label>
+                        <select name="estado" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                            <option value="" {% if not request.GET.estado %}selected{% endif %}>Todos</option>
+                            {% for estado in estados_db %}
+                            <option value="{{ estado }}" {% if request.GET.estado|lower == estado|lower %}selected{% endif %}>{{ estado|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <fieldset>
+                    <legend class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Filtrar por Categorías</legend>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {% for codigo, nombre in categorias_list %}
+                        <div class="flex items-center gap-3">
+                            <input id="{{ codigo }}" name="{{ codigo }}" type="checkbox" {% if request.GET|get_item:codigo == 'on' %}checked{% endif %}
+                                class="w-4 h-4 text-intu-red border-gray-300 rounded focus:ring-intu-red">
+                            <label for="{{ codigo }}" class="text-[11px] font-bold text-gray-600 uppercase">{{ nombre }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+
+                <div class="flex flex-wrap gap-3 pt-6 border-t border-gray-50">
+                    <button type="submit" name="action" value="filter" class="flex-1 py-3 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-intu-dark transition">
+                        <i class="fas fa-search mr-2"></i> Aplicar Filtros
+                    </button>
+                    <button type="submit" name="action" value="excel" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 py-3 bg-teal-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-teal-700 transition">
+                        <i class="fas fa-file-excel mr-2"></i> Reporte Excel
+                    </button>
+                    <button type="submit" name="action" value="pdf" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 py-3 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-700 transition">
+                        <i class="fas fa-file-pdf mr-2"></i> Reporte PDF
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-8 border-b border-gray-50">
+                <form method="GET" action="." class="flex flex-col md:flex-row gap-4">
+                    {% for key, value in request.GET.items %}
+                        {% if key != 'q' and key != 'page' and key != 'field' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}
+                    {% endfor %}
+                    
+                    <div class="flex-none">
+                        <select name="field" class="bg-gray-50 border-none rounded-xl text-[11px] font-bold uppercase py-2 px-4 focus:ring-2 focus:ring-intu-blue/10">
+                            <option value="" {% if not request.GET.field %}selected{% endif %}>Todos los campos</option>
+                            <option value="nombre" {% if request.GET.field == 'nombre' %}selected{% endif %}>Nombre</option>
+                            <option value="rif_cedula_identidad" {% if request.GET.field == 'rif_cedula_identidad' %}selected{% endif %}>Cédula/RIF</option>
+                            <option value="numero_recibo" {% if request.GET.field == 'numero_recibo' %}selected{% endif %}>Nº Recibo</option>
+                        </select>
+                    </div>
+                    <input type="text" name="q" placeholder="Introduce el texto a buscar..." value="{{ request.GET.q|default:'' }}"
+                           class="flex-grow bg-gray-50 border-none rounded-xl text-[11px] px-4 focus:ring-2 focus:ring-intu-blue/10">
+                    <button type="submit" class="px-6 py-2 bg-intu-blue text-white text-[10px] font-black uppercase rounded-xl hover:bg-intu-dark transition">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50/50">
+                        <tr>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nº Recibo</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nombre</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Cédula/RIF</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Monto (Bs.)</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        {% for recibo in recibos %}
+                        <tr class="hover:bg-gray-50/50 transition duration-150 {% if recibo.anulado %}bg-red-50/30 opacity-70{% endif %}">
+                            <td class="px-6 py-4">
+                                <a href="{% url 'recibos:modificar_recibo' recibo.pk %}" class="text-xs font-black {% if not recibo.anulado %}text-intu-blue hover:text-intu-red{% else %}text-gray-400{% endif %}">
+                                    {{ recibo.numero_recibo|stringformat:"04d" }}
+                                </a>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-[11px] font-bold text-gray-700 uppercase truncate max-w-[200px]">{{ recibo.nombre }}</div>
+                                <div class="text-[9px] text-gray-400">{{ recibo.fecha|date:"d/m/Y" }}</div>
+                            </td>
+                            <td class="px-6 py-4 text-[11px] text-gray-500 font-medium">{{ recibo.rif_cedula_identidad }}</td>
+                            <td class="px-6 py-4 text-right font-black text-xs text-intu-blue">
+                                {{ recibo.total_monto_bs|floatformat:2 }}
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                {% if recibo.anulado %}
+                                    <span class="px-2 py-0.5 bg-red-100 text-red-600 text-[9px] font-black rounded-full uppercase">Anulado</span>
+                                {% else %}
+                                    <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black rounded-full uppercase">{{ recibo.estado|default:"N/A" }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex justify-center gap-2">
+                                    <a href="{% url 'recibos:generar_pdf_recibo' recibo.pk %}" title="Descargar PDF" class="text-emerald-500 hover:scale-110 transition"><i class="fas fa-file-pdf text-lg"></i></a>
+                                    
+                                    {% if not recibo.anulado %}
+                                        {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' or recibo.usuario == user %}
+                                            <a href="{% url 'recibos:modificar_recibo' pk=recibo.pk %}" title="Modificar" class="text-blue-500 hover:scale-110 transition"><i class="fas fa-edit text-lg"></i></a>
+                                        {% else %}
+                                            <i class="fas fa-lock text-gray-300 text-lg" title="Solo lectura"></i>
+                                        {% endif %}
+
+                                        {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' %}
+                                            <button type="button" class="anular-recibo-btn text-red-500 hover:scale-110 transition"
+                                                data-message="¿Estás seguro que deseas **ANULAR el recibo N°{{ recibo.numero_recibo|stringformat:'04d' }}**?"
+                                                data-confirm-text="Sí, Anular" data-color="red" data-action-url="{% url 'recibos:dashboard' %}" data-recibo-id="{{ recibo.pk }}">
+                                                <i class="fas fa-times-circle text-lg"></i>
+                                            </button>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="p-20 text-center opacity-30">
+                                <i class="fas fa-search-minus text-5xl mb-4"></i>
+                                <p class="text-[10px] font-black uppercase tracking-widest">Sin resultados</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if is_paginated %}
+            <div class="p-6 bg-gray-50/50 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }}</span>
+                <nav class="flex shadow-sm rounded-xl overflow-hidden border border-gray-100">
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}{{ request.GET.urlencode|remove_query_param:'page' }}" class="px-4 py-2 bg-white text-gray-500 hover:bg-gray-100 transition"><i class="fas fa-chevron-left text-xs"></i></a>
+                    {% endif %}
+                    <span class="px-4 py-2 bg-intu-blue text-white text-[10px] font-black">{{ page_obj.number }}</span>
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{{ request.GET.urlencode|remove_query_param:'page' }}" class="px-4 py-2 bg-white text-gray-500 hover:bg-gray-100 transition"><i class="fas fa-chevron-right text-xs"></i></a>
+                    {% endif %}
+                </nav>
             </div>
             {% endif %}
-
-            {% block main_content %}
-
-            <div class="flex flex-col lg:flex-row gap-6">
-
-                {# ASIDE (PANEL LATERAL: Carga y Logs) #}
-                <aside class="w-full lg:w-1/4 space-y-6 self-start">
-
-                    {#Carga de Archivos #}
-                    <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100">
-                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                            <i class="fas fa-file-upload mr-2 text-indigo-600"></i> Carga de Archivos Excel
-                        </h2>
-                        <form method="post" enctype="multipart/form-data" action="{% url 'recibos:dashboard' %}"
-                            id="upload-form" class="space-y-4">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="upload">
-                            <label class="block">
-                                <span class="sr-only">Seleccionar Archivo Excel</span>
-                                <input type="file" name="archivo_recibo" id="excel-file-input" accept=".xlsx" required
-                                    class="block w-full text-sm text-gray-500
-                                    file:mr-4 file:py-2 file:px-4
-                                    file:rounded-lg file:border-0
-                                    file:text-sm file:font-semibold
-                                    file:bg-indigo-50 file:text-indigo-700
-                                    hover:file:bg-indigo-100 transition duration-150"
-                                >
-                            </label>
-                        </form>
-                        <p id="upload-status" class="mt-2 text-xs text-gray-500 text-center italic">
-                            Ningún archivo seleccionado.
-                        </p>
-                    </div>
-
-                    {#Botón de Generar Recibos #}
-                    <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100">
-                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                            <i class="fas fa-edit mr-2 text-yellow-600"></i> Generar Recibos
-                        </h2>
-                        <button type="button" id="trigger-upload-button"
-                            class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 transition duration-150 flex justify-center items-center disabled:opacity-50"
-                            disabled>
-                            <i class="fas fa-arrow-up mr-2"></i> Esperando Archivo
-                        </button>
-                        <p id="generation-status" class="mt-2 text-xs text-gray-500 text-center italic">
-                            Presiona para procesar el archivo seleccionado.
-                        </p>
-                    </div>
-
-                    {#Logs y Botón Limpiar Logs #}
-                    <div class="bg-white p-5 rounded-xl shadow-md border border-gray-100 max-h-96 flex flex-col">
-                        <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                            <i class="fas fa-clipboard-list mr-2 text-blue-600"></i> Procesos y Logs
-                        </h2>
-                        <div id="log-display"
-                            class="flex-grow overflow-y-auto bg-gray-50 p-3 rounded-lg text-xs font-mono border border-gray-200">
-                            <p class="text-gray-400"></p>
-                        </div>
-
-                        {# BOTÓN: Limpiar Logs #}
-                        <button type="button"
-                            data-message="¿Estás seguro que deseas LIMPIAR el contenido visual de los Logs?"
-                            data-confirm-text="Sí, Limpiar"
-                            data-color="gray"
-                            id="clear-visual-logs-button"
-                            class="mt-3 w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gray-500 hover:bg-gray-600 transition duration-150 flex justify-center items-center">
-                            <i class="fas fa-broom mr-2"></i> Limpiar Logs
-                        </button>
-                    </div>
-
-                    <div>
-                        <a href="{% url 'recibos:recibos_anulados' %}"
-                            class="px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition duration-150 flex items-center shadow-md">
-                            <i class="fas fa-archive mr-2"></i> Ver Recibos Anulados
-                        </a>
-                    </div>
-                </aside>
-
-
-                {# SECTION (CONTENIDO PRINCIPAL: Filtros y Tabla) #}
-                <section class="w-full lg:w-3/4 space-y-6">
-
-                    {# Módulo de Reportes y Filtrado #}
-                    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-filter mr-2 text-purple-600"></i> Módulo de Reportes y Filtrado
-                        </h2>
-
-                        <form method="get" action="{% url 'recibos:dashboard' %}" id="filter-form" class="space-y-4">
-
-                            {# Campos de Fecha y Estado #}
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-                                {# Filtro: Fecha Inicial #}
-                                <div class="md:col-span-2">
-                                    <label for="fecha_inicio" class="block text-sm font-medium text-gray-700">Fecha
-                                        Inicial:</label>
-                                    <input type="date" id="fecha_inicio" name="fecha_inicio"
-                                        value="{{ request.GET.fecha_inicio|default:'' }}"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                                </div>
-
-                                {# Filtro: Fecha Final #}
-                                <div class="md:col-span-2">
-                                    <label for="fecha_fin" class="block text-sm font-medium text-gray-700">Fecha
-                                        Final:</label>
-                                    <input type="date" id="fecha_fin" name="fecha_fin"
-                                        value="{{ request.GET.fecha_fin|default:'' }}"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                                </div>
-
-                                {# Filtro: Estado #}
-                                <div class="md:col-span-4">
-                                    <label for="estado" class="block text-sm font-medium text-gray-700">Filtrar por
-                                        Estado</label>
-                                    <select id="estado" name="estado"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                                        <option value="" {% if not request.GET.estado %}selected{% endif %}>Todos
-                                        </option>
-                                        {% for estado in estados_db %}
-                                        <option value="{{ estado }}"
-                                            {% if request.GET.estado|lower == estado|lower %}selected{% endif %}>
-                                            {{ estado|title }}
-                                        </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {# Filtros por Categorías #}
-                            <fieldset>
-                                <legend class="text-base font-medium text-gray-900">Filtrar por Categorías:</legend>
-                                <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {% for codigo, nombre in categorias_list %}
-                                    <div class="relative flex items-start">
-                                        <div class="flex items-center h-5">
-                                            <input id="{{ codigo }}" name="{{ codigo }}" type="checkbox"
-                                                class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                                                {% if request.GET|get_item:codigo == 'on' %}checked{% endif %}>
-                                        </div>
-                                        <div class="ml-3 text-sm">
-                                            <label for="{{ codigo }}"
-                                                class="font-medium text-gray-700">{{ nombre }}</label>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </fieldset>
-
-                            {# Botones de Acción de Reportes #}
-                            <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-
-                                {# Botón 1: Aplicar Filtros #}
-                                <button type="submit" name="action" value="filter"
-                                    class="flex-1 min-w-[150px] inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 transition duration-150">
-                                    <i class="fas fa-search mr-2"></i> Aplicar Filtros
-                                </button>
-
-                                {# Botón 2: Generar Reporte Excel #}
-                                <button type="submit" name="action" value="excel"
-                                    formaction="{% url 'recibos:generar_reporte' %}"
-                                    class="flex-1 min-w-[150px] inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition duration-150">
-                                    <i class="fas fa-file-excel mr-2"></i> Generar Reporte Excel
-                                </button>
-
-                                {# Botón 3: Generar Reporte PDF #}
-                                <button type="submit" name="action" value="pdf"
-                                    formaction="{% url 'recibos:generar_reporte' %}"
-                                    class="flex-1 min-w-[150px] inline-flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
-                                    <i class="fas fa-file-pdf mr-2"></i> Generar Reporte PDF
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-
-                    {# Sección de Resultados y Tabla #}
-                    <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-                        <h1 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                            <i class="fas fa-table mr-2 text-indigo-600"></i> Resultados y Gestión de Recibos
-                        </h1>
-
-                        {# Zona de Búsqueda de la Tabla #}
-                        <form method="GET" action=".">
-
-                            {% for key, value in request.GET.items %}
-                                {% if key != 'q' and key != 'page' and key != 'field' %}
-                                    <input type="hidden" name="{{ key }}" value="{{ value }}">
-                                {% endif %}
-                            {% endfor %}
-
-                            <div class="mb-4 flex space-x-3 items-center gap-3">
-
-                                {# Campo de Selección para la Búsqueda #}
-                                <div class="flex-none">
-                                    <label for="search-field" class="block text-sm font-medium text-gray-700 mb-1">Buscar por</label>
-                                    <select id="search-field" name="field"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                        <option value="" {% if not request.GET.field %}selected{% endif %}>Todos los campos</option>
-                                        <option value="nombre" {% if request.GET.field == 'nombre' %}selected{% endif %}>Nombre</option>
-                                        <option value="rif_cedula_identidad" {% if request.GET.field == 'rif_cedula_identidad' %}selected{% endif %}>Cédula/RIF</option>
-                                        <option value="numero_recibo" {% if request.GET.field == 'numero_recibo' %}selected{% endif %}>Nº Recibo</option>
-                                        <option value="numero_transferencia" {% if request.GET.field == 'numero_transferencia' %}selected{% endif %}>Nº Transferencia</option>
-                                    </select>
-                                </div>
-
-                                {# Campo de Texto para la Búsqueda #}
-                                <input type="text" name="q" placeholder="Introduce el texto a buscar..."
-                                    class="flex-grow rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    value="{{ request.GET.q|default:'' }}">
-
-                                <button type="submit"
-                                    class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150">
-                                    <i class="fas fa-search"></i> Buscar
-                                </button>
-                            </div>
-                        </form>
-                        {# Fin Zona de Búsqueda #}
-
-                        {# Inicio Tabla de Recibos #}
-                        <div class="overflow-x-auto border rounded-lg">
-                            <table class="min-w-full divide-y divide-gray-200">
-
-                                {# Encabezado de tabla #}
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th
-                                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            ID</th>
-                                        <th
-                                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Nº Recibo</th>
-                                        <th
-                                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Nombre</th>
-                                        <th
-                                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Cédula/RIF</th>
-                                        <th
-                                            class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Monto (Bs.)</th>
-                                        <th
-                                            class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Fecha</th>
-                                        <th
-                                            class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Estado</th>
-                                        <th
-                                            class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Acción</th>
-                                    </tr>
-                                </thead>
-
-                                {# Contenido de tabla #}
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    {% for recibo in recibos %}
-                                    <tr
-                                        class="{% if recibo.anulado %}bg-red-50/50 text-gray-400 opacity-80{% else %}hover:bg-gray-50{% endif %} transition duration-100">
-                                        <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500">{{ recibo.id }}
-                                        </td>
-                                        <td
-                                            class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {# Enlace al recibo para modificar #}
-                                            <a href="{% url 'recibos:modificar_recibo' recibo.pk %}" class="{% if not recibo.anulado %}text-indigo-600 hover:text-indigo-900 font-bold{% else %}text-gray-500{% endif %}">
-                                                {{ recibo.numero_recibo|stringformat:"04d" }}
-                                            </a>
-                                        </td>
-                                        <td
-                                            class="px-3 py-2 whitespace-nowrap text-sm text-gray-700 max-w-xs overflow-hidden text-ellipsis">
-                                            {{ recibo.nombre }}</td>
-                                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                            {{ recibo.rif_cedula_identidad }}</td>
-
-                                        <td
-                                            class="px-3 py-2 whitespace-nowrap text-sm font-bold text-right text-indigo-600">
-                                            {{ recibo.total_monto_bs|floatformat:2 }}
-                                        </td>
-
-                                        <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                                            {{ recibo.fecha|date:"d/m/Y" }}</td>
-
-                                        {# ESTILO PARA EL ESTADO #}
-                                        <td class="px-3 py-2 whitespace-nowrap text-center">
-                                            {% if recibo.anulado %}
-                                            <span
-                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                <i class="fas fa-ban mr-1"></i> ANULADO
-                                            </span>
-                                            {% else %}
-                                            <span
-                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                {{ recibo.estado|default:"N/A"|title }}
-                                            </span>
-                                            {% endif %}
-                                        </td>
-
-                                        {# BOTONES DE ACCIÓN #}
-                                        <td class="px-3 py-2 whitespace-nowrap text-center text-sm font-medium">
-                                        <div class="flex space-x-2 justify-center">
-
-                                            {# DESCARGAR (PDF) - Siempre visible para todos #}
-                                            <a href="{% url 'recibos:generar_pdf_recibo' recibo.pk %}"
-                                            title="Descargar PDF"
-                                            class="text-green-600 hover:text-green-900 transition duration-150 p-1 rounded hover:bg-green-50">
-                                                <i class="fas fa-file-pdf text-xl"></i>
-                                            </a>
-
-                                            {# MODIFICAR (Icono lápiz) #}
-                                            {% if not recibo.anulado %}
-                                                {# REGLA: Solo si es dueño, admin o superadmin #}
-                                                {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' or recibo.usuario == user %}
-                                                    <a href="{% url 'recibos:modificar_recibo' pk=recibo.pk %}"
-                                                    title="Modificar Recibo"
-                                                    class="text-blue-600 hover:text-blue-900 transition duration-150 p-1 rounded hover:bg-blue-50">
-                                                        <i class="fas fa-edit text-xl"></i>
-                                                    </a>
-                                                {% else %}
-                                                    {# Si no es dueño, mostramos el icono gris o un candado de 'Solo Lectura' #}
-                                                    <span title="No tienes permiso para editar este recibo ajeno" class="text-gray-300 p-1">
-                                                        <i class="fas fa-lock text-xl"></i>
-                                                    </span>
-                                                {% endif %}
-                                            {% else %}
-                                                <span title="Recibo Anulado, no se puede modificar" class="text-gray-300 p-1">
-                                                    <i class="fas fa-edit text-xl"></i>
-                                                </span>
-                                            {% endif %}
-
-                                            {# ANULAR (Icono de cruz) #}
-                                            {% if not recibo.anulado %}
-                                                {# REGLA: El usuario común NO PUEDE anular nada #}
-                                                {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' %}
-                                                    <button type="button"
-                                                        data-message="¿Estás seguro que deseas **ANULAR el recibo N°{{ recibo.numero_recibo|stringformat:'04d' }}**? Esta acción no se puede deshacer."
-                                                        data-confirm-text="Sí, Anular"
-                                                        data-color="red"
-                                                        data-action-url="{% url 'recibos:dashboard' %}"
-                                                        data-recibo-id="{{ recibo.pk }}"
-                                                        class="anular-recibo-btn text-red-600 hover:text-red-900 transition duration-150 p-1 rounded hover:bg-red-50"
-                                                        title="Anular Recibo">
-                                                        <i class="fas fa-times-circle text-xl"></i>
-                                                    </button>
-                                                {% else %}
-                                                    {# El usuario común no ve el botón de anular #}
-                                                    <span title="Solo administradores pueden anular registros" class="text-gray-200 p-1">
-                                                        <i class="fas fa-times-circle text-xl invisible"></i>
-                                                    </span>
-                                                {% endif %}
-                                            {% else %}
-                                                <span title="Recibo ya Anulado" class="text-gray-300 p-1">
-                                                    <i class="fas fa-times-circle text-xl"></i>
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="8"
-                                            class="text-center p-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                                            <i class="fas fa-search-minus text-6xl text-gray-400 mb-4"></i>
-                                            <p class="text-xl font-medium text-gray-600">No se encontraron recibos que
-                                                coincidan con los filtros o la búsqueda.</p>
-                                            <p class="text-gray-500 mt-2">Intenta ajustar tus criterios de búsqueda o
-                                                filtros.</p>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {# Fin Tabla de Recibos #}
-
-                        {# Paginación #}
-                        {% if is_paginated %}
-                        <div class="mt-4 flex flex-col md:flex-row justify-between items-center p-3 bg-gray-50 rounded-lg">
-                            <div class="mb-2 md:mb-0">
-                                <span class="text-sm text-gray-700">
-                                    Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de
-                                    {{ page_obj.paginator.count }} resultados
-                                </span>
-                            </div>
-
-                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-
-                                {% if page_obj.has_previous %}
-                                <a href="?page={{ page_obj.previous_page_number }}{{ request_get.urlencode|remove_query_param:'page' }}"
-                                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-100">
-                                    <i class="fas fa-chevron-left"></i>
-                                </a>
-                                {% else %}
-                                <span
-                                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-200 text-sm font-medium text-gray-400">
-                                    <i class="fas fa-chevron-left"></i>
-                                </span>
-                                {% endif %}
-
-                                {% for i in page_obj.paginator.page_range %}
-                                {% if i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
-
-                                {% if page_obj.number == i %}
-                                <span aria-current="page"
-                                    class="relative inline-flex items-center px-4 py-2 border border-indigo-500 bg-indigo-500 text-sm font-medium text-white">
-                                    {{ i }}
-                                </span>
-                                {% else %}
-                                <a href="?page={{ i }}{{ request_get.urlencode|remove_query_param:'page' }}"
-                                    class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100">
-                                    {{ i }}
-                                </a>
-                                {% endif %}
-                                {% endif %}
-                                {% endfor %}
-
-                                {% if page_obj.has_next %}
-                                <a href="?page={{ page_obj.next_page_number }}{{ request_get.urlencode|remove_query_param:'page' }}"
-                                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-100">
-                                    <i class="fas fa-chevron-right"></i>
-                                </a>
-                                {% else %}
-                                <span
-                                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-200 text-sm font-medium text-gray-400">
-                                    <i class="fas fa-chevron-right"></i>
-                                </span>
-                                {% endif %}
-                            </nav>
-                        </div>
-                        {% endif %}
-                        {# Fin Paginación #}
-
-                    </div>
-                </section>
-            </div>
-
-            <form id="anular-form" method="POST" action="{% url 'recibos:dashboard' %}" class="hidden">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="anular">
-                <input type="hidden" name="recibo_id" id="anular-recibo-id">
-            </form>
-
-            <form id="clear-logs-form" method="POST" action="{% url 'recibos:dashboard' %}" class="hidden">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="clear_logs">
-            </form>
-
-            {% endblock main_content %}
         </div>
-    </main>
+    </section>
+</div>
 
-    <footer class="bg-gray-800 text-white p-4 mt-auto">
-        <div class="max-w-7xl mx-auto text-center text-sm">
-            Sistema de Gestión de Recibos &copy;{% now "Y" %}
-        </div>
-    </footer>
+<form id="anular-form" method="POST" action="{% url 'recibos:dashboard' %}" class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="anular">
+    <input type="hidden" name="recibo_id" id="anular-recibo-id">
+</form>
 
-    {# MODAL DE CONFIRMACIÓN #}
-    <div id="confirmation-modal"
-        class="fixed inset-0 bg-gray-600 bg-opacity-75 z-50 hidden transition-opacity duration-300" style="opacity:0;">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all duration-300 scale-95 opacity-0"
-                id="modal-content">
-                <h3 class="text-xl font-bold text-gray-800 border-b pb-2 mb-4" id="modal-title">Confirmar Acción</h3>
-                <div class="text-gray-700 mb-6">
-                    <p id="modal-message"></p>
-                </div>
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="hideModal()"
-                        class="px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition duration-150">
-                        Cancelar
-                    </button>
-                    <button type="button" id="confirm-action-button" data-target-form=""
-                        class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-150">
-                        Aceptar
-                    </button>
-                </div>
-            </div>
+<form id="clear-logs-form" method="POST" action="{% url 'recibos:dashboard' %}" class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="clear_logs">
+</form>
+
+<div id="confirmation-modal" class="fixed inset-0 bg-gray-900/60 z-50 hidden transition-opacity flex items-center justify-center p-4" style="opacity:0;">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all scale-95 opacity-0" id="modal-content">
+        <h3 class="text-lg font-black text-intu-blue uppercase tracking-tight mb-4" id="modal-title">Confirmar Acción</h3>
+        <p id="modal-message" class="text-sm text-gray-500 leading-relaxed mb-8"></p>
+        <div class="flex justify-end gap-3">
+            <button type="button" onclick="hideModal()" class="px-6 py-2 text-[10px] font-black uppercase text-gray-400 hover:text-gray-600 transition">Cancelar</button>
+            <button type="button" id="confirm-action-button" class="px-6 py-2 bg-red-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-red-700 transition">Aceptar</button>
         </div>
     </div>
+</div>
 
-    {# 6. SCRIPTS JS #}
-    <script src="{% static 'recibos/js/dashboard.js' %}"></script>
-    {% block extra_js %}{% endblock extra_js %}
-
-</body>
-</html>
+<script src="{% static 'recibos/js/dashboard.js' %}"></script>
+{% endblock %}
