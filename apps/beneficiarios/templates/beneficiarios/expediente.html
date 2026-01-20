@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="mb-8">
+    <a href="{% url 'beneficiarios:lista' %}" class="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-intu-blue transition">
+        <i class="fas fa-chevron-left mr-1"></i> Volver a Beneficiarios
+    </a>
+    <div class="flex items-center gap-4 mt-4">
+        <div class="w-12 h-12 bg-intu-blue text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-100">
+            <i class="fas fa-folder-open text-xl"></i>
+        </div>
+        <div>
+            <h1 class="text-2xl font-black text-intu-blue uppercase tracking-tighter">{{ beneficiario.nombre_completo }}</h1>
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Expediente: {{ beneficiario.tipo_documento }}-{{ beneficiario.documento_identidad }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    {# --- COLUMNA IZQUIERDA: CARGA --- #}
+    <div class="lg:col-span-1">
+        <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm sticky top-6">
+            <h3 class="text-[10px] font-black uppercase mb-6 text-gray-400 tracking-widest">Añadir Documentos</h3>
+            
+            <form method="POST" enctype="multipart/form-data" class="space-y-4">
+                {% csrf_token %}
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-gray-400 uppercase ml-2">Nombre descriptivo</label>
+                    <input type="text" name="nombre_documento" placeholder="Ej: Copia de RIF 2024" required
+                           class="w-full p-3 bg-gray-50 border-none rounded-xl text-xs focus:ring-2 focus:ring-intu-blue/10 outline-none">
+                </div>
+                
+                <div class="relative group">
+                    <input type="file" name="archivos" id="file-input" multiple required
+                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
+                    
+                    <div id="drop-zone" class="p-8 border-2 border-dashed border-gray-100 rounded-2xl text-center group-hover:border-intu-blue/30 transition-all bg-gray-50/30">
+                        <i id="upload-icon" class="fas fa-cloud-upload-alt text-2xl text-gray-300 group-hover:text-intu-blue mb-2 transition-colors"></i>
+                        <p id="file-name" class="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Arrastra o selecciona</p>
+                        <p id="file-info" class="text-[9px] font-black text-intu-blue mt-1 hidden uppercase"></p>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-4 bg-intu-blue text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-intu-dark transition shadow-lg shadow-blue-50">
+                    Subir al Expediente
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {# --- COLUMNA DERECHA: LISTADO --- #}
+    <div class="lg:col-span-2 space-y-4">
+        <h3 class="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-4">Documentos Archivados ({{ documentos.count }})</h3>
+        
+        <div class="grid grid-cols-1 gap-3">
+            {% for doc in documentos %}
+            <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-50 shadow-sm hover:shadow-md transition group">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center group-hover:bg-blue-50 group-hover:text-intu-blue transition-colors text-sm">
+                        {% if ".pdf" in doc.archivo.name|lower %}
+                            <i class="fas fa-file-pdf text-red-400"></i>
+                        {% elif ".jpg" in doc.archivo.name|lower or ".png" in doc.archivo.name|lower %}
+                            <i class="fas fa-file-image text-emerald-400"></i>
+                        {% else %}
+                            <i class="fas fa-file-alt"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-bold text-gray-700 uppercase tracking-tight">{{ doc.nombre_documento }}</p>
+                        <p class="text-[9px] text-gray-400 font-medium">{{ doc.fecha_subida|date:"d M, Y" }} • {{ doc.archivo.size|filesizeformat }}</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <a href="{{ doc.archivo.url }}" target="_blank" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-blue-50 hover:text-intu-blue transition-all">
+                        <i class="fas fa-eye text-xs"></i>
+                    </a>
+                    <a href="{% url 'beneficiarios:eliminar_documento' doc.id %}" 
+                       onclick="return confirm('¿Eliminar este documento del expediente?')"
+                       class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all">
+                        <i class="fas fa-trash-alt text-xs"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="py-20 text-center bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-100">
+                <i class="fas fa-folder-open text-4xl text-gray-200 mb-4"></i>
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-300">No hay documentos cargados</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{# --- SCRIPT DE FEEDBACK VISUAL --- #}
+<script>
+    const fileInput = document.getElementById('file-input');
+    const fileNameText = document.getElementById('file-name');
+    const fileInfoText = document.getElementById('file-info');
+    const dropZone = document.getElementById('drop-zone');
+    const uploadIcon = document.getElementById('upload-icon');
+
+    fileInput.addEventListener('change', function(e) {
+        const files = e.target.files;
+        
+        if (files.length > 0) {
+            // Cambiar a estado "Cargado/Listo"
+            dropZone.classList.remove('border-gray-100', 'bg-gray-50/30');
+            dropZone.classList.add('border-intu-blue', 'bg-blue-50/50');
+            uploadIcon.classList.remove('text-gray-300');
+            uploadIcon.classList.add('text-intu-blue');
+            
+            if (files.length === 1) {
+                fileNameText.innerText = files[0].name;
+                fileInfoText.innerText = "Archivo listo para subir";
+            } else {
+                fileNameText.innerText = files.length + " Archivos seleccionados";
+                fileInfoText.innerText = "Lote listo para subir";
+            }
+            fileInfoText.classList.remove('hidden');
+        } else {
+            // Revertir a estado inicial si no hay selección
+            dropZone.classList.add('border-gray-100', 'bg-gray-50/30');
+            dropZone.classList.remove('border-intu-blue', 'bg-blue-50/50');
+            uploadIcon.classList.add('text-gray-300');
+            uploadIcon.classList.remove('text-intu-blue');
+            fileNameText.innerText = "Arrastra o selecciona";
+            fileInfoText.classList.add('hidden');
+        }
+    });
+</script>
+
+{% endblock %}
