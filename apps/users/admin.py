@@ -4,18 +4,27 @@ from django.contrib.auth.admin import UserAdmin
 from .models import Usuario
 
 class UsuarioAdmin(UserAdmin):
-    # Campos que se ven en la tabla principal
-    list_display = ('username', 'cedula', 'rol', 'is_staff', 'is_superuser')
+    # 1. Campos que se ven en la tabla principal (list_display)
+    # Eliminamos 'cedula' y agregamos 'rol' y 'telefono' para mejor visibilidad
+    list_display = ('username', 'email', 'rol', 'telefono', 'is_staff')
     
-    # Campos al editar un usuario
+    # 2. Filtros laterales para facilitar la búsqueda
+    list_filter = ('rol', 'is_staff', 'is_superuser', 'is_active')
+
+    # 3. Campos al editar un usuario existente
+    # Agregamos 'observacion' y quitamos 'cedula'
     fieldsets = UserAdmin.fieldsets + (
-        ('Información Personal Extra', {'fields': ('cedula', 'telefono')}),
+        ('Información Personal Extra', {'fields': ('telefono', 'observacion')}),
         ('Configuración de Sistema', {'fields': ('rol',)}),
     )
     
-    # Campos al crear un usuario nuevo
+    # 4. Campos al crear un usuario nuevo desde el Admin
+    # Agregamos 'observacion' y quitamos 'cedula'
     add_fieldsets = UserAdmin.add_fieldsets + (
-        ('Información Extra', {'fields': ('cedula', 'telefono', 'rol')}),
+        ('Información Extra', {'fields': ('rol', 'telefono', 'observacion')}),
     )
+
+    # Ordenar por nombre de usuario por defecto
+    ordering = ('username',)
 
 admin.site.register(Usuario, UsuarioAdmin)
