@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{# --- ENCABEZADO --- #}
+<div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div>
+        <span class="text-[10px] font-black text-intu-blue uppercase tracking-[0.3em]">Gestión de Datos</span>
+        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Beneficiarios</h1>
+        <p class="text-gray-500 font-medium italic text-sm">Registro centralizado de beneficiarios y expedientes digitales.</p>
+    </div>
+    
+    <div class="flex gap-2">
+        <a href="{% url 'beneficiarios:crear' %}" class="px-5 py-2.5 text-[10px] font-black bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all active:scale-95 uppercase tracking-wider flex items-center">
+            <i class="fas fa-user-plus mr-2"></i> Nuevo Beneficiario
+        </a>
+    </div>
+</div>
+
+{# --- BUSCADOR Y FILTROS --- #}
+<div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <form method="GET" class="relative max-w-md w-full">
+        <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Buscar por nombre o cédula..." 
+               class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-2xl text-xs focus:ring-4 focus:ring-intu-blue/5 focus:border-intu-blue outline-none transition shadow-sm">
+        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+        {% if query %}
+            <a href="{% url 'beneficiarios:lista' %}" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
+                <i class="fas fa-times-circle"></i>
+            </a>
+        {% endif %}
+    </form>
+    
+    {% if query %}
+    <span class="text-[10px] font-bold text-gray-400 uppercase">
+        Resultados para: <span class="text-intu-blue">"{{ query }}"</span>
+    </span>
+    {% endif %}
+</div>
+
+{# --- TABLA PRINCIPAL --- #}
+<div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-gray-50/50">
+                <tr>
+                    <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Identificación</th>
+                    <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nombre Completo</th>
+                    <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Contacto</th>
+                    <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Expediente Digital</th>
+                    <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for b in beneficiarios %}
+                <tr class="hover:bg-blue-50/20 transition duration-150 group">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <span class="w-6 h-6 flex items-center justify-center bg-gray-100 text-gray-500 text-[9px] font-black rounded-lg mr-2 group-hover:bg-intu-blue group-hover:text-white transition-colors uppercase">
+                                {{ b.tipo_documento }}
+                            </span>
+                            <span class="text-xs font-black text-intu-blue tracking-tight">{{ b.documento_identidad }}</span>
+                        </div>
+                    </td>
+
+                    <td class="px-6 py-4">
+                        <div class="text-[11px] font-bold text-gray-700 uppercase leading-tight">{{ b.nombre_completo }}</div>
+                    </td>
+
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col gap-1">
+                            <div class="text-[10px] text-gray-500 flex items-center"><i class="fas fa-phone-alt w-4 opacity-50"></i> {{ b.telefono|default:"No registrado" }}</div>
+                            <div class="text-[10px] text-gray-400 flex items-center"><i class="fas fa-envelope w-4 opacity-50"></i> {{ b.email|default:"-"|lower }}</div>
+                        </div>
+                    </td>
+
+                    <td class="px-6 py-4 text-center">
+                        {% with count=b.documentos.count %}
+                        <a href="{% url 'beneficiarios:expediente' b.id %}" 
+                           class="inline-flex items-center px-4 py-1.5 rounded-xl transition-all duration-300 
+                                  {% if count > 0 %} bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white {% else %} bg-gray-50 text-gray-400 hover:bg-gray-100 {% endif %}">
+                            <i class="fas {% if count > 0 %}fa-folder-open{% else %}fa-folder-plus{% endif %} mr-2 text-[10px]"></i>
+                            <span class="text-[9px] font-black uppercase tracking-tighter">{{ count }} Archivos</span>
+                        </a>
+                        {% endwith %}
+                    </td>
+
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex justify-end gap-3">
+                            <a href="{% url 'beneficiarios:editar' b.id %}" 
+                               title="Editar Beneficiario"
+                               class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-blue-50 hover:text-intu-blue transition-all">
+                                <i class="fas fa-edit text-xs"></i>
+                            </a>
+                            <a href="{% url 'beneficiarios:eliminar' b.id %}" 
+                               title="Eliminar Registro"
+                               onclick="return confirm('¿Está seguro de eliminar a {{ b.nombre_completo }}? Esta acción borrará también todos sus documentos del expediente.')"
+                               class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all">
+                                <i class="fas fa-trash text-xs"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="py-24 text-center">
+                        <div class="inline-flex items-center justify-center w-20 h-20 bg-gray-50 rounded-full mb-4">
+                            <i class="fas fa-users-slash text-3xl text-gray-200"></i>
+                        </div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">No se encontraron beneficiarios</p>
+                        {% if query %}
+                            <a href="{% url 'beneficiarios:lista' %}" class="text-intu-blue text-[10px] font-bold mt-2 inline-block underline">Ver todos los registros</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# --- INFO INFERIOR --- #}
+<div class="mt-6 flex justify-between items-center px-4">
+    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+        Total en base de datos: <span class="text-gray-700">{{ beneficiarios.count }}</span>
+    </p>
+</div>
+
+{% endblock %}
