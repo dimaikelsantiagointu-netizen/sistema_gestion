@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-10 flex items-center gap-6">
+        <a href="{% url 'contratos:lista' %}" class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 hover:text-intu-red shadow-sm transition-all">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+            <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">{{ titulo|default:"Nuevo Contrato" }}</h1>
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Vincular documento legal a un beneficiario existente</p>
+        </div>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <div class="md:col-span-2 border-b border-gray-50 pb-4 mb-2">
+                    <p class="text-[11px] font-black text-intu-blue uppercase tracking-widest flex items-center gap-2">
+                        <i class="fas fa-id-card-alt text-orange-500"></i> Datos del Expediente
+                    </p>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Seleccionar Beneficiario</label>
+                    <select name="beneficiario" required class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all cursor-pointer">
+                        <option value="" disabled selected>-- Buscar por nombre o cédula --</option>
+                        {% for b in beneficiarios %}
+                            <option value="{{ b.id }}">{{ b.tipo_documento }}-{{ b.documento_identidad }} | {{ b.nombre_completo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Código de Contrato</label>
+                    <input type="text" name="codigo" required placeholder="Ej: CT-2026-0001"
+                           class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all uppercase">
+                </div>
+
+                <div class="md:col-span-2 space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Tipo / Objeto del Contrato</label>
+                    <input type="text" name="tipo" required placeholder="Ej: Adjudicación de Terreno / Título de Propiedad"
+                           class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all">
+                </div>
+
+                <div class="md:col-span-2 border-b border-gray-50 pb-4 mt-4 mb-2">
+                    <p class="text-[11px] font-black text-intu-blue uppercase tracking-widest flex items-center gap-2">
+                        <i class="fas fa-paragraph text-orange-500"></i> Cuerpo y Cláusulas del Documento
+                    </p>
+                </div>
+
+                <div class="md:col-span-2 space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Contenido Legal</label>
+                    <textarea name="cuerpo" required rows="12" placeholder="Redacte aquí las cláusulas del contrato..."
+                              class="w-full p-6 bg-gray-50 border-none rounded-3xl text-sm font-medium leading-relaxed focus:ring-2 focus:ring-intu-blue/10 transition-all"></textarea>
+                    <p class="text-[9px] text-gray-400 font-bold italic mt-2 ml-2">* Este contenido podrá ser editado posteriormente antes de la aprobación final.</p>
+                </div>
+            </div>
+
+            <div class="mt-10 pt-8 border-t border-gray-50 flex flex-col md:flex-row gap-4">
+                <button type="submit" class="flex-grow py-4 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-intu-dark transition shadow-lg shadow-blue-50 flex items-center justify-center gap-3">
+                    <i class="fas fa-save"></i>
+                    {{ boton|default:"Guardar Borrador de Contrato" }}
+                </button>
+                
+                <a href="{% url 'contratos:lista' %}" class="px-8 py-4 bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-gray-200 transition text-center">
+                    Cancelar
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

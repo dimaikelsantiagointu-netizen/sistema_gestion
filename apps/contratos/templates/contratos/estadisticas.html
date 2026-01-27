@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'contratos:lista' %}" class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-gray-400 hover:text-intu-red shadow-sm transition-all">
+                <i class="fas fa-chevron-left text-xs"></i>
+            </a>
+            <div>
+                <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Estadísticas de Gestión</h1>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Análisis de rendimiento y estados de contratos</p>
+            </div>
+        </div>
+        
+        <a href="{% url 'contratos:exportar_excel' %}" class="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition shadow-lg shadow-green-100">
+            <i class="fas fa-file-excel"></i> Descargar Reporte Completo
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-1">
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 h-full flex flex-col items-center justify-center">
+                <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 text-center w-full">Composición Visual</h2>
+                <div class="relative w-full" style="max-width: 250px;">
+                    <canvas id="chartEstados"></canvas>
+                </div>
+                <div class="mt-8 text-center">
+                    <p class="text-[10px] font-black text-gray-400 uppercase">Total en Sistema</p>
+                    <p class="text-4xl font-black text-intu-blue">{{ total_general }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2">
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 h-full">
+                <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-8">Distribución por Estado</h2>
+                
+                <div class="space-y-8">
+                    {% for s in stats %}
+                    <div>
+                        <div class="flex justify-between items-end mb-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full 
+                                    {% if s.estado == 'aprobado' %} bg-green-500 
+                                    {% elif s.estado == 'borrador' %} bg-gray-400 
+                                    {% else %} bg-orange-500 {% endif %}">
+                                </div>
+                                <p class="text-sm font-black text-intu-blue uppercase">{{ s.estado }}</p>
+                            </div>
+                            <p class="text-sm font-black text-gray-600">{{ s.total }} <span class="text-[10px] text-gray-400 font-bold">({{ s.porcentaje }}%)</span></p>
+                        </div>
+                        <div class="w-full h-3 bg-gray-50 rounded-full overflow-hidden">
+                            <div class="h-full {% if s.estado == 'aprobado' %} bg-green-500 {% elif s.estado == 'borrador' %} bg-gray-400 {% else %} bg-orange-500 {% endif %} rounded-full transition-all duration-1000" style="width: {{ s.porcentaje }}%"></div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-10">
+                        <i class="fas fa-chart-bar text-gray-200 text-4xl mb-4"></i>
+                        <p class="text-gray-400 font-bold uppercase text-xs">No hay datos suficientes</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('chartEstados').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [{% for s in stats %}'{{ s.estado|upper }}',{% endfor %}],
+            datasets: [{
+                data: [{% for s in stats %}{{ s.total }},{% endfor %}],
+                backgroundColor: [
+                    '#1e3a8a', // Azul INTU
+                    '#f97316', // Naranja
+                    '#10b981', // Verde
+                    '#94a3b8'  // Gris
+                ],
+                borderWidth: 0,
+                hoverOffset: 15
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false // Ocultamos leyenda para usar nuestra lista custom
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.label}: ${context.raw} contratos`;
+                        }
+                    }
+                }
+            },
+            cutout: '75%' // Hace la dona más delgada y elegante
+        }
+    });
+</script>
+{% endblock %}

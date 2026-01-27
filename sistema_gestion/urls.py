@@ -18,8 +18,11 @@ urlpatterns = [
     path('users/', include('apps.users.urls', namespace='users')),
     path('recibos/', include('apps.recibos.urls', namespace='recibos')),
     
-    # 5. Gestión de Beneficiarios (AGREGAR ESTA LÍNEA)
+    # 5. Gestión de Beneficiarios
     path('beneficiarios/', include('apps.beneficiarios.urls', namespace='beneficiarios')),
+
+    # 5.1 Gestión de Contratos 
+    path('contratos/', include('apps.contratos.urls', namespace='contratos')),
 
 ] 
 

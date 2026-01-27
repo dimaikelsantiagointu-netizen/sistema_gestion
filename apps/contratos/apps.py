@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
-
 class ContratosConfig(AppConfig):
-    name = 'contratos'
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'apps.contratos'  # <--- Debe incluir el prefijo 'apps.'
