@@ -5,7 +5,10 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from .forms import CustomUserCreationForm, CustomUserChangeForm, UserProfileForm
 from .models import Usuario
+from django.contrib.auth.views import PasswordChangeView
+from django.contrib.auth.forms import PasswordChangeForm
 
+# --- VISTA DEL DASHBOARD ---
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'gestores.html'  
 
@@ -91,4 +94,14 @@ class MiPerfilUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         messages.success(self.request, "Tu información de perfil ha sido actualizada.")
+        return super().form_valid(form)
+ 
+ 
+# --- VISTA PARA CAMBIAR CONTRASEÑA ---   
+class MiPasswordUpdateView(LoginRequiredMixin, PasswordChangeView):
+    template_name = 'users/cambiar_password.html'
+    success_url = reverse_lazy('home')
+    
+    def form_valid(self, form):
+        messages.success(self.request, "Tu contraseña ha sido actualizada correctamente.")
         return super().form_valid(form)

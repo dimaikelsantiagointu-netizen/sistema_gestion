@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import DashboardView, CrearUsuarioView, UsuarioDeleteView, UsuarioUpdateView, UsuarioListView,MiPerfilUpdateView
+from .views import DashboardView, CrearUsuarioView, UsuarioDeleteView, UsuarioUpdateView, UsuarioListView,MiPerfilUpdateView,MiPasswordUpdateView
 
 # El app_name es vital para que {% url 'users:crear_usuario' %} funcione
 app_name = 'users'
@@ -14,4 +14,5 @@ urlpatterns = [
     path('editar/<int:pk>/', UsuarioUpdateView.as_view(), name='usuario_editar'),
     path('eliminar/<int:pk>/', UsuarioDeleteView.as_view(), name='usuario_eliminar'),
     path('perfil/', MiPerfilUpdateView.as_view(), name='mi_perfil'),
+    path('cambiar-password/', MiPasswordUpdateView.as_view(), name='cambiar_password'),
 ]
