@@ -82,3 +82,24 @@ class CustomUserChangeForm(UserChangeForm):
                 field.widget.attrs.update({
                     'class': 'block w-full px-4 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm'
                 })
+                
+class UserProfileForm(forms.ModelForm):
+    """
+    Formulario simplificado para que los usuarios no administradores
+    puedan actualizar su propia información básica.
+    """
+    class Meta:
+        model = Usuario
+        # Solo campos de contacto y personales, nunca permisos ni roles
+        fields = ('first_name', 'last_name', 'email', 'telefono')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Aplicamos el estilo visual consistente
+        for name, field in self.fields.items():
+            field.widget.attrs.update({
+                'class': 'mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 font-bold'
+            })
+        
+        # Opcional: Hacer que el correo sea obligatorio
+        self.fields['email'].required = True

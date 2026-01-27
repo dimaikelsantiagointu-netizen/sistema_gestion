@@ -3,7 +3,7 @@ from django.views.generic import TemplateView, CreateView, ListView, UpdateView,
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
-from .forms import CustomUserCreationForm, CustomUserChangeForm
+from .forms import CustomUserCreationForm, CustomUserChangeForm, UserProfileForm
 from .models import Usuario
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -77,3 +77,18 @@ class UsuarioDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
     def test_func(self):
         return self.request.user.is_superuser or self.request.user.rol == 'superadmin'
+    
+# --- VISTA PARA QUE EL USUARIO EDITE SU PROPIO PERFIL ---
+class MiPerfilUpdateView(LoginRequiredMixin, UpdateView):
+    model = Usuario
+    form_class = UserProfileForm
+    template_name = 'users/mi_perfil.html'
+    success_url = reverse_lazy('home') # O la ruta que prefieras tras guardar
+
+    def get_object(self, queryset=None):
+        """Retorna el usuario actual para asegurar que solo edite su propio perfil"""
+        return self.request.user
+
+    def form_valid(self, form):
+        messages.success(self.request, "Tu información de perfil ha sido actualizada.")
+        return super().form_valid(form)
