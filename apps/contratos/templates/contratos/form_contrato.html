@@ -1,26 +1,26 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
+<div class="max-w-5xl mx-auto pb-20">
     <div class="mb-10 flex items-center gap-6">
         <a href="{% url 'contratos:lista' %}" class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 hover:text-intu-red shadow-sm transition-all">
             <i class="fas fa-arrow-left"></i>
         </a>
         <div>
-            <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">{{ titulo|default:"Nuevo Contrato" }}</h1>
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Vincular documento legal a un beneficiario existente</p>
+            <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">{{ titulo|default:"Redactar Nuevo Contrato" }}</h1>
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Generación automática de documento de venta pura y simple</p>
         </div>
     </div>
 
-    <form method="POST" class="space-y-6">
+    <form method="POST" class="space-y-8">
         {% csrf_token %}
         
-        <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                
-                <div class="md:col-span-2 border-b border-gray-50 pb-4 mb-2">
+        <div class="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-gray-100">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                <div class="md:col-span-2 border-b border-gray-50 pb-4">
                     <p class="text-[11px] font-black text-intu-blue uppercase tracking-widest flex items-center gap-2">
-                        <i class="fas fa-id-card-alt text-orange-500"></i> Datos del Expediente
+                        <i class="fas fa-user-check text-orange-500"></i> Partes Contratantes
                     </p>
                 </div>
 
@@ -35,42 +35,91 @@
                 </div>
 
                 <div class="space-y-1">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Código de Contrato</label>
-                    <input type="text" name="codigo" required placeholder="Ej: CT-2026-0001"
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Código de Expediente INTU</label>
+                    <input type="text" name="codigo" required placeholder="Ej: DC-CP-2026-0001"
                            class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all uppercase">
-                </div>
-
-                <div class="md:col-span-2 space-y-1">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Tipo / Objeto del Contrato</label>
-                    <input type="text" name="tipo" required placeholder="Ej: Adjudicación de Terreno / Título de Propiedad"
-                           class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all">
-                </div>
-
-                <div class="md:col-span-2 border-b border-gray-50 pb-4 mt-4 mb-2">
-                    <p class="text-[11px] font-black text-intu-blue uppercase tracking-widest flex items-center gap-2">
-                        <i class="fas fa-paragraph text-orange-500"></i> Cuerpo y Cláusulas del Documento
-                    </p>
-                </div>
-
-                <div class="md:col-span-2 space-y-1">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Contenido Legal</label>
-                    <textarea name="cuerpo" required rows="12" placeholder="Redacte aquí las cláusulas del contrato..."
-                              class="w-full p-6 bg-gray-50 border-none rounded-3xl text-sm font-medium leading-relaxed focus:ring-2 focus:ring-intu-blue/10 transition-all"></textarea>
-                    <p class="text-[9px] text-gray-400 font-bold italic mt-2 ml-2">* Este contenido podrá ser editado posteriormente antes de la aprobación final.</p>
                 </div>
             </div>
 
-            <div class="mt-10 pt-8 border-t border-gray-50 flex flex-col md:flex-row gap-4">
-                <button type="submit" class="flex-grow py-4 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-intu-dark transition shadow-lg shadow-blue-50 flex items-center justify-center gap-3">
-                    <i class="fas fa-save"></i>
-                    {{ boton|default:"Guardar Borrador de Contrato" }}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                <div class="md:col-span-3 border-b border-gray-50 pb-4">
+                    <p class="text-[11px] font-black text-intu-blue uppercase tracking-widest flex items-center gap-2">
+                        <i class="fas fa-map-marked-alt text-orange-500"></i> Información Catastral y Superficie
+                    </p>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Código Catastral</label>
+                    <input type="text" name="codigo_catastral" required placeholder="01-01-..."
+                           class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Metraje (Números)</label>
+                    <input type="text" name="superficie_num" required placeholder="Ej: 120,50"
+                           class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Metraje (Letras)</label>
+                    <input type="text" name="superficie_letras" required placeholder="CIEN METROS..."
+                           class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all uppercase">
+                </div>
+
+                <div class="md:col-span-3 space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Dirección Exacta (Según Plano)</label>
+                    <textarea name="direccion_plano" required rows="2" 
+                              class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all"></textarea>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                <div class="md:col-span-2 border-b border-gray-50 pb-4">
+                    <p class="text-[11px] font-black text-intu-blue uppercase tracking-widest flex items-center gap-2">
+                        <i class="fas fa-compass text-orange-500"></i> Linderos Específicos
+                    </p>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Norte</label>
+                    <input type="text" name="lindero_norte" required placeholder="Limita con..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Sur</label>
+                    <input type="text" name="lindero_sur" required placeholder="Limita con..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Este</label>
+                    <input type="text" name="lindero_este" required placeholder="Limita con..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Oeste</label>
+                    <input type="text" name="lindero_oeste" required placeholder="Limita con..." class="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-intu-blue/10 transition-all">
+                </div>
+            </div>
+
+            <div class="pt-8 border-t border-gray-50 flex flex-col md:flex-row gap-4">
+                <button type="submit" class="flex-grow py-5 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-intu-dark hover:scale-[1.01] active:scale-95 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-3">
+                    <i class="fas fa-file-signature text-sm"></i>
+                    Generar y Guardar Contrato Legal
                 </button>
                 
-                <a href="{% url 'contratos:lista' %}" class="px-8 py-4 bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-gray-200 transition text-center">
+                <a href="{% url 'contratos:lista' %}" class="px-10 py-5 bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-gray-200 transition text-center">
                     Cancelar
                 </a>
             </div>
         </div>
     </form>
 </div>
+<script>
+// Función simplificada para convertir números a letras (puedes usar una librería como numero-a-letras.js)
+document.getElementsByName('superficie_num')[0].addEventListener('input', function(e) {
+    let valor = e.target.value;
+    // Aquí podrías integrar una función que traduzca el número a texto
+    // Por ahora, el usuario lo llena, pero lo ideal es automatizarlo.
+});
+</script>
 {% endblock %}

@@ -13,25 +13,85 @@ class Contrato(models.Model):
         ('anulado', 'Anulado'),
     ]
 
-    # Relación con beneficiarios existentes
+    PRIORIDAD = [
+        ('baja', 'Baja'),
+        ('media', 'Media'),
+        ('alta', 'Alta'),
+        ('urgente', 'Urgente'),
+    ]
+
+    # Relación con beneficiarios
     beneficiario = models.ForeignKey(Beneficiario, on_delete=models.CASCADE, related_name='contratos')
     
-    # Datos básicos
+    # Identificación
     codigo_contrato = models.CharField(max_length=50, unique=True, verbose_name="Nro. Contrato")
-    tipo_contrato = models.CharField(max_length=100, help_text="Ej: Adjudicación de Terreno")
+    tipo_contrato = models.CharField(max_length=100, default="VENTA PURA Y SIMPLE")
+    prioridad = models.CharField(max_length=10, choices=PRIORIDAD, default='media')
+    
+    # --- [NUEVOS CAMPOS TÉCNICOS] ---
+    # Estos campos alimentan la redacción automática
+    codigo_catastral = models.CharField(max_length=100, verbose_name="Código Catastral", null=True, blank=True)
+    superficie_num = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Superficie (m2)", null=True)
+    superficie_letras = models.CharField(max_length=255, verbose_name="Superficie en Letras", null=True)
+    direccion_inmueble = models.TextField(verbose_name="Dirección según Plano", null=True)
+    
+    # Linderos específicos
+    lindero_norte = models.CharField(max_length=255, null=True, blank=True)
+    lindero_sur = models.CharField(max_length=255, null=True, blank=True)
+    lindero_este = models.CharField(max_length=255, null=True, blank=True)
+    lindero_oeste = models.CharField(max_length=255, null=True, blank=True)
+    
+    # Expediente Digital
+    archivo_escaneado = models.FileField(
+        upload_to='contratos/expedientes/%Y/%m/', 
+        null=True, 
+        blank=True,
+        verbose_name="Contrato Digitalizado (PDF/Imagen)"
+    )
+    
+    # Trazabilidad
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    fecha_aprobacion = models.DateTimeField(null=True, blank=True)
     estado = models.CharField(max_length=20, choices=ESTADOS, default='borrador')
     
-    # Contenido (Preparado para plantillas futuras)
-    cuerpo_contrato = models.TextField(help_text="Contenido principal y cláusulas")
+    # Contenido generado por el motor
+    cuerpo_contrato = models.TextField(help_text="Contenido principal generado automáticamente")
     version = models.PositiveIntegerField(default=1)
     
-    # Flujo de trabajo
     creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='contratos_creados')
     aprobado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='contratos_aprobados')
 
     class Meta:
         ordering = ['-fecha_creacion']
+        verbose_name = "Contrato"
+        verbose_name_plural = "Contratos"
 
     def __str__(self):
         return f"{self.codigo_contrato} - {self.beneficiario.nombre_completo}"
+
+# --- [NUEVO] Para evitar editar código cuando cambie el Gerente ---
+class ConfiguracionInstitucional(models.Model):
+    nombre_gerente = models.CharField(max_length=200, default="ROSMEL DANIEL FLORES ÑAÑEZ")
+    cedula_gerente = models.CharField(max_length=20, default="V-13.617.999")
+    providencia_nro = models.CharField(max_length=100, default="020-024")
+    fecha_providencia = models.DateField(null=True, blank=True)
+    gaceta_nro = models.CharField(max_length=50, default="43.063")
+    monto_m2 = models.DecimalField(max_digits=10, decimal_places=4, default=0.001)
+
+    class Meta:
+        verbose_name = "Configuración INTU"
+        verbose_name_plural = "Configuración Institucional"
+
+    def __str__(self):
+        return "Configuración Actual del Sistema"
+
+class HistorialContrato(models.Model):
+    contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='historial')
+    usuario = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True)
+    accion = models.CharField(max_length=100)
+    descripcion = models.TextField(blank=True)
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha']
