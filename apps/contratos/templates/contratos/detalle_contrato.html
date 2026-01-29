@@ -2,37 +2,34 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 pb-20">
-    
-    <div class="sticky top-4 z-40 flex flex-wrap items-center justify-between bg-white/90 backdrop-blur-xl p-4 rounded-3xl border border-gray-100 shadow-2xl shadow-gray-200/50 mb-8 transition-all">
-        <div class="flex items-center gap-4">
-            <a href="{% url 'contratos:lista' %}" class="group w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 hover:bg-intu-red hover:text-white transition-all duration-300">
+    <div class="sticky top-4 z-40 flex flex-wrap items-center justify-between bg-white/95 backdrop-blur-md p-5 rounded-[2rem] border border-slate-100 shadow-2xl shadow-slate-200/60 mb-10 transition-all">
+        <div class="flex items-center gap-5">
+            <a href="{% url 'contratos:lista' %}" class="group w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-blue-900 hover:text-white transition-all duration-300">
                 <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
             </a>
-            <div class="h-10 w-[1px] bg-gray-100 hidden md:block"></div>
+            <div class="h-10 w-[1px] bg-slate-100 hidden md:block"></div>
             <div>
-                <h1 class="text-xl font-black text-intu-blue uppercase tracking-tighter leading-none">Gestión de Expediente</h1>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                    Sistema de Control Legal / Ver. {{ contrato.version }}.0
+                <h1 class="text-xl font-black text-slate-900 uppercase tracking-tighter leading-none">Expediente Digital</h1>
+                <p class="text-[9px] font-black text-blue-900 uppercase tracking-widest mt-1">
+                    ID: {{ contrato.codigo_catastral|default:contrato.pk }} / V-{{ contrato.version|default:"1" }}.0
                 </p>
             </div>
         </div>
 
-        <div class="flex items-center gap-2 mt-4 md:mt-0">
-            <div class="flex bg-gray-100 p-1 rounded-2xl mr-2">
-                <a href="{% url 'contratos:descargar_pdf' contrato.pk %}" class="flex items-center gap-2 px-4 py-3 text-gray-600 hover:bg-white rounded-xl text-[10px] font-black uppercase transition-all">
-                    <i class="fas fa-file-pdf text-intu-red"></i> PDF
+        <div class="flex items-center gap-3 mt-4 md:mt-0">
+            <div class="flex bg-slate-100 p-1.5 rounded-2xl">
+                <a href="{% url 'contratos:descargar_pdf' contrato.pk %}" class="flex items-center gap-2 px-4 py-2.5 text-slate-600 hover:bg-white hover:shadow-sm rounded-xl text-[10px] font-black uppercase transition-all">
+                    <i class="fas fa-file-pdf text-red-600 text-sm"></i> PDF
                 </a>
-                <button onclick="window.print()" class="flex items-center gap-2 px-4 py-3 text-gray-600 hover:bg-white rounded-xl text-[10px] font-black uppercase transition-all">
-                    <i class="fas fa-print"></i>
-                </button>
+                
             </div>
 
             {% if contrato.estado != 'aprobado' %}
             <form method="POST" class="inline">
                 {% csrf_token %}
-                <button type="submit" name="aprobar" class="group flex items-center gap-3 px-8 py-4 bg-green-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-green-700 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-green-200">
-                    <i class="fas fa-check-double text-sm group-hover:rotate-12"></i> 
-                    Finalizar y Validar
+                <button type="submit" name="aprobar" class="group flex items-center gap-3 px-8 py-4 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-emerald-100">
+                    <i class="fas fa-check-double text-sm group-hover:rotate-12 transition-transform"></i> 
+                    Validar Contrato
                 </button>
             </form>
             {% endif %}
@@ -40,63 +37,62 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
         <div class="lg:col-span-8">
-            <div class="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden relative">
-                
-                <div class="flex bg-gray-50/50 border-b border-gray-100 px-6">
-                    <button class="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] border-b-2 border-intu-blue text-intu-blue">
-                        <i class="fas fa-file-alt mr-2"></i> Cuerpo Legal
-                    </button>
-                    <button class="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-gray-600 transition">
-                        <i class="fas fa-history mr-2"></i> Cambios
-                    </button>
+            <div class="bg-slate-200/30 rounded-[3rem] p-4 md:p-10 border border-slate-100 shadow-inner">
+                <div class="flex justify-center mb-6">
+                    <span class="px-6 py-2 bg-white/80 backdrop-blur-sm rounded-full text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] border border-slate-100">
+                        Vista Previa Legal (Papel Oficio)
+                    </span>
                 </div>
 
-                <div class="p-8 md:p-20 bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')] relative">
-                    
-                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-                        <p class="text-[15rem] font-black uppercase text-gray-100/30 -rotate-45 leading-none">
-                            {{ contrato.estado }}
-                        </p>
-                    </div>
-
-                    <article class="relative z-10 max-w-3xl mx-auto">
-                        <div class="flex justify-between items-start mb-16 opacity-80">
-                            <div class="w-16 h-16 bg-intu-blue rounded-2xl flex items-center justify-center text-white text-2xl font-black">
-                                I
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs font-black text-gray-800 uppercase leading-tight">Instituto Nacional de<br>Tierras Urbanas</p>
-                                <p class="text-[9px] font-bold text-gray-400 uppercase mt-1">Consultoría Jurídica</p>
-                            </div>
-                        </div>
-
-                        <div class="text-center mb-16">
-                            <h2 class="text-2xl md:text-3xl font-black text-gray-900 uppercase tracking-tighter mb-4">
-                                {{ contrato.tipo_contrato }}
+                <div class="overflow-x-auto pb-10">
+                    <article class="bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] mx-auto p-[2.5cm] text-justify" 
+                             style="font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.6; min-height: 27.94cm; width: 21.59cm; color: #1a1a1a;">
+                        
+                        <div class="text-center mb-10 border-b border-slate-100 pb-6">
+                            <h2 class="text-[10pt] font-bold uppercase leading-tight tracking-tight">
+                                República Bolivariana de Venezuela<br>
+                                Ministerio del Poder Popular para Hábitat y Vivienda<br>
+                                Instituto Nacional de Tierras Urbanas (INTU)
                             </h2>
-                            <div class="inline-flex items-center gap-3 px-4 py-1.5 bg-gray-100 rounded-full">
-                                <span class="w-2 h-2 rounded-full bg-intu-red animate-pulse"></span>
-                                <span class="text-[10px] font-black text-gray-500 uppercase tracking-widest">{{ contrato.codigo_contrato }}</span>
-                            </div>
                         </div>
 
-                        <div class="text-gray-800 leading-[1.8] text-justify space-y-6 text-base md:text-lg font-serif italic border-l-4 border-gray-50 pl-8 md:pl-12">
-                            {{ contrato.cuerpo_contrato|linebreaks }}
+                        <div class="text-left italic text-[10pt] leading-tight mb-12">
+                            LEOPOLDO PIÑA<br>
+                            Abogado<br>
+                            I.P.S.A. Nº 108617
                         </div>
 
-                        <div class="mt-24 grid grid-cols-2 gap-16">
-                            <div class="text-center">
-                                <div class="h-[1px] bg-gray-200 mb-4"></div>
-                                <p class="text-[10px] font-black text-gray-800 uppercase tracking-widest">Por la Institución</p>
-                                <p class="text-[8px] text-gray-400 font-bold mt-1">FIRMA Y SELLO AUTORIZADO</p>
-                            </div>
-                            <div class="text-center">
-                                <div class="h-[1px] bg-gray-200 mb-4"></div>
-                                <p class="text-[10px] font-black text-gray-800 uppercase tracking-widest">{{ contrato.beneficiario.nombre_completo }}</p>
-                                <p class="text-[8px] text-gray-400 font-bold mt-1">BENEFICIARIO / C.I: {{ contrato.beneficiario.documento_identidad }}</p>
-                            </div>
+                        <div class="text-center mb-10">
+                            <h2 class="text-[13pt] font-bold uppercase underline decoration-1 underline-offset-4">
+                                CONTRATO DE ADJUDICACIÓN Y VENTA
+                            </h2>
+                            <p class="text-xl font-bold text-blue-900">{{ contrato.codigo_contrato }}</p>
+                        </div>
+
+                        <div class="document-body space-y-4" style="text-indent: 1.27cm;">
+                            {{ contrato.cuerpo_contrato|safe }}
+                        </div>
+
+                        <div class="mt-24">
+                            <table class="w-full border-none">
+                                <tr>
+                                    <td class="w-1/2 pt-16 text-center align-bottom">
+                                        <div class="border-t border-slate-900 mx-10"></div>
+                                        <p class="text-[9pt] font-bold mt-3 uppercase tracking-tighter">Por el INTU</p>
+                                        <p class="text-[8pt] text-slate-600">Gerencia Estadal Distrito Capital</p>
+                                    </td>
+                                    <td class="w-1/2">
+                                        {% for b in contrato.beneficiarios.all %}
+                                        <div class="text-center pt-20">
+                                            <div class="border-t border-slate-900 mx-10"></div>
+                                            <p class="text-[9pt] font-bold mt-3 uppercase tracking-tighter">{{ b.nombre_completo }}</p>
+                                            <p class="text-[8pt] text-slate-600">C.I: {{ b.documento_identidad }}</p>
+                                        </div>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                            </table>
                         </div>
                     </article>
                 </div>
@@ -104,67 +100,53 @@
         </div>
 
         <div class="lg:col-span-4 space-y-6">
-            
-            <div class="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm relative overflow-hidden group">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-bl-full -mr-16 -mt-16 group-hover:bg-intu-blue/5 transition-colors"></div>
-                
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-6">Status Operativo</p>
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Estado del Trámite</h3>
                 <div class="flex items-center gap-5">
                     <div class="w-16 h-16 rounded-3xl flex items-center justify-center text-2xl
-                        {% if contrato.estado == 'aprobado' %} bg-green-50 text-green-600 {% else %} bg-orange-50 text-orange-600 {% endif %}">
-                        <i class="fas {% if contrato.estado == 'aprobado' %}fa-check-circle{% else %}fa-spinner fa-spin{% endif %}"></i>
+                        {% if contrato.estado == 'aprobado' %} bg-emerald-50 text-emerald-600 {% else %} bg-orange-50 text-orange-600 {% endif %}">
+                        <i class="fas {% if contrato.estado == 'aprobado' %}fa-check-double{% else %}fa-file-signature animate-pulse{% endif %}"></i>
                     </div>
                     <div>
-                        <p class="text-xl font-black text-intu-blue uppercase leading-none">{{ contrato.estado }}</p>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase mt-2">Expediente {{ contrato.codigo_contrato }}</p>
+                        <p class="text-xl font-black text-slate-900 uppercase leading-none">{{ contrato.estado|default:"Borrador" }}</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mt-2">Registrado el: {{ contrato.fecha_creacion|date:"d/m/Y" }}</p>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-intu-blue p-8 rounded-[2.5rem] text-white shadow-xl shadow-blue-100 relative overflow-hidden">
-                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-                
-                <h3 class="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-6">Sujeto Vinculado</h3>
-                <div class="flex items-center gap-4 mb-8">
-                    <div class="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                        <i class="fas fa-id-badge text-xl"></i>
-                    </div>
-                    <div>
-                        <p class="text-sm font-black uppercase">{{ contrato.beneficiario.nombre_completo }}</p>
-                        <p class="text-[10px] text-white/50 font-bold uppercase tracking-widest">Cédula: {{ contrato.beneficiario.documento_identidad }}</p>
-                    </div>
-                </div>
-                <a href="{% url 'beneficiarios:expediente' contrato.beneficiario.id %}" class="flex items-center justify-center gap-2 w-full py-4 bg-white/10 hover:bg-white text-white hover:text-intu-blue rounded-2xl text-[9px] font-black uppercase transition-all duration-300">
-                    <i class="fas fa-external-link-alt"></i> Abrir Expediente Maestro
-                </a>
-            </div>
-
-            <div class="bg-white p-8 rounded-[2.5rem] border border-gray-100">
+            <div class="bg-blue-900 p-8 rounded-[2.5rem] text-white shadow-2xl shadow-blue-200">
                 <div class="flex items-center justify-between mb-8">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Trazabilidad</p>
-                    <span class="px-2 py-1 bg-gray-50 text-[8px] font-black text-gray-400 rounded-md">LOGS</span>
+                    <h3 class="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Titulares</h3>
+                    <i class="fas fa-users text-white/20"></i>
                 </div>
-                
-                <div class="space-y-8 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1px] before:bg-gray-100">
-                    <div class="relative pl-10">
-                        <div class="absolute left-0 top-1 w-6 h-6 bg-white border border-gray-100 rounded-lg flex items-center justify-center z-10">
-                            <i class="fas fa-plus text-[8px] text-intu-blue"></i>
+                <div class="space-y-6">
+                    {% for b in contrato.beneficiarios.all %}
+                    <div class="group border-b border-white/10 pb-5 last:border-0 last:pb-0">
+                        <p class="text-sm font-black uppercase tracking-tight group-hover:text-orange-400 transition-colors">{{ b.nombre_completo }}</p>
+                        <p class="text-[10px] text-white/50 font-bold uppercase mt-1">C.I: {{ b.documento_identidad }}</p>
+                        
+                        <div class="mt-4 flex gap-2">
+                            <span class="px-3 py-1 bg-white/10 rounded-lg text-[8px] font-black uppercase tracking-widest">Beneficiario</span>
+                            {% if forloop.first %}
+                            <span class="px-3 py-1 bg-orange-500 rounded-lg text-[8px] font-black uppercase tracking-widest">Principal</span>
+                            {% endif %}
                         </div>
-                        <p class="text-[10px] font-black text-gray-800 uppercase">Creación de Registro</p>
-                        <p class="text-[9px] text-gray-400 font-bold uppercase">{{ contrato.fecha_creacion|date:"d M Y - H:i" }}</p>
-                        <p class="text-[9px] text-intu-blue font-bold mt-1">@{{ contrato.creado_por.username }}</p>
                     </div>
+                    {% endfor %}
+                </div>
+            </div>
 
-                    {% if contrato.aprobado_por %}
-                    <div class="relative pl-10">
-                        <div class="absolute left-0 top-1 w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center z-10 shadow-sm shadow-green-200">
-                            <i class="fas fa-check text-[8px] text-white"></i>
-                        </div>
-                        <p class="text-[10px] font-black text-gray-800 uppercase">Validación Final</p>
-                        <p class="text-[9px] text-gray-400 font-bold uppercase">Aprobación exitosa</p>
-                        <p class="text-[9px] text-green-600 font-bold mt-1">@{{ contrato.aprobado_por.username }}</p>
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Detalles Técnicos</h3>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Superficie</span>
+                        <span class="text-xs font-black text-slate-900">{{ contrato.superficie_num }} M²</span>
                     </div>
-                    {% endif %}
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Código Catastral</span>
+                        <span class="text-xs font-black text-slate-900">{{ contrato.codigo_catastral }}</span>
+                    </div>
                 </div>
             </div>
         </div>

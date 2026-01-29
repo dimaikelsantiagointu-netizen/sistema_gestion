@@ -1,106 +1,132 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+<div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12">
         <div>
-            <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Gestor de Contratos</h1>
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Expedientes legales y formalización de convenios</p>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-12 h-1 bg-orange-600 rounded-full"></div>
+                <span class="text-[10px] font-black text-orange-600 uppercase tracking-[0.4em]">Área Legal INTU</span>
+            </div>
+            <h1 class="text-4xl font-black text-slate-900 uppercase tracking-tighter">
+                Control de <span class="text-blue-900">Contratos</span>
+            </h1>
         </div>
         
-        <div class="flex items-center gap-3">
-            <a href="{% url 'contratos:estadisticas' %}" class="inline-flex items-center justify-center gap-3 px-6 py-4 bg-white border border-gray-200 text-gray-600 rounded-2xl shadow-sm hover:bg-gray-50 transition-all">
-                <i class="fas fa-chart-pie text-sm text-intu-blue"></i>
-                <span class="text-[10px] font-black uppercase tracking-widest">Estadísticas</span>
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="{% url 'contratos:estadisticas' %}" class="flex items-center gap-2 px-5 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[10px] font-black uppercase hover:bg-slate-50 transition-all shadow-sm">
+                <i class="fas fa-chart-pie text-blue-600"></i> Estadísticas
             </a>
-
-            <a href="{% url 'contratos:crear' %}" class="inline-flex items-center justify-center gap-3 px-6 py-4 bg-orange-600 text-white rounded-2xl shadow-lg shadow-orange-100 hover:bg-orange-700 transition-all transform hover:-translate-y-1">
-                <i class="fas fa-plus text-sm"></i>
-                <span class="text-[10px] font-black uppercase tracking-widest">Generar Nuevo Contrato</span>
+            
+            <a href="{% url 'contratos:crear' %}" class="flex items-center gap-3 px-8 py-4 bg-blue-900 text-white rounded-2xl shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all transform hover:-translate-y-1">
+                <i class="fas fa-plus-circle text-lg"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest">Nuevo Contrato</span>
             </a>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <a href="{% url 'contratos:estadisticas' %}" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-intu-blue transition-colors group">
-            <div class="w-10 h-10 bg-blue-50 text-intu-blue rounded-xl flex items-center justify-center group-hover:bg-intu-blue group-hover:text-white transition-colors">
-                <i class="fas fa-file-invoice"></i>
-            </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
             <div>
-                <p class="text-[10px] font-black text-gray-400 uppercase">Total Contratos</p>
-                <p class="text-xl font-black text-intu-blue">{{ contratos.count }}</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Sistema</p>
+                <p class="text-3xl font-black text-slate-900">{{ total }}</p>
             </div>
-        </a>
-        
+            <div class="w-14 h-14 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl">
+                <i class="fas fa-folder-open"></i>
+            </div>
         </div>
 
-    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="bg-gray-50/50 border-b border-gray-100">
-                    <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Código / Tipo</th>
-                    <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Beneficiario</th>
-                    <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
-                    <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha</th>
-                    <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-50">
-                {% for contrato in contratos %}
-                <tr class="hover:bg-gray-50/50 transition-colors group">
-                    <td class="px-6 py-5">
-                        <p class="text-sm font-black text-intu-blue uppercase">{{ contrato.codigo_contrato }}</p>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">{{ contrato.tipo_contrato }}</p>
-                    </td>
-                    <td class="px-6 py-5">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">
-                                <i class="fas fa-user"></i>
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">En Espera</p>
+                <p class="text-3xl font-black text-orange-600">{{ espera }}</p>
+            </div>
+            <div class="w-14 h-14 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center text-xl">
+                <i class="fas fa-clock"></i>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Validados</p>
+                <p class="text-3xl font-black text-green-600">{{ aprobados }}</p>
+            </div>
+            <div class="w-14 h-14 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-xl">
+                <i class="fas fa-check-double"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/50">
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Referencia</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Titulares</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Estado</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Registro</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for contrato in contratos %}
+                    <tr class="hover:bg-blue-50/30 transition-all group">
+    <td class="px-8 py-6">
+        <p class="text-sm font-black text-blue-900 uppercase tracking-tighter">
+            {{ contrato.codigo_contrato|default:"SIN CÓDIGO" }}
+        </p>
+        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+            Catastro: {{ contrato.codigo_catastral|default:"---" }}
+        </span>
+    </td>
+    
+    <td class="px-8 py-6">
+        <p class="text-[11px] font-bold text-slate-700 uppercase">
+            {{ contrato.beneficiarios.first.nombre_completo }}
+            {% if contrato.beneficiarios.count > 1 %}
+            <span class="text-blue-600 text-[9px] ml-1">+{{ contrato.beneficiarios.count|add:"-1" }}</span>
+            {% endif %}
+        </p>
+    </td>
+
+                        <td class="px-8 py-6 text-center">
+                            {% if contrato.estado == 'aprobado' %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 text-[9px] font-black uppercase rounded-lg border border-green-200">
+                                    <span class="w-1.5 h-1.5 bg-green-600 rounded-full"></span> Validado
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 text-[9px] font-black uppercase rounded-lg border border-orange-200">
+                                    <span class="w-1.5 h-1.5 bg-orange-600 rounded-full animate-pulse"></span> {{ contrato.estado|default:"Borrador" }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td class="px-8 py-6 text-[10px] font-black text-slate-500 uppercase">
+                            {{ contrato.fecha_creacion|date:"d/m/Y" }}
+                        </td>
+
+                        <td class="px-8 py-6 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href="{% url 'contratos:detalle' contrato.pk %}" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:bg-blue-900 hover:text-white transition-all shadow-sm">
+                                    <i class="fas fa-eye text-xs"></i>
+                                </a>
+                                <a href="{% url 'contratos:descargar_pdf' contrato.pk %}" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:bg-red-600 hover:text-white transition-all shadow-sm">
+                                    <i class="fas fa-file-pdf text-xs"></i>
+                                </a>
                             </div>
-                            <div>
-                                <p class="text-xs font-bold text-gray-700 uppercase">{{ contrato.beneficiario.nombre_completo }}</p>
-                                <p class="text-[9px] text-gray-400 font-medium">{{ contrato.beneficiario.tipo_documento }}-{{ contrato.beneficiario.documento_identidad }}</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-5 text-center">
-                        {% if contrato.estado == 'borrador' %}
-                            <span class="px-3 py-1 bg-gray-100 text-gray-500 text-[9px] font-black uppercase rounded-full">Borrador</span>
-                        {% elif contrato.estado == 'aprobado' %}
-                            <span class="px-3 py-1 bg-green-50 text-green-600 text-[9px] font-black uppercase rounded-full border border-green-100">Aprobado</span>
-                        {% elif contrato.estado == 'revision' %}
-                            <span class="px-3 py-1 bg-orange-50 text-orange-600 text-[9px] font-black uppercase rounded-full border border-orange-100">En Revisión</span>
-                        {% else %}
-                            <span class="px-3 py-1 bg-blue-50 text-blue-600 text-[9px] font-black uppercase rounded-full border border-blue-100">{{ contrato.estado }}</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-6 py-5">
-                        <p class="text-xs font-bold text-gray-600">{{ contrato.fecha_creacion|date:"d/m/Y" }}</p>
-                    </td>
-                    <td class="px-6 py-5 text-right">
-                        <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <a href="{% url 'contratos:detalle' contrato.pk %}" class="p-2 text-gray-400 hover:text-intu-blue transition" title="Ver Detalle">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="{% url 'contratos:descargar_pdf' contrato.pk %}" 
-                               class="p-2 text-gray-400 hover:text-intu-red transition" title="Descargar PDF">
-                                <i class="fas fa-file-pdf"></i>
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="px-6 py-20 text-center">
-                        <div class="w-16 h-16 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-file-contract text-2xl"></i>
-                        </div>
-                        <p class="text-sm font-bold text-gray-400 uppercase tracking-widest">No hay contratos registrados aún</p>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-8 py-20 text-center text-slate-400 uppercase text-[10px] font-bold tracking-widest">
+                            No hay contrato registrados
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

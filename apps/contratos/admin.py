@@ -14,10 +14,14 @@ class ConfiguracionInstitucionalAdmin(admin.ModelAdmin):
 
 @admin.register(Contrato)
 class ContratoAdmin(admin.ModelAdmin):
-    list_display = ('codigo_contrato', 'beneficiario', 'estado', 'fecha_creacion')
-    list_filter = ('estado', 'fecha_creacion')
-    search_fields = ('codigo_contrato', 'beneficiario__nombre_completo', 'beneficiario__documento_identidad')
-
+    # Cambiamos 'beneficiario' por una función personalizada 'get_beneficiarios'
+    list_display = ('codigo_contrato', 'get_beneficiarios', 'estado', 'fecha_creacion')
+    
+    def get_beneficiarios(self, obj):
+        # Esto concatena los nombres para que se vean en la lista del admin
+        return ", ".join([b.nombre_completo for b in obj.beneficiarios.all()])
+    
+    get_beneficiarios.short_description = 'Beneficiarios'
 @admin.register(HistorialContrato)
 class HistorialContratoAdmin(admin.ModelAdmin):
     list_display = ('contrato', 'accion', 'usuario', 'fecha')

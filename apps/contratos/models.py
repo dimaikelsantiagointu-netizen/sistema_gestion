@@ -1,8 +1,13 @@
 from django.db import models
 from apps.beneficiarios.models import Beneficiario
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 Usuario = get_user_model()
+
+from django.db import models
+from datetime import datetime
 
 class Contrato(models.Model):
     ESTADOS = [
@@ -20,16 +25,24 @@ class Contrato(models.Model):
         ('urgente', 'Urgente'),
     ]
 
-    # Relación con beneficiarios
-    beneficiario = models.ForeignKey(Beneficiario, on_delete=models.CASCADE, related_name='contratos')
+    # --- Beneficiarios (Muchos a Muchos) ---
+    beneficiarios = models.ManyToManyField(
+        'beneficiarios.Beneficiario', 
+        related_name='contratos',
+        verbose_name="Beneficiarios"
+    )
     
-    # Identificación
-    codigo_contrato = models.CharField(max_length=50, unique=True, verbose_name="Nro. Contrato")
+    # --- Identificación (Código automático CT-AÑO-CORRELATIVO) ---
+    codigo_contrato = models.CharField(
+        max_length=50, 
+        unique=True, 
+        verbose_name="Nro. Contrato",
+        blank=True
+    )
     tipo_contrato = models.CharField(max_length=100, default="VENTA PURA Y SIMPLE")
     prioridad = models.CharField(max_length=10, choices=PRIORIDAD, default='media')
     
-    # --- [NUEVOS CAMPOS TÉCNICOS] ---
-    # Estos campos alimentan la redacción automática
+    # Datos Técnicos
     codigo_catastral = models.CharField(max_length=100, verbose_name="Código Catastral", null=True, blank=True)
     superficie_num = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Superficie (m2)", null=True)
     superficie_letras = models.CharField(max_length=255, verbose_name="Superficie en Letras", null=True)
@@ -41,7 +54,7 @@ class Contrato(models.Model):
     lindero_este = models.CharField(max_length=255, null=True, blank=True)
     lindero_oeste = models.CharField(max_length=255, null=True, blank=True)
     
-    # Expediente Digital
+    # Archivo
     archivo_escaneado = models.FileField(
         upload_to='contratos/expedientes/%Y/%m/', 
         null=True, 
@@ -55,22 +68,62 @@ class Contrato(models.Model):
     fecha_aprobacion = models.DateTimeField(null=True, blank=True)
     estado = models.CharField(max_length=20, choices=ESTADOS, default='borrador')
     
-    # Contenido generado por el motor
-    cuerpo_contrato = models.TextField(help_text="Contenido principal generado automáticamente")
+    # Texto Legal
+    cuerpo_contrato = models.TextField(help_text="Contenido principal generado automáticamente", blank=True)
     version = models.PositiveIntegerField(default=1)
     
-    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='contratos_creados')
-    aprobado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='contratos_aprobados')
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        related_name='contratos_creados'
+    )
+    aprobado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='contratos_aprobados'
+    )
 
     class Meta:
         ordering = ['-fecha_creacion']
         verbose_name = "Contrato"
         verbose_name_plural = "Contratos"
 
-    def __str__(self):
-        return f"{self.codigo_contrato} - {self.beneficiario.nombre_completo}"
+    # --- LÓGICA DE AUTO-GENERACIÓN DE CÓDIGO MEJORADA ---
+    def save(self, *args, **kwargs):
+        if not self.codigo_contrato:
+            # 1. Obtiene el año actual desde el servidor para evitar desfases
+            anio = timezone.now().year
+            prefijo = f"CT-{anio}"
+            
+            # 2. Busca el último contrato que empiece con el prefijo del año actual
+            # Usamos __startswith para mayor precisión en la consulta
+            ultimo = Contrato.objects.filter(
+                codigo_contrato__startswith=prefijo
+            ).order_by('-codigo_contrato').first()
+            
+            if ultimo:
+                try:
+                    # Extrae el número después del último guion
+                    partes = ultimo.codigo_contrato.split('-')
+                    ultimo_numero = int(partes[-1])
+                    nuevo_numero = ultimo_numero + 1
+                except (ValueError, IndexError):
+                    nuevo_numero = 1
+            else:
+                # Primer contrato del año
+                nuevo_numero = 1
+            
+            # 3. Formato final: CT-2026-001 (3 dígitos para el correlativo)
+            self.codigo_contrato = f"{prefijo}-{nuevo_numero:04d}"
+            
+        super().save(*args, **kwargs)
 
-# --- [NUEVO] Para evitar editar código cuando cambie el Gerente ---
+    def __str__(self):
+        return f"{self.codigo_contrato}"
+
 class ConfiguracionInstitucional(models.Model):
     nombre_gerente = models.CharField(max_length=200, default="ROSMEL DANIEL FLORES ÑAÑEZ")
     cedula_gerente = models.CharField(max_length=20, default="V-13.617.999")
