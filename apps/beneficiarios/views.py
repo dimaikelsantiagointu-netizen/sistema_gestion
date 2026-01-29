@@ -25,20 +25,40 @@ def expediente_beneficiario(request, beneficiario_id):
     beneficiario = get_object_or_404(Beneficiario, id=beneficiario_id)
     
     if request.method == 'POST':
-        # Captura la lista de archivos (input name="archivos")
         archivos_subidos = request.FILES.getlist('archivos')
         nombre_descriptivo = request.POST.get('nombre_documento')
+        
+        # 5MB en bytes (5 * 1024 * 1024)
+        MAX_FILE_SIZE = 5242880 
 
         if not archivos_subidos:
             messages.error(request, "No seleccionaste ningún archivo.")
         else:
+            archivos_creados = 0
+            errores = []
+
             for f in archivos_subidos:
+                # Validamos el tamaño de cada archivo individualmente
+                if f.size > MAX_FILE_SIZE:
+                    errores.append(f"El archivo '{f.name}' es demasiado pesado (Máx 5MB).")
+                    continue
+                
+                # Si pasa la validación, lo creamos
                 DocumentoExpediente.objects.create(
                     beneficiario=beneficiario,
                     archivo=f,
                     nombre_documento=nombre_descriptivo if nombre_descriptivo else f.name
                 )
-            messages.success(request, f"Se cargaron {len(archivos_subidos)} archivo(s) correctamente.")
+                archivos_creados += 1
+
+            # Informamos de los éxitos
+            if archivos_creados > 0:
+                messages.success(request, f"Se cargaron {archivos_creados} archivo(s) correctamente.")
+            
+            # Informamos de los rechazos
+            for error in errores:
+                messages.error(request, error)
+
             return redirect('beneficiarios:expediente', beneficiario_id=beneficiario.id)
 
     documentos = beneficiario.documentos.all()

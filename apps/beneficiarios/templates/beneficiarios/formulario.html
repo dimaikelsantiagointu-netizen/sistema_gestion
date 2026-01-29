@@ -16,42 +16,56 @@
             {# --- Identificación --- #}
             <div>
                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tipo de Documento</label>
-                <select name="tipo_documento" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
-                    <option value="V">Cédula (V)</option>
-                    <option value="J">Jurídico (J)</option>
-                    <option value="E">Extranjero (E)</option>
-                    <option value="G">Gubernamental (G)</option>
+                <select name="tipo_documento" id="tipo_doc_selector" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                    <option value="V" {% if beneficiario.tipo_documento == 'V' %}selected{% endif %}>Cédula (V)</option>
+                    <option value="J" {% if beneficiario.tipo_documento == 'J' %}selected{% endif %}>Jurídico (J)</option>
+                    <option value="E" {% if beneficiario.tipo_documento == 'E' %}selected{% endif %}>Extranjero (E)</option>
+                    <option value="G" {% if beneficiario.tipo_documento == 'G' %}selected{% endif %}>Gubernamental (G)</option>
                 </select>
             </div>
+
             <div>
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Número de Documento (Cédula/RIF)</label>
-                <input type="text" name="documento_identidad" required placeholder="V12345678"
-                       class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Número de Documento</label>
+                <div class="relative flex items-center mt-1">
+                    <span id="visual-prefix" class="absolute left-4 text-sm font-black text-intu-blue opacity-40 border-r pr-2 border-gray-200">
+                        {{ beneficiario.tipo_documento|default:'V' }}-
+                    </span>
+                    
+                    <input type="text" name="documento_identidad" id="doc_number_input" required 
+                           value="{{ beneficiario.documento_identidad|default:'' }}"
+                           placeholder="12345678"
+                           class="block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 pl-12 font-bold transition-all">
+                </div>
+                <p class="text-[9px] text-gray-400 mt-1 ml-2 italic text-uppercase font-bold">Solo ingrese los números</p>
             </div>
 
             {# --- Nombre --- #}
             <div class="md:col-span-2">
                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Nombre Completo o Razón Social</label>
                 <input type="text" name="nombre_completo" required placeholder="EJ: JUAN PEREZ"
-                       class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                       value="{{ beneficiario.nombre_completo|default:'' }}"
+                       class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 uppercase font-bold">
             </div>
 
             {# --- Contacto --- #}
             <div>
                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Teléfono de contacto</label>
                 <input type="text" name="telefono" placeholder="0412-0000000"
-                       class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                       value="{{ beneficiario.telefono|default:'' }}"
+                       class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 font-bold">
             </div>
             <div>
                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Correo Electrónico</label>
                 <input type="email" name="email" placeholder="ejemplo@correo.com"
-                       class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                       value="{{ beneficiario.email|default:'' }}"
+                       class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 font-bold">
             </div>
 
             {# --- Dirección --- #}
             <div class="md:col-span-2">
                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Dirección Fiscal / Domicilio</label>
-                <textarea name="direccion" rows="3" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10"></textarea>
+                <textarea name="direccion" rows="3" 
+                          class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 font-medium uppercase">{{ beneficiario.direccion|default:'' }}</textarea>
             </div>
         </div>
 
@@ -62,4 +76,32 @@
         </div>
     </form>
 </div>
+
+{# --- LÓGICA DE PREFIJO DINÁMICO --- #}
+<script>
+    const typeSelector = document.getElementById('tipo_doc_selector');
+    const visualPrefix = document.getElementById('visual-prefix');
+    const docInput = document.getElementById('doc_number_input');
+
+    function updatePrefix() {
+        const selectedValue = typeSelector.value;
+        visualPrefix.innerText = selectedValue + '-';
+        
+        // Ajustar el espacio interior del input para que no pise el prefijo
+        const prefixWidth = visualPrefix.offsetWidth;
+        docInput.style.paddingLeft = (prefixWidth + 10) + 'px';
+    }
+
+    // Escuchar cambios en el select
+    typeSelector.addEventListener('change', updatePrefix);
+
+    // Ejecutar al cargar la página (útil para edición)
+    window.addEventListener('DOMContentLoaded', updatePrefix);
+
+    // Opcional: Impedir que escriban letras si es cédula
+    docInput.addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+</script>
+
 {% endblock %}

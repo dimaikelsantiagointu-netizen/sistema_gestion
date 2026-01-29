@@ -49,7 +49,7 @@
         </div>
     </div>
 
-    {# --- COLUMNA DERECHA: LISTADO --- #}
+{# --- COLUMNA DERECHA: LISTADO --- #}
     <div class="lg:col-span-2 space-y-4">
         <h3 class="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-4">Documentos Archivados ({{ documentos.count }})</h3>
         
@@ -73,11 +73,22 @@
                 </div>
                 
                 <div class="flex gap-2">
-                    <a href="{{ doc.archivo.url }}" target="_blank" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-blue-50 hover:text-intu-blue transition-all">
+                    {# --- VER --- #}
+                    <a href="{{ doc.archivo.url }}" target="_blank" title="Ver documento"
+                       class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-blue-50 hover:text-intu-blue transition-all">
                         <i class="fas fa-eye text-xs"></i>
                     </a>
+
+                    {# --- DESCARGAR --- #}
+                    <a href="{{ doc.archivo.url }}" download="{{ doc.nombre_documento }}" title="Descargar archivo"
+                       class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-emerald-50 hover:text-emerald-500 transition-all">
+                        <i class="fas fa-download text-xs"></i>
+                    </a>
+
+                    {# --- ELIMINAR --- #}
                     <a href="{% url 'beneficiarios:eliminar_documento' doc.id %}" 
                        onclick="return confirm('¿Eliminar este documento del expediente?')"
+                       title="Eliminar del sistema"
                        class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all">
                         <i class="fas fa-trash-alt text-xs"></i>
                     </a>
@@ -91,7 +102,6 @@
             {% endfor %}
         </div>
     </div>
-</div>
 
 {# --- SCRIPT DE FEEDBACK VISUAL --- #}
 <script>
@@ -100,33 +110,44 @@
     const fileInfoText = document.getElementById('file-info');
     const dropZone = document.getElementById('drop-zone');
     const uploadIcon = document.getElementById('upload-icon');
+    const submitBtn = document.querySelector('button[type="submit"]');
 
     fileInput.addEventListener('change', function(e) {
         const files = e.target.files;
-        
+        const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+        let oversizedFiles = [];
+
         if (files.length > 0) {
-            // Cambiar a estado "Cargado/Listo"
-            dropZone.classList.remove('border-gray-100', 'bg-gray-50/30');
-            dropZone.classList.add('border-intu-blue', 'bg-blue-50/50');
-            uploadIcon.classList.remove('text-gray-300');
-            uploadIcon.classList.add('text-intu-blue');
-            
-            if (files.length === 1) {
-                fileNameText.innerText = files[0].name;
-                fileInfoText.innerText = "Archivo listo para subir";
-            } else {
-                fileNameText.innerText = files.length + " Archivos seleccionados";
-                fileInfoText.innerText = "Lote listo para subir";
+            // Validar tamaños
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].size > MAX_SIZE) {
+                    oversizedFiles.push(files[i].name);
+                }
             }
-            fileInfoText.classList.remove('hidden');
-        } else {
-            // Revertir a estado inicial si no hay selección
-            dropZone.classList.add('border-gray-100', 'bg-gray-50/30');
-            dropZone.classList.remove('border-intu-blue', 'bg-blue-50/50');
-            uploadIcon.classList.add('text-gray-300');
-            uploadIcon.classList.remove('text-intu-blue');
-            fileNameText.innerText = "Arrastra o selecciona";
-            fileInfoText.classList.add('hidden');
+
+            if (oversizedFiles.length > 0) {
+                // Estado de Error
+                dropZone.classList.replace('border-gray-100', 'border-red-500');
+                dropZone.classList.add('bg-red-50');
+                uploadIcon.classList.replace('text-gray-300', 'text-red-500');
+                fileNameText.innerText = "Error: Archivo muy pesado";
+                fileInfoText.innerText = "El límite es 5MB por archivo";
+                fileInfoText.classList.remove('hidden', 'text-intu-blue');
+                fileInfoText.classList.add('text-red-600');
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                alert("Uno o más archivos superan los 5MB permitidos.");
+            } else {
+                // Estado de Éxito (Listo para subir)
+                dropZone.className = "p-8 border-2 border-dashed border-intu-blue rounded-2xl text-center transition-all bg-blue-50/50";
+                uploadIcon.className = "fas fa-cloud-upload-alt text-2xl text-intu-blue mb-2";
+                fileNameText.innerText = files.length === 1 ? files[0].name : files.length + " Archivos seleccionados";
+                fileInfoText.innerText = "Tamaño validado correctamente";
+                fileInfoText.classList.remove('hidden', 'text-red-600');
+                fileInfoText.classList.add('text-intu-blue');
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
         }
     });
 </script>
