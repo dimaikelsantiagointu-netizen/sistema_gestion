@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'apps.recibos.apps.RecibosConfig',
     'apps.users',
     'apps.beneficiarios',
+    'apps.contratos',
 ]
 
 MIDDLEWARE = [
