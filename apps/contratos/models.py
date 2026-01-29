@@ -11,7 +11,7 @@ from datetime import datetime
 
 class Contrato(models.Model):
     ESTADOS = [
-        ('borrador', 'Borrador'),
+        ('espera', 'En espera'),
         ('revision', 'En Revisión'),
         ('aprobado', 'Aprobado'),
         ('firmado', 'Firmado'),

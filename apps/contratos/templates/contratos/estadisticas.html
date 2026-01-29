@@ -37,7 +37,7 @@
 
                 <div class="w-full mt-10 p-6 bg-slate-50 rounded-[2rem] border border-slate-100/50">
                     <p class="text-[10px] text-center font-black text-slate-500 uppercase leading-relaxed">
-                        Análisis basado en el volumen total de expedientes registrados hasta la fecha.
+                        Análisis basado en el volumen total de contratos registrados bajo el nuevo control correlativo.
                     </p>
                 </div>
             </div>
@@ -57,12 +57,16 @@
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xs shadow-sm
                                     {% if s.estado == 'aprobado' %} bg-emerald-50 text-emerald-600 
-                                    {% elif s.estado == 'borrador' %} bg-slate-100 text-slate-400 
-                                    {% else %} bg-orange-50 text-orange-600 {% endif %}">
-                                    <i class="fas {% if s.estado == 'aprobado' %}fa-check-circle{% else %}fa-clock{% endif %}"></i>
+                                    {% elif s.estado == 'espera' or s.estado == 'borrador' %} bg-orange-50 text-orange-600 
+                                    {% else %} bg-slate-100 text-slate-400 {% endif %}">
+                                    <i class="fas {% if s.estado == 'aprobado' %}fa-check-double{% else %}fa-clock{% endif %}"></i>
                                 </div>
                                 <div>
-                                    <p class="text-[11px] font-black text-slate-900 uppercase tracking-wider">{{ s.estado }}</p>
+                                    <p class="text-[11px] font-black text-slate-900 uppercase tracking-wider">
+                                        {% if s.estado == 'borrador' or s.estado == 'espera' %} EN ESPERA 
+                                        {% elif s.estado == 'aprobado' %} VALIDADO 
+                                        {% else %} {{ s.estado }} {% endif %}
+                                    </p>
                                     <p class="text-[10px] text-slate-400 font-bold uppercase">Rendimiento Actual</p>
                                 </div>
                             </div>
@@ -75,15 +79,15 @@
                         <div class="w-full h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-0.5">
                             <div class="h-full rounded-full transition-all duration-1000 ease-out shadow-sm
                                 {% if s.estado == 'aprobado' %} bg-emerald-500 
-                                {% elif s.estado == 'borrador' %} bg-slate-400 
-                                {% else %} bg-orange-500 {% endif %}" 
+                                {% elif s.estado == 'espera' or s.estado == 'borrador' %} bg-orange-500 
+                                {% else %} bg-slate-400 {% endif %}" 
                                 style="width: {{ s.porcentaje }}%">
                             </div>
                         </div>
                     </div>
                     {% empty %}
                     <div class="text-center py-20 bg-slate-50 rounded-[2.5rem] border border-dashed border-slate-200">
-                        <img src="https://cdn-icons-png.flaticon.com/512/7486/7486744.png" class="w-20 mx-auto opacity-20 mb-6" alt="No data">
+                        <i class="fas fa-database text-4xl text-slate-200 mb-4"></i>
                         <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Sin datos para procesar</p>
                     </div>
                     {% endfor %}
@@ -97,18 +101,21 @@
 <script>
     const ctx = document.getElementById('chartEstados').getContext('2d');
     
-    // Configuración de gradientes para el gráfico
     const chart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: [{% for s in stats %}'{{ s.estado|upper }}',{% endfor %}],
+            labels: [
+                {% for s in stats %}
+                    '{% if s.estado == "borrador" or s.estado == "espera" %}EN ESPERA{% else %}{{ s.estado|upper }}{% endif %}',
+                {% endfor %}
+            ],
             datasets: [{
                 data: [{% for s in stats %}{{ s.total }},{% endfor %}],
                 backgroundColor: [
-                    '#1e3a8a', // Azul Profundo
-                    '#f97316', // Naranja Alerta
-                    '#10b981', // Verde Éxito
-                    '#94a3b8'  // Gris Neutro
+                    '#10b981', // Emerald (Validado)
+                    '#f97316', // Orange (En Espera)
+                    '#1e3a8a', // Blue (Otros)
+                    '#94a3b8'  // Slate (Resto)
                 ],
                 hoverOffset: 20,
                 borderWidth: 8,

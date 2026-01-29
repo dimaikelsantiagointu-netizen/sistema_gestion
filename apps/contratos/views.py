@@ -6,7 +6,7 @@ from django.http import FileResponse, HttpResponse
 from django.utils import timezone
 from django.db.models import Count
 from django.conf import settings
-
+from django.core.paginator import Paginator
 # Modelos
 from .models import Contrato, HistorialContrato, ConfiguracionInstitucional
 from apps.beneficiarios.models import Beneficiario
@@ -120,10 +120,10 @@ def descargar_pdf(request, pk):
         name='LegalArial', 
         fontName='Helvetica', 
         fontSize=12, 
-        leading=16, # Interlineado profesional
+        leading=16, 
         alignment=TA_JUSTIFY,
-        firstLineIndent=30, # Sangría de primera línea
-        spaceAfter=12       # Espacio entre párrafos
+        firstLineIndent=30, 
+        spaceAfter=12
     ))
 
     story = []
@@ -135,7 +135,7 @@ def descargar_pdf(request, pk):
         img.hAlign = 'CENTER'
         story.append(img)
 
-    # --- 2. BLOQUE DEL ABOGADO (NEGRILLA Y CURSIVA) ---
+    # --- 2. BLOQUE DEL ABOGADO ---
     style_abogado = ParagraphStyle(
         name='Abogado',
         fontName='Helvetica-BoldOblique',
@@ -147,16 +147,14 @@ def descargar_pdf(request, pk):
     story.append(Paragraph("LEOPOLDO PIÑA<br/>Abogado<br/>I.P.S.A. Nº 108617", style_abogado))
     story.append(Spacer(1, 0.3 * inch))
 
-    # --- 3. TÍTULO ---
+    # --- 3. TÍTULO (Usando Código de Contrato) ---
     style_titulo = ParagraphStyle(name='T', alignment=TA_CENTER, fontName='Helvetica-Bold', fontSize=12)
+    # Aquí ya tenías contrato.codigo_contrato, nos aseguramos que se mantenga así
     story.append(Paragraph(f"CONTRATO DE ADJUDICACIÓN Y VENTA<br/>Nº {contrato.codigo_contrato}", style_titulo))
     story.append(Spacer(1, 0.3 * inch))
     
     # --- 4. CUERPO DEL CONTRATO ---
-    # Importante: ReportLab necesita que las etiquetas estén cerradas <br />
     cuerpo_formateado = contrato.cuerpo_contrato.replace('<br>', '<br/>').replace('\n', '<br/>')
-    
-    # Dividimos por párrafos para que ReportLab los maneje mejor si es muy largo
     parrafos = cuerpo_formateado.split('<br/><br/>')
     for p in parrafos:
         if p.strip():
@@ -164,11 +162,8 @@ def descargar_pdf(request, pk):
 
     # --- 5. FIRMAS ---
     story.append(Spacer(1, 0.8 * inch))
-    
-    # Estilo para el texto dentro de las firmas
     style_f = ParagraphStyle(name='F', fontName='Helvetica-Bold', fontSize=10, alignment=TA_CENTER, leading=11)
     
-    # Preparar beneficiarios
     nombres_b = "<br/>".join([f"{b.nombre_completo.upper()}<br/>C.I: {b.documento_identidad}" for b in contrato.beneficiarios.all()])
 
     datos_firmas = [
@@ -184,8 +179,10 @@ def descargar_pdf(request, pk):
 
     doc.build(story)
     buffer.seek(0)
-    return FileResponse(buffer, as_attachment=True, filename=f"Contrato_{contrato.codigo_catastral}.pdf")
-
+    
+    # --- CAMBIO FINAL: Nombre del archivo PDF con el Código de Contrato ---
+    nombre_pdf = f"Contrato_{contrato.codigo_contrato}.pdf"
+    return FileResponse(buffer, as_attachment=True, filename=nombre_pdf)
 @login_required
 def detalle_contrato(request, pk):
     contrato = get_object_or_404(Contrato, pk=pk)
@@ -216,20 +213,24 @@ def crear_contrato(request):
         return redirect('contratos:lista')
     return render(request, 'contratos/form_contrato.html', {'beneficiarios': Beneficiario.objects.all()})
 
+
 @login_required
 def lista_contratos(request):
-    contratos = Contrato.objects.all()
+    # Traemos todos los contratos
+    contratos_list = Contrato.objects.all().order_by('-fecha_creacion')
     
-    # Calculamos los contadores aquí (esto es mucho más rápido y seguro)
-    total = contratos.count()
-    aprobados = contratos.filter(estado='aprobado').count()
-    espera = total - aprobados # O: contratos.exclude(estado='aprobado').count()
-
+    # Paginación (10 por página)
+    paginator = Paginator(contratos_list, 10) 
+    page_number = request.GET.get('page')
+    contratos = paginator.get_page(page_number)
+    
+    # IMPORTANTE: Filtros de conteo para las tarjetas
+    # Usamos .exclude(estado='aprobado') para que todo lo que NO esté validado cuente como "En Espera"
     context = {
-        'contratos': contratos,
-        'total': total,
-        'aprobados': aprobados,
-        'espera': espera,
+        'contratos': contratos, # Esta es la variable que recorre el for
+        'total': contratos_list.count(),
+        'espera': contratos_list.exclude(estado='aprobado').count(), 
+        'aprobados': contratos_list.filter(estado='aprobado').count(),
     }
     return render(request, 'contratos/lista_contratos.html', context)
 
