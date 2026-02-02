@@ -11,18 +11,15 @@
             <div>
                 <h1 class="text-xl font-black text-slate-900 uppercase tracking-tighter leading-none">Expediente Digital</h1>
                 <p class="text-[9px] font-black text-blue-900 uppercase tracking-widest mt-1">
-                    ID: {{ contrato.codigo_catastral|default:contrato.pk }} / V-{{ contrato.version|default:"1" }}.0
+                    ID: {{ contrato.codigo_contrato }} / V-{{ contrato.version|default:"1" }}.0
                 </p>
             </div>
         </div>
 
         <div class="flex items-center gap-3 mt-4 md:mt-0">
-            <div class="flex bg-slate-100 p-1.5 rounded-2xl">
-                <a href="{% url 'contratos:descargar_pdf' contrato.pk %}" class="flex items-center gap-2 px-4 py-2.5 text-slate-600 hover:bg-white hover:shadow-sm rounded-xl text-[10px] font-black uppercase transition-all">
-                    <i class="fas fa-file-pdf text-red-600 text-sm"></i> PDF
-                </a>
-                
-            </div>
+            <a href="{% url 'contratos:descargar_pdf' contrato.pk %}" class="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-600 hover:bg-white hover:shadow-sm rounded-xl text-[10px] font-black uppercase transition-all">
+                <i class="fas fa-file-pdf text-red-600 text-sm"></i> PDF
+            </a>
 
             {% if contrato.estado != 'aprobado' %}
             <form method="POST" class="inline">
@@ -38,7 +35,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div class="lg:col-span-8">
-            <div class="bg-slate-200/30 rounded-[3rem] p-4 md:p-10 border border-slate-100 shadow-inner">
+            <div class="bg-slate-200/30 rounded-[3rem] p-4 md:p-10 border border-slate-100 shadow-inner overflow-hidden">
                 <div class="flex justify-center mb-6">
                     <span class="px-6 py-2 bg-white/80 backdrop-blur-sm rounded-full text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] border border-slate-100">
                         Vista Previa Legal (Papel Oficio)
@@ -65,9 +62,9 @@
 
                         <div class="text-center mb-10">
                             <h2 class="text-[13pt] font-bold uppercase underline decoration-1 underline-offset-4">
-                                CONTRATO DE ADJUDICACIÓN Y VENTA
+                                {{ contrato.get_tipo_contrato_display|default:"CONTRATO" }}
                             </h2>
-                            <p class="text-xl font-bold text-blue-900">{{ contrato.codigo_contrato }}</p>
+                            <p class="text-xl font-bold text-blue-900 mt-2">{{ contrato.codigo_contrato }}</p>
                         </div>
 
                         <div class="document-body space-y-4" style="text-indent: 1.27cm;">
@@ -80,7 +77,6 @@
                                     <td class="w-1/2 pt-16 text-center align-bottom">
                                         <div class="border-t border-slate-900 mx-10"></div>
                                         <p class="text-[9pt] font-bold mt-3 uppercase tracking-tighter">Por el INTU</p>
-                                        <p class="text-[8pt] text-slate-600">Gerencia Estadal Distrito Capital</p>
                                     </td>
                                     <td class="w-1/2">
                                         {% for b in contrato.beneficiarios.all %}
@@ -100,18 +96,96 @@
         </div>
 
         <div class="lg:col-span-4 space-y-6">
+            
             <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
-                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Estado del Trámite</h3>
-                <div class="flex items-center gap-5">
-                    <div class="w-16 h-16 rounded-3xl flex items-center justify-center text-2xl
-                        {% if contrato.estado == 'aprobado' %} bg-emerald-50 text-emerald-600 {% else %} bg-orange-50 text-orange-600 {% endif %}">
-                        <i class="fas {% if contrato.estado == 'aprobado' %}fa-check-double{% else %}fa-file-signature animate-pulse{% endif %}"></i>
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Ficha Técnica</h3>
+                    <button onclick="toggleForm()" id="btnEdit" class="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-[9px] font-black uppercase hover:bg-blue-100 transition-all">
+                        <i class="fas fa-edit"></i> Actualizar
+                    </button>
+                </div>
+
+                <div id="vistaDatos" class="space-y-4">
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p class="text-[9px] font-black text-slate-400 uppercase mb-3">Información del Terreno</p>
+                        <div class="space-y-2">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] text-slate-500 font-bold uppercase">Código Catastral:</span>
+                                <span class="text-xs font-black text-slate-900">{{ contrato.codigo_catastral|default:"NO REGISTRADO" }}</span>
+                            </div>
+                            <div class="flex flex-col pt-2">
+                                <span class="text-[10px] text-slate-500 font-bold uppercase">Superficie:</span>
+                                <span class="text-xs font-black text-slate-900">{{ contrato.superficie_num|default:"0.00" }} m² ({{ contrato.superficie_letras|default:"Cero metros" }})</span>
+                            </div>
+                            <div class="flex flex-col pt-2">
+                                <span class="text-[10px] text-slate-500 font-bold uppercase">Dirección Inmueble:</span>
+                                <span class="text-[11px] font-bold text-slate-700">{{ contrato.direccion_inmueble|default:"No especificada" }}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-xl font-black text-slate-900 uppercase leading-none">{{ contrato.estado|default:"Borrador" }}</p>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase mt-2">Registrado el: {{ contrato.fecha_creacion|date:"d/m/Y" }}</p>
+
+                    <div class="p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
+                        <p class="text-[9px] font-black text-blue-900/40 uppercase mb-3">Linderos Específicos</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <span class="block text-[8px] font-black text-blue-900/60 uppercase">Norte</span>
+                                <span class="text-[10px] font-bold text-slate-800">{{ contrato.lindero_norte|default:"---" }}</span>
+                            </div>
+                            <div>
+                                <span class="block text-[8px] font-black text-blue-900/60 uppercase">Sur</span>
+                                <span class="text-[10px] font-bold text-slate-800">{{ contrato.lindero_sur|default:"---" }}</span>
+                            </div>
+                            <div>
+                                <span class="block text-[8px] font-black text-blue-900/60 uppercase">Este</span>
+                                <span class="text-[10px] font-bold text-slate-800">{{ contrato.lindero_este|default:"---" }}</span>
+                            </div>
+                            <div>
+                                <span class="block text-[8px] font-black text-blue-900/60 uppercase">Oeste</span>
+                                <span class="text-[10px] font-bold text-slate-800">{{ contrato.lindero_oeste|default:"---" }}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <form method="POST" id="formDatosTecnicos" class="hidden space-y-4 animate-in fade-in duration-300">
+                    {% csrf_token %}
+                    <div class="space-y-3">
+                        <input type="text" name="codigo_catastral" value="{{ contrato.codigo_catastral|default:'' }}" placeholder="Código Catastral" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-900/20">
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="number" step="0.01" name="superficie_num" value="{{ contrato.superficie_num|default:'' }}" placeholder="Metros (N)" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-bold">
+                            <input type="text" name="superficie_letras" value="{{ contrato.superficie_letras|default:'' }}" placeholder="Metros (Letras)" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-bold">
+                        </div>
+
+                        <textarea name="direccion_inmueble" rows="2" placeholder="Dirección Exacta del Inmueble" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-bold resize-none">{{ contrato.direccion_inmueble|default:'' }}</textarea>
+                        
+                        <div class="h-[1px] bg-slate-100 my-2"></div>
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" name="lindero_norte" value="{{ contrato.lindero_norte|default:'' }}" placeholder="Lindero Norte" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-bold">
+                            <input type="text" name="lindero_sur" value="{{ contrato.lindero_sur|default:'' }}" placeholder="Lindero Sur" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-bold">
+                            <input type="text" name="lindero_este" value="{{ contrato.lindero_este|default:'' }}" placeholder="Lindero Este" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-bold">
+                            <input type="text" name="lindero_oeste" value="{{ contrato.lindero_oeste|default:'' }}" placeholder="Lindero Oeste" class="w-full p-3 bg-slate-50 border-none rounded-xl text-xs font-bold">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button type="button" onclick="toggleForm()" class="w-1/3 py-3 bg-slate-100 text-slate-500 rounded-xl text-[9px] font-black uppercase">Cancelar</button>
+                        <button type="submit" name="actualizar_expediente" class="w-2/3 py-3 bg-blue-900 text-white rounded-xl text-[9px] font-black uppercase shadow-lg shadow-blue-100">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-slate-50 p-8 rounded-[2.5rem] border-2 border-dashed border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <i class="fas fa-comment-dots text-blue-900 text-sm"></i>
+                    <h3 class="text-[10px] font-black text-slate-900 uppercase tracking-widest">Observación Técnica</h3>
+                </div>
+                <form method="POST">
+                    {% csrf_token %}
+                    <textarea name="observaciones" rows="3" class="w-full p-4 bg-white border border-slate-200 rounded-2xl text-[11px] font-bold text-slate-600 focus:ring-2 focus:ring-blue-900/10 placeholder:text-slate-300 resize-none">{{ contrato.observaciones|default:"" }}</textarea>
+                    <button type="submit" name="guardar_observacion" class="mt-3 w-full py-3 bg-white border border-slate-200 text-slate-500 rounded-xl text-[9px] font-black uppercase hover:bg-blue-900 hover:text-white transition-all">Actualizar Nota</button>
+                </form>
             </div>
 
             <div class="bg-blue-900 p-8 rounded-[2.5rem] text-white shadow-2xl shadow-blue-200">
@@ -124,32 +198,31 @@
                     <div class="group border-b border-white/10 pb-5 last:border-0 last:pb-0">
                         <p class="text-sm font-black uppercase tracking-tight group-hover:text-orange-400 transition-colors">{{ b.nombre_completo }}</p>
                         <p class="text-[10px] text-white/50 font-bold uppercase mt-1">C.I: {{ b.documento_identidad }}</p>
-                        
-                        <div class="mt-4 flex gap-2">
-                            <span class="px-3 py-1 bg-white/10 rounded-lg text-[8px] font-black uppercase tracking-widest">Beneficiario</span>
-                            {% if forloop.first %}
-                            <span class="px-3 py-1 bg-orange-500 rounded-lg text-[8px] font-black uppercase tracking-widest">Principal</span>
-                            {% endif %}
-                        </div>
                     </div>
+                    {% empty %}
+                    <p class="text-[10px] text-white/30 italic uppercase">Sin beneficiarios registrados</p>
                     {% endfor %}
-                </div>
-            </div>
-
-            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
-                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Detalles Técnicos</h3>
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Superficie</span>
-                        <span class="text-xs font-black text-slate-900">{{ contrato.superficie_num }} M²</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Código Catastral</span>
-                        <span class="text-xs font-black text-slate-900">{{ contrato.codigo_catastral }}</span>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    function toggleForm() {
+        const vista = document.getElementById('vistaDatos');
+        const formulario = document.getElementById('formDatosTecnicos');
+        const btn = document.getElementById('btnEdit');
+
+        if (formulario.classList.contains('hidden')) {
+            formulario.classList.remove('hidden');
+            vista.classList.add('hidden');
+            btn.classList.add('hidden');
+        } else {
+            formulario.classList.add('hidden');
+            vista.classList.remove('hidden');
+            btn.classList.remove('hidden');
+        }
+    }
+</script>
 {% endblock %}

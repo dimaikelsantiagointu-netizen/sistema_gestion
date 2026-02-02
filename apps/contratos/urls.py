@@ -18,4 +18,5 @@ urlpatterns = [
     # Si no tienes la función de estadísticas aún, puedes comentarla 
     # para que no te de error al arrancar:
     path('estadisticas/', views.estadisticas_contratos, name='estadisticas'),
+    path('importar/', views.importar_contrato_existente, name='importar_existente'),
 ]

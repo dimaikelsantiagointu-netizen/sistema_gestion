@@ -18,42 +18,31 @@
                 <i class="fas fa-chart-pie text-blue-600"></i> Estadísticas
             </a>
             
-            <a href="{% url 'contratos:crear' %}" class="flex items-center gap-3 px-8 py-4 bg-blue-900 text-white rounded-2xl shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all transform hover:-translate-y-1">
-                <i class="fas fa-plus-circle text-lg"></i>
-                <span class="text-[10px] font-black uppercase tracking-widest">Nuevo Contrato</span>
+            <a href="{% url 'contratos:crear' %}" class="flex items-center gap-3 px-6 py-4 bg-white border-2 border-blue-900 text-blue-900 rounded-2xl hover:bg-blue-50 transition-all group">
+                <i class="fas fa-pen-nib text-lg group-hover:rotate-12 transition-transform"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest">Redactar Nuevo</span>
+            </a>
+
+            <a href="{% url 'contratos:importar_existente' %}" 
+                class="flex items-center gap-3 px-8 py-4 bg-blue-900 text-white rounded-2xl shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all transform hover:-translate-y-1">
+                <i class="fas fa-file-import text-lg"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest">Carga desde Existente</span>
             </a>
         </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Sistema</p>
-                <p class="text-3xl font-black text-slate-900">{{ total }}</p>
-            </div>
-            <div class="w-14 h-14 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl">
-                <i class="fas fa-folder-open"></i>
-            </div>
+            <div><p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Sistema</p><p class="text-3xl font-black text-slate-900">{{ total }}</p></div>
+            <div class="w-14 h-14 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center text-xl"><i class="fas fa-folder-open"></i></div>
         </div>
-
         <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">En Espera</p>
-                <p class="text-3xl font-black text-orange-600">{{ espera }}</p>
-            </div>
-            <div class="w-14 h-14 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center text-xl">
-                <i class="fas fa-clock"></i>
-            </div>
+            <div><p class="text-[10px] font-black text-slate-400 uppercase mb-1">En Espera</p><p class="text-3xl font-black text-orange-600">{{ espera }}</p></div>
+            <div class="w-14 h-14 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center text-xl"><i class="fas fa-clock"></i></div>
         </div>
-
         <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Validados</p>
-                <p class="text-3xl font-black text-green-600">{{ aprobados }}</p>
-            </div>
-            <div class="w-14 h-14 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-xl">
-                <i class="fas fa-check-double"></i>
-            </div>
+            <div><p class="text-[10px] font-black text-slate-400 uppercase mb-1">Validados</p><p class="text-3xl font-black text-green-600">{{ aprobados }}</p></div>
+            <div class="w-14 h-14 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-xl"><i class="fas fa-check-double"></i></div>
         </div>
     </div>
 
@@ -62,9 +51,9 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-slate-50/50">
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Referencia</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Referencia / Tipo</th>
                         <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Titulares</th>
-                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Estado</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Estado / Notas</th>
                         <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Registro</th>
                         <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Acciones</th>
                     </tr>
@@ -72,61 +61,49 @@
                 <tbody class="divide-y divide-slate-50">
                     {% for contrato in contratos %}
                     <tr class="hover:bg-blue-50/30 transition-all group">
-    <td class="px-8 py-6">
-        <p class="text-sm font-black text-blue-900 uppercase tracking-tighter">
-            {{ contrato.codigo_contrato|default:"SIN CÓDIGO" }}
-        </p>
-        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-            Catastro: {{ contrato.codigo_catastral|default:"---" }}
-        </span>
-    </td>
-    
-    <td class="px-8 py-6">
-        <p class="text-[11px] font-bold text-slate-700 uppercase">
-            {{ contrato.beneficiarios.first.nombre_completo }}
-            {% if contrato.beneficiarios.count > 1 %}
-            <span class="text-blue-600 text-[9px] ml-1">+{{ contrato.beneficiarios.count|add:"-1" }}</span>
-            {% endif %}
-        </p>
-    </td>
-
+                        <td class="px-8 py-6">
+                            <div class="flex flex-col gap-1">
+                                <p class="text-sm font-black text-blue-900 uppercase tracking-tighter">{{ contrato.codigo_contrato|default:"SIN CÓDIGO" }}</p>
+                                <span class="inline-flex w-fit px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest
+                                    {% if contrato.tipo_contrato == 'arrendamiento' %} bg-purple-100 text-purple-700 border border-purple-200
+                                    {% elif contrato.tipo_contrato == 'comodato' %} bg-cyan-100 text-cyan-700 border border-cyan-200
+                                    {% else %} bg-blue-100 text-blue-700 border border-blue-200 {% endif %}">
+                                    {{ contrato.get_tipo_contrato_display|upper }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-8 py-6">
+                            <div class="flex flex-col gap-1">
+                                {% for b in contrato.beneficiarios.all|slice:":2" %}
+                                    <p class="text-[10px] font-bold text-slate-700 uppercase">• {{ b.nombre_completo }}</p>
+                                {% endfor %}
+                                {% if contrato.beneficiarios.count > 2 %}
+                                    <p class="text-[8px] font-black text-blue-600 uppercase">+ {{ contrato.beneficiarios.count|add:"-2" }} más</p>
+                                {% endif %}
+                            </div>
+                        </td>
                         <td class="px-8 py-6 text-center">
                             {% if contrato.estado == 'aprobado' %}
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 text-[9px] font-black uppercase rounded-lg border border-green-200">
-                                    <span class="w-1.5 h-1.5 bg-green-600 rounded-full"></span> Validado
-                                </span>
+                                <span class="px-3 py-1.5 bg-green-100 text-green-700 text-[9px] font-black uppercase rounded-lg">Validado</span>
                             {% else %}
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 text-[9px] font-black uppercase rounded-lg border border-orange-200">
-                                    <span class="w-1.5 h-1.5 bg-orange-600 rounded-full animate-pulse"></span> {{ contrato.estado|default:"Borrador" }}
-                                </span>
+                                <span class="px-3 py-1.5 bg-orange-100 text-orange-700 text-[9px] font-black uppercase rounded-lg">Pendiente</span>
                             {% endif %}
                         </td>
-
-                        <td class="px-8 py-6 text-[10px] font-black text-slate-500 uppercase">
-                            {{ contrato.fecha_creacion|date:"d/m/Y" }}
-                        </td>
-
+                        <td class="px-8 py-6 text-[10px] font-black text-slate-500 uppercase">{{ contrato.fecha_creacion|date:"d M Y" }}</td>
                         <td class="px-8 py-6 text-right">
-                            <div class="flex items-center justify-end gap-2">
-                                <a href="{% url 'contratos:detalle' contrato.pk %}" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:bg-blue-900 hover:text-white transition-all shadow-sm">
-                                    <i class="fas fa-eye text-xs"></i>
-                                </a>
-                                <a href="{% url 'contratos:descargar_pdf' contrato.pk %}" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:bg-red-600 hover:text-white transition-all shadow-sm">
-                                    <i class="fas fa-file-pdf text-xs"></i>
-                                </a>
+                            <div class="flex justify-end gap-2">
+                                <a href="{% url 'contratos:detalle' contrato.pk %}" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:bg-blue-900 hover:text-white transition-all"><i class="fas fa-eye text-xs"></i></a>
+                                <a href="{% url 'contratos:descargar_pdf' contrato.pk %}" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:bg-red-600 hover:text-white transition-all"><i class="fas fa-file-pdf text-xs"></i></a>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr>
-                        <td colspan="5" class="px-8 py-20 text-center text-slate-400 uppercase text-[10px] font-bold tracking-widest">
-                            No hay contrato registrados
-                        </td>
-                    </tr>
+                    <tr><td colspan="5" class="px-8 py-20 text-center text-slate-400 text-[10px] font-black uppercase">No hay registros</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
 {% endblock %}
