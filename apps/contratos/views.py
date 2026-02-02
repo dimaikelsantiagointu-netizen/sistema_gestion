@@ -19,6 +19,9 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Tabl
 from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_LEFT
 import re
 from docx import Document
+from django.core.paginator import Paginator
+from django.db.models import Q
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 def generar_cuerpo_legal(beneficiarios, datos, config, tipo_contrato):
     """ Genera el texto legal blindado y dinámico por tipo de contrato """
@@ -315,91 +318,178 @@ def crear_contrato(request):
 
 @login_required
 def lista_contratos(request):
-    # Traemos los contratos para la tabla
-    contratos = Contrato.objects.all().order_by('-fecha_creacion')
+    # 1. Capturar parámetros de búsqueda (Añadimos 'tipo')
+    q = request.GET.get('q', '')
+    estado = request.GET.get('estado', '')
+    tipo = request.GET.get('tipo', '') # <-- Nuevo parámetro
+
+    # Consulta base
+    contratos_queryset = Contrato.objects.all().order_by('-fecha_creacion')
+
+    # 2. Aplicar filtros si existen
+    if q:
+        contratos_queryset = contratos_queryset.filter(
+            Q(codigo_contrato__icontains=q) | 
+            Q(tipo_contrato__icontains=q) |
+            Q(beneficiarios__nombre_completo__icontains=q)
+        ).distinct()
+
+    if estado:
+        contratos_queryset = contratos_queryset.filter(estado=estado)
     
-    # IMPORTANTE: Traemos TODOS los beneficiarios para el modal
+    if tipo: # <-- Aplicar filtro de Tipo de Contrato
+        contratos_queryset = contratos_queryset.filter(tipo_contrato=tipo)
+
+    # Paginación (10 por página)
+    paginator = Paginator(contratos_queryset, 10)
+    page_number = request.GET.get('page')
+    contratos_paginados = paginator.get_page(page_number)
+    
+    # Datos para modales o selectores adicionales
     beneficiarios_listado = Beneficiario.objects.all().order_by('nombre_completo')
 
-    # Calculamos los totales para las tarjetas de arriba
-    total = contratos.count()
-    espera = contratos.filter(estado='espera').count()
-    aprobados = contratos.filter(estado='aprobado').count()
+    # Totales (Globales)
+    total = Contrato.objects.count()
+    espera = Contrato.objects.filter(estado='espera').count()
+    aprobados = Contrato.objects.filter(estado='aprobado').count()
 
+    # 3. Contexto (Añadimos 'tipo_filtro')
     context = {
-        'contratos': contratos,
-        'beneficiarios': beneficiarios_listado, # Este nombre debe coincidir con el del modal
+        'contratos': contratos_paginados,
+        'beneficiarios': beneficiarios_listado,
         'total': total,
         'espera': espera,
         'aprobados': aprobados,
+        'busqueda': q,
+        'estado_filtro': estado,
+        'tipo_filtro': tipo, # <-- Importante para que el <select> mantenga la opción elegida
     }
     
     return render(request, 'contratos/lista_contratos.html', context)
 
-@login_required
 def estadisticas_contratos(request):
     total = Contrato.objects.count()
+    
+    # 1. Estadísticas por Estado
     stats = Contrato.objects.values('estado').annotate(total=Count('estado'))
-    return render(request, 'contratos/estadisticas.html', {'stats': stats, 'total_general': total})
+    for s in stats:
+        s['porcentaje'] = round((s['total'] / total) * 100) if total > 0 else 0
+
+    # 2. Estadísticas por Tipo de Contrato (CORREGIDO A 'tipo_contrato')
+    conteo_tipos = Contrato.objects.values('tipo_contrato').annotate(total=Count('tipo_contrato')).order_by('-total')
+    
+    # Usamos 'tipo_contrato' en el list comprehension también
+    tipos_labels = [item['tipo_contrato'] for item in conteo_tipos]
+    tipos_data = [item['total'] for item in conteo_tipos]
+
+    context = {
+        'stats': stats, 
+        'total_general': total,
+        'tipos_labels': tipos_labels, 
+        'tipos_data': tipos_data      
+    }
+    
+    return render(request, 'contratos/estadisticas.html', context)
 
 @login_required
 def exportar_excel(request):
-    # Creamos el libro y la hoja
     wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Reporte de Contratos"
+    
+    # --- 1. HOJA DE ESTADÍSTICAS (RESUMEN) ---
+    ws_stats = wb.active
+    ws_stats.title = "Resumen Ejecutivo"
+    
+    # Estilos Profesionales
+    header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    white_font = Font(color="FFFFFF", bold=True, size=11)
+    title_font = Font(bold=True, size=14, color="2563EB")
+    
+    # Título Principal
+    ws_stats["A1"] = "INFORME ESTRATÉGICO DE GESTIÓN"
+    ws_stats["A1"].font = title_font
+    
+    # Cálculos
+    total_general = Contrato.objects.count()
+    stats_estado = Contrato.objects.values('estado').annotate(total=Count('id'))
+    stats_tipo = Contrato.objects.values('tipo_contrato').annotate(total=Count('id'))
 
-    # Definimos encabezados robustos
+    # SECCIÓN A: RESUMEN POR ESTADO
+    ws_stats.append([]) # Espacio
+    ws_stats.append(["RESUMEN POR ESTADO", "CANTIDAD", "PORCENTAJE"])
+    start_row_estado = ws_stats.max_row
+    for cell in ws_stats[start_row_estado]:
+        cell.fill = header_fill
+        cell.font = white_font
+
+    for s in stats_estado:
+        estado_label = s['estado'].upper() if s['estado'] else "SIN ESTADO"
+        porcentaje = (s['total'] / total_general * 100) if total_general > 0 else 0
+        ws_stats.append([estado_label, s['total'], f"{porcentaje:.1f}%"])
+
+    # SECCIÓN B: RESUMEN POR TIPO DE CONTRATO
+    ws_stats.append([]) # Espacio
+    ws_stats.append(["RESUMEN POR TIPO DE CONTRATO", "CANTIDAD", "DISTRIBUCIÓN"])
+    start_row_tipo = ws_stats.max_row
+    for cell in ws_stats[start_row_tipo]:
+        cell.fill = header_fill
+        cell.font = white_font
+
+    for t in stats_tipo:
+        tipo_label = t['tipo_contrato'].upper() if t['tipo_contrato'] else "NO ESPECIFICADO"
+        distribucion = (t['total'] / total_general * 100) if total_general > 0 else 0
+        ws_stats.append([tipo_label, t['total'], f"{distribucion:.1f}%"])
+
+    # --- 2. HOJA DE DATOS DETALLADOS ---
+    ws_data = wb.create_sheet(title="Listado de Contratos")
+    
+    # Quitamos ID SISTEMA y ajustamos encabezados
     headers = [
-        'ID SISTEMA', 
         'ESTADO', 
         'FECHA REGISTRO', 
         'CÓDIGO CATASTRAL', 
-        'SUPERFICIE (M²)', 
         'BENEFICIARIO(S)', 
-        'CÉDULA(S)'
+        'CÉDULA/RIF'
     ]
-    ws.append(headers)
+    ws_data.append(headers)
 
-    # Optimizamos la consulta con prefetch_related para los beneficiarios
+    for cell in ws_data[1]:
+        cell.fill = header_fill
+        cell.font = white_font
+        cell.alignment = Alignment(horizontal="center")
+
+    # Consulta optimizada
     contratos = Contrato.objects.all().prefetch_related('beneficiarios').order_by('-fecha_creacion')
 
     for c in contratos:
-        # Extraemos nombres y cédulas de todos los beneficiarios vinculados
         nombres = ", ".join([b.nombre_completo for b in c.beneficiarios.all()])
-        cedulas = ", ".join([f"{b.tipo_documento}-{b.documento_identidad}" for b in c.beneficiarios.all()])
-        
-        # Limpiamos la fecha para Excel
+        # Mantenemos el formato de Cédula/RIF
+        docs = ", ".join([f"{b.tipo_documento}-{b.documento_identidad}" for b in c.beneficiarios.all()])
         fecha = c.fecha_creacion.replace(tzinfo=None) if c.fecha_creacion else ""
 
-        ws.append([
-            c.id,
+        ws_data.append([
             c.estado.upper() if c.estado else "BORRADOR",
             fecha,
             c.codigo_catastral,
-            c.superficie_num,
             nombres,
-            cedulas
+            docs
         ])
 
-    # Ajuste básico de ancho de columnas (opcional pero recomendado)
-    for col in ws.columns:
-        max_length = 0
-        column = col[0].column_letter
-        for cell in col:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except: pass
-        ws.column_dimensions[column].width = max_length + 2
+    # --- AJUSTES DE ANCHO AUTOMÁTICO ---
+    for sheet in [ws_stats, ws_data]:
+        for col in sheet.columns:
+            max_length = 0
+            column = col[0].column_letter
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except: pass
+            sheet.column_dimensions[column].width = min(max_length + 3, 60)
 
-    # Preparamos la respuesta
-    response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="Reporte_Gestion_INTU.xlsx"'
-    
     wb.save(response)
+    
     return response
 
 @login_required

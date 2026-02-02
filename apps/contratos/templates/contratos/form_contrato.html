@@ -41,11 +41,20 @@
                 <div class="space-y-3">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Seleccionar Beneficiario(s)</label>
                     <div class="relative">
-                        <select name="beneficiario" required multiple class="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-900/10 rounded-2xl text-sm font-bold transition-all min-h-[120px] scrollbar-thin">
+                        <div class="relative mb-3">
+                            <input type="text" 
+                                id="buscador-beneficiarios" 
+                                placeholder="Buscar por nombre o cédula..." 
+                                class="w-full p-3 pl-10 bg-white border-2 border-blue-50 rounded-xl text-xs font-bold focus:border-blue-200 outline-none transition-all shadow-sm">
+                            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                        </div>
+
+                        <select name="beneficiario" id="select-beneficiarios" required multiple 
+                                class="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-blue-900/10 rounded-2xl text-sm font-bold transition-all min-h-[150px] scrollbar-thin">
                             {% for b in beneficiarios %}
                                 <option value="{{ b.id }}" 
-                                    {% if b.id in ids_pre %}selected{% endif %}
-                                    class="p-3 mb-1 rounded-xl hover:bg-blue-50 cursor-pointer italic">
+                                        {% if b.id in ids_pre %}selected{% endif %}
+                                        class="p-3 mb-1 rounded-xl hover:bg-blue-50 cursor-pointer italic">
                                     {{ b.nombre_completo }} ({{ b.tipo_documento }}-{{ b.documento_identidad }})
                                 </option>
                             {% endfor %}
@@ -129,4 +138,28 @@
         </div>
     </form>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const buscador = document.getElementById('buscador-beneficiarios');
+        const select = document.getElementById('select-beneficiarios');
+        const opciones = Array.from(select.options);
+
+        buscador.addEventListener('input', function(e) {
+            const termino = e.target.value.toLowerCase();
+            
+            opciones.forEach(option => {
+                const texto = option.text.toLowerCase();
+                const coincide = texto.includes(termino);
+                
+                // Si coincide se muestra, si no se oculta
+                // Usamos display: none para que no ocupe espacio
+                if (coincide) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

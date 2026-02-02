@@ -45,19 +45,29 @@
 
                 <div>
                     <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Beneficiario(s) a Vincular</label>
+                    
+                    <div class="relative mb-3">
+                        <input type="text" id="buscador-importar" placeholder="Filtrar por nombre o identificación..." 
+                               class="w-full p-3 pl-10 bg-white border-2 border-blue-50 rounded-xl text-xs font-bold focus:border-blue-200 outline-none transition-all shadow-sm">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                    </div>
+
                     <div class="relative">
-                        <select name="beneficiario_ids" required multiple 
+                        <select name="beneficiario_ids" id="select-importar" required multiple 
                             class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm font-bold h-48 focus:ring-2 focus:ring-blue-600 scrollbar-thin scrollbar-thumb-blue-200">
                             {% for b in beneficiarios %}
                                 <option value="{{ b.id }}" class="py-2 px-2 rounded-lg hover:bg-blue-100 italic">
-                                    {{ b.nombre_completo }} — ID: {{ b.documento_identidad }}
+                                    {{ b.nombre_completo }} ({{ b.tipo_documento }}-{{ b.documento_identidad }})
                                 </option>
                             {% endfor %}
                         </select>
                     </div>
+                    
                     <div class="flex items-center gap-2 mt-3 px-2">
                         <span class="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Manten presionado <kbd class="bg-slate-200 px-1 rounded">Ctrl</kbd> o <kbd class="bg-slate-200 px-1 rounded">Cmd</kbd> para selección múltiple</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                            Manten presionado <kbd class="bg-slate-200 px-1 rounded">Ctrl</kbd> para selección múltiple
+                        </p>
                     </div>
                 </div>
 
@@ -77,10 +87,33 @@
 </div>
 
 <style>
-    /* Estilo minimalista para el scroll de los beneficiarios */
     .scrollbar-thin::-webkit-scrollbar { width: 6px; }
     .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
     .scrollbar-thin::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const buscador = document.getElementById('buscador-importar');
+        const select = document.getElementById('select-importar');
+        const opcionesOriginales = Array.from(select.options);
+
+        buscador.addEventListener('input', function(e) {
+            const termino = e.target.value.toLowerCase();
+            
+            opcionesOriginales.forEach(option => {
+                const texto = option.text.toLowerCase();
+                const coincide = texto.includes(termino);
+                
+                // Muestra u oculta manteniendo la lógica anterior que te funcionó
+                if (coincide) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}
