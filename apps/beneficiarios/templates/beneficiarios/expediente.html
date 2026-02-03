@@ -86,11 +86,11 @@
                     </a>
 
                     {# --- ELIMINAR --- #}
-                    <a href="{% url 'beneficiarios:eliminar_documento' doc.id %}" 
-                       onclick="return confirm('¿Eliminar este documento del expediente?')"
-                       title="Eliminar del sistema"
-                       class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all">
-                        <i class="fas fa-trash-alt text-xs"></i>
+                    <a href="{% url 'beneficiarios:eliminar_documento' doc_id=doc.id %}" 
+                        onclick="return confirm('¿Eliminar este documento del expediente?')"
+                        title="Eliminar del sistema"
+                        class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all">
+                            <i class="fas fa-trash-alt text-xs"></i>
                     </a>
                 </div>
             </div>

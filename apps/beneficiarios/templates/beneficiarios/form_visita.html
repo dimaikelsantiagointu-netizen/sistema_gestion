@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    {# Encabezado con estilo mejorado #}
+    <div class="mb-8">
+        <a href="{% url 'beneficiarios:lista' %}" class="inline-flex items-center text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hover:text-intu-blue transition-all group">
+            <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform"></i> Volver al listado
+        </a>
+        <h1 class="text-4xl font-black text-intu-blue uppercase tracking-tighter mt-4 leading-none">
+            Registrar Visita <span class="text-gray-300">de Control</span>
+        </h1>
+    </div>
+
+    <form method="POST" class="bg-white p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-gray-100 space-y-8 relative overflow-hidden">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {# --- BUSCADOR DINÁMICO --- #}
+            <div class="relative">
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Buscar Beneficiario</label>
+                <div class="relative flex items-center mt-2 group">
+                    <div class="absolute left-4 text-gray-400 group-focus-within:text-intu-blue transition-colors">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <input type="text" id="input_busqueda" autocomplete="off" 
+                           placeholder="Cédula o nombre..."
+                           class="block w-full bg-gray-50 border-2 border-transparent rounded-2xl text-sm focus:bg-white focus:border-intu-blue/20 focus:ring-4 focus:ring-intu-blue/5 font-bold transition-all p-4 pl-12">
+                </div>
+                
+                {# Lista Desplegable de Resultados #}
+                <div id="contenedor_resultados" class="absolute z-50 w-full bg-white mt-2 rounded-2xl shadow-2xl border border-gray-100 hidden overflow-hidden transition-all">
+                    <div id="lista_resultados" class="max-h-64 overflow-y-auto custom-scrollbar"></div>
+                    <div class="bg-gray-50 p-3 border-t border-gray-100">
+                        <a href="{% url 'beneficiarios:crear' %}" class="text-[10px] font-bold text-intu-blue uppercase hover:underline">
+                            <i class="fas fa-plus-circle mr-1"></i> ¿No existe? Crear nuevo
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            {# --- BENEFICIARIO SELECCIONADO --- #}
+            <div>
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Selección Actual</label>
+                <div id="card_seleccionado" class="mt-2 flex items-center p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 transition-all">
+                    <div class="flex-1">
+                        <input type="text" id="nombre_confirmado" readonly placeholder="NADIE SELECCIONADO"
+                               class="bg-transparent border-none p-0 w-full text-sm font-black text-gray-400 placeholder-gray-300 focus:ring-0">
+                        <input type="hidden" name="beneficiario_id" id="id_oculto">
+                    </div>
+                    <div id="check_ok" class="hidden text-green-500">
+                        <i class="fas fa-check-circle text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            {# --- SECCIÓN DE DETALLES (Se desbloquea al seleccionar) --- #}
+            <div id="seccion_detalles" class="md:col-span-2 space-y-8 opacity-10 pointer-events-none blur-[2px] transition-all duration-700">
+                <div class="h-px bg-gradient-to-r from-transparent via-gray-100 to-transparent"></div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="group">
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Motivo de la Visita</label>
+                        <select name="motivo" class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-intu-blue/5 p-4 cursor-pointer">
+                            {% for code, name in motivos %}
+                                <option value="{{ code }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Fecha y Hora</label>
+                        <input type="datetime-local" name="fecha_registro" 
+                               value="{{ current_time|date:'Y-m-d\TH:i' }}"
+                               class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-intu-blue/5 p-4">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Observaciones Detalladas</label>
+                    <textarea name="descripcion" rows="4" placeholder="Escriba aquí los hallazgos de la visita..."
+                              class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-medium p-4 focus:ring-4 focus:ring-intu-blue/5 transition-all"></textarea>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" class="group relative w-full py-5 bg-intu-blue text-white text-xs font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-intu-dark transition-all shadow-xl shadow-blue-200 active:scale-[0.98]">
+                        <span class="relative z-10">Finalizar y Guardar Registro</span>
+                        <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+    
+    .bg-intu-blue { background-color: #1e40af; }
+    .text-intu-blue { color: #1e40af; }
+    .hover\:bg-intu-dark:hover { background-color: #1e3a8a; }
+</style>
+
+<script>
+    const inputBusqueda = document.getElementById('input_busqueda');
+    const contenedorResultados = document.getElementById('contenedor_resultados');
+    const listaResultados = document.getElementById('lista_resultados');
+    const nombreConfirmado = document.getElementById('nombre_confirmado');
+    const idOculto = document.getElementById('id_oculto');
+    const seccionDetalles = document.getElementById('seccion_detalles');
+    const cardSeleccionado = document.getElementById('card_seleccionado');
+    const checkOk = document.getElementById('check_ok');
+
+    inputBusqueda.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            contenedorResultados.classList.add('hidden');
+            return;
+        }
+
+        fetch(`{% url 'beneficiarios:buscar_api' %}?cedula=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                listaResultados.innerHTML = '';
+                if (data.encontrado) {
+                    data.results.forEach(beneficiario => {
+                        const div = document.createElement('div');
+                        div.className = "p-4 hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-50 last:border-0";
+                        div.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-xs font-black text-gray-800">${beneficiario.nombre}</p>
+                                    <p class="text-[10px] text-gray-400 font-bold uppercase">${beneficiario.tipo_doc}: ${beneficiario.cedula}</p>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+                            </div>
+                        `;
+                        div.onclick = () => seleccionar(beneficiario);
+                        listaResultados.appendChild(div);
+                    });
+                    contenedorResultados.classList.remove('hidden');
+                } else {
+                    listaResultados.innerHTML = '<div class="p-4 text-[10px] font-bold text-gray-400 uppercase text-center">No se encontraron resultados</div>';
+                    contenedorResultados.classList.remove('hidden');
+                }
+            });
+    });
+
+    function seleccionar(b) {
+        idOculto.value = b.id;
+        nombreConfirmado.value = b.nombre;
+        nombreConfirmado.classList.replace('text-gray-400', 'text-intu-blue');
+        
+        // Estética de selección
+        cardSeleccionado.classList.replace('bg-gray-50', 'bg-blue-50');
+        cardSeleccionado.classList.replace('border-gray-200', 'border-intu-blue/20');
+        checkOk.classList.remove('hidden');
+        
+        // Desbloquear formulario
+        seccionDetalles.classList.remove('opacity-10', 'pointer-events-none', 'blur-[2px]');
+        contenedorResultados.classList.add('hidden');
+        inputBusqueda.value = '';
+    }
+
+    // Cerrar buscador al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        if (!inputBusqueda.contains(e.target) && !contenedorResultados.contains(e.target)) {
+            contenedorResultados.classList.add('hidden');
+        }
+    });
+</script>
+{% endblock %}
