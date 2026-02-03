@@ -1,155 +1,155 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="mb-8">
-    <a href="{% url 'beneficiarios:lista' %}" class="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-intu-blue transition">
-        <i class="fas fa-chevron-left mr-1"></i> Volver a Beneficiarios
-    </a>
-    <div class="flex items-center gap-4 mt-4">
-        <div class="w-12 h-12 bg-intu-blue text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-100">
-            <i class="fas fa-folder-open text-xl"></i>
+<div class="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
+    {# --- ENCABEZADO MEJORADO --- #}
+    <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div class="flex items-center gap-5">
+            <div class="w-16 h-16 bg-intu-blue text-white rounded-[1.5rem] flex items-center justify-center shadow-xl shadow-blue-100 ring-4 ring-white">
+                <i class="fas fa-folder-open text-2xl"></i>
+            </div>
+            <div>
+                <a href="{% url 'beneficiarios:lista' %}" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-intu-blue transition flex items-center mb-1">
+                    <i class="fas fa-arrow-left mr-2"></i> Dashboard de Control
+                </a>
+                <h1 class="text-3xl font-black text-slate-900 uppercase tracking-tighter">{{ beneficiario.nombre_completo }}</h1>
+                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                    <span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600 mr-2">{{ beneficiario.tipo_documento }}</span>
+                    Expediente ID: <span class="text-intu-red">{{ beneficiario.documento_identidad }}</span>
+                </p>
+            </div>
         </div>
-        <div>
-            <h1 class="text-2xl font-black text-intu-blue uppercase tracking-tighter">{{ beneficiario.nombre_completo }}</h1>
-            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Expediente: {{ beneficiario.tipo_documento }}-{{ beneficiario.documento_identidad }}</p>
+
+        {# Estadísticas rápidas del expediente #}
+        <div class="flex gap-4">
+            <div class="bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-sm text-center">
+                <p class="text-[9px] font-black text-slate-400 uppercase">Archivos</p>
+                <p class="text-xl font-black text-intu-blue">{{ documentos.count }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {# --- COLUMNA CARGA (4/12) --- #}
+        <div class="lg:col-span-4">
+            <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-2xl shadow-slate-200/50 sticky top-6">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-2 h-6 bg-intu-red rounded-full"></div>
+                    <h3 class="text-[12px] font-black uppercase text-slate-800 tracking-widest">Digitalización</h3>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Categoría del Documento</label>
+                        <select name="nombre_documento" required
+                                class="w-full p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl text-xs font-bold focus:border-intu-blue focus:bg-white transition-all outline-none">
+                            <option value="" disabled selected>Seleccione tipo...</option>
+                            <option value="CÉDULA DE IDENTIDAD">Cédula de Identidad</option>
+                            <option value="REGISTRO FISCAL (RIF)">Registro Fiscal (RIF)</option>
+                            <option value="CARTA DE RESIDENCIA">Carta de Residencia</option>
+                            <option value="TÍTULO DE PROPIEDAD">Título de Propiedad</option>
+                            <option value="CONTRATO">Contrato</option>
+                            <option value="OTROS">Otros Soporte</option>
+                        </select>
+                    </div>
+                    
+                    <div class="relative group">
+                        <input type="file" name="archivos" id="file-input" multiple required
+                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
+                        
+                        <div id="drop-zone" class="p-10 border-2 border-dashed border-slate-200 rounded-3xl text-center group-hover:border-intu-blue/50 group-hover:bg-blue-50/30 transition-all">
+                            <i id="upload-icon" class="fas fa-file-export text-3xl text-slate-300 group-hover:text-intu-blue mb-3 transition-colors"></i>
+                            <p id="file-name" class="text-[11px] font-black text-slate-500 uppercase tracking-tight">Soltar archivos aquí</p>
+                            <p id="file-info" class="text-[9px] font-bold text-intu-blue mt-2 hidden"></p>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-intu-blue transition-all shadow-xl shadow-blue-100 active:scale-95">
+                        Vincular al Expediente
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {# --- COLUMNA LISTADO (8/12) --- #}
+        <div class="lg:col-span-8">
+            <div class="flex items-center justify-between mb-6 px-4">
+                <h3 class="text-[11px] font-black uppercase text-slate-400 tracking-widest">Documentación Registrada</h3>
+                <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full">Actualizado hoy</span>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-4">
+                {% for doc in documentos %}
+                <div class="flex items-center justify-between p-5 bg-white rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group">
+                    <div class="flex items-center gap-5">
+                        {# Icono dinámico según extensión #}
+                        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl transition-all
+                            {% if '.pdf' in doc.archivo.name|lower %} bg-red-50 text-red-500 group-hover:bg-red-500 group-hover:text-white
+                            {% elif '.jpg' in doc.archivo.name|lower or '.png' in doc.archivo.name|lower %} bg-emerald-50 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white
+                            {% else %} bg-slate-100 text-slate-400 group-hover:bg-slate-800 group-hover:text-white {% endif %}">
+                            
+                            {% if ".pdf" in doc.archivo.name|lower %}<i class="fas fa-file-pdf"></i>
+                            {% elif ".jpg" in doc.archivo.name|lower or ".png" in doc.archivo.name|lower %}<i class="fas fa-image"></i>
+                            {% else %}<i class="fas fa-file-shield"></i>{% endif %}
+                        </div>
+
+                        <div>
+                            <p class="text-[13px] font-black text-slate-800 uppercase tracking-tight">{{ doc.nombre_documento }}</p>
+                            <div class="flex items-center gap-3 mt-1">
+                                <span class="text-[10px] font-bold text-slate-400 italic">{{ doc.archivo.name|truncatechars:30 }}</span>
+                                <span class="w-1 h-1 bg-slate-200 rounded-full"></span>
+                                <span class="text-[9px] font-black text-intu-blue uppercase">{{ doc.archivo.size|filesizeformat }}</span>
+                                <span class="w-1 h-1 bg-slate-200 rounded-full"></span>
+                                <span class="text-[9px] font-bold text-slate-400">{{ doc.fecha_subida|date:"d/m/Y" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2 pr-2">
+                        <a href="{{ doc.archivo.url }}" target="_blank" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-intu-blue hover:text-white transition-all shadow-sm" title="Ver">
+                            <i class="fas fa-eye text-xs"></i>
+                        </a>
+                        <a href="{{ doc.archivo.url }}" download class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-emerald-500 hover:text-white transition-all shadow-sm" title="Descargar">
+                            <i class="fas fa-download text-xs"></i>
+                        </a>
+                        <a href="{% url 'beneficiarios:eliminar_documento' doc.id %}" onclick="return confirm('¿Seguro?')" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-intu-red hover:text-white transition-all shadow-sm" title="Eliminar">
+                            <i class="fas fa-trash-alt text-xs"></i>
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="py-24 text-center bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100">
+                    <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-folder-plus text-3xl text-slate-200"></i>
+                    </div>
+                    <p class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-300">Expediente vacío</p>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    
-    {# --- COLUMNA IZQUIERDA: CARGA --- #}
-    <div class="lg:col-span-1">
-        <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm sticky top-6">
-            <h3 class="text-[10px] font-black uppercase mb-6 text-gray-400 tracking-widest">Añadir Documentos</h3>
-            
-            <form method="POST" enctype="multipart/form-data" class="space-y-4">
-                {% csrf_token %}
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-gray-400 uppercase ml-2">Nombre descriptivo</label>
-                    <input type="text" name="nombre_documento" placeholder="Ej: Copia de RIF 2024" required
-                           class="w-full p-3 bg-gray-50 border-none rounded-xl text-xs focus:ring-2 focus:ring-intu-blue/10 outline-none">
-                </div>
-                
-                <div class="relative group">
-                    <input type="file" name="archivos" id="file-input" multiple required
-                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
-                    
-                    <div id="drop-zone" class="p-8 border-2 border-dashed border-gray-100 rounded-2xl text-center group-hover:border-intu-blue/30 transition-all bg-gray-50/30">
-                        <i id="upload-icon" class="fas fa-cloud-upload-alt text-2xl text-gray-300 group-hover:text-intu-blue mb-2 transition-colors"></i>
-                        <p id="file-name" class="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Arrastra o selecciona</p>
-                        <p id="file-info" class="text-[9px] font-black text-intu-blue mt-1 hidden uppercase"></p>
-                    </div>
-                </div>
-
-                <button type="submit" class="w-full py-4 bg-intu-blue text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-intu-dark transition shadow-lg shadow-blue-50">
-                    Subir al Expediente
-                </button>
-            </form>
-        </div>
-    </div>
-
-{# --- COLUMNA DERECHA: LISTADO --- #}
-    <div class="lg:col-span-2 space-y-4">
-        <h3 class="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-4">Documentos Archivados ({{ documentos.count }})</h3>
-        
-        <div class="grid grid-cols-1 gap-3">
-            {% for doc in documentos %}
-            <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-50 shadow-sm hover:shadow-md transition group">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center group-hover:bg-blue-50 group-hover:text-intu-blue transition-colors text-sm">
-                        {% if ".pdf" in doc.archivo.name|lower %}
-                            <i class="fas fa-file-pdf text-red-400"></i>
-                        {% elif ".jpg" in doc.archivo.name|lower or ".png" in doc.archivo.name|lower %}
-                            <i class="fas fa-file-image text-emerald-400"></i>
-                        {% else %}
-                            <i class="fas fa-file-alt"></i>
-                        {% endif %}
-                    </div>
-                    <div>
-                        <p class="text-[11px] font-bold text-gray-700 uppercase tracking-tight">{{ doc.nombre_documento }}</p>
-                        <p class="text-[9px] text-gray-400 font-medium">{{ doc.fecha_subida|date:"d M, Y" }} • {{ doc.archivo.size|filesizeformat }}</p>
-                    </div>
-                </div>
-                
-                <div class="flex gap-2">
-                    {# --- VER --- #}
-                    <a href="{{ doc.archivo.url }}" target="_blank" title="Ver documento"
-                       class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-blue-50 hover:text-intu-blue transition-all">
-                        <i class="fas fa-eye text-xs"></i>
-                    </a>
-
-                    {# --- DESCARGAR --- #}
-                    <a href="{{ doc.archivo.url }}" download="{{ doc.nombre_documento }}" title="Descargar archivo"
-                       class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-emerald-50 hover:text-emerald-500 transition-all">
-                        <i class="fas fa-download text-xs"></i>
-                    </a>
-
-                    {# --- ELIMINAR --- #}
-                    <a href="{% url 'beneficiarios:eliminar_documento' doc_id=doc.id %}" 
-                        onclick="return confirm('¿Eliminar este documento del expediente?')"
-                        title="Eliminar del sistema"
-                        class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all">
-                            <i class="fas fa-trash-alt text-xs"></i>
-                    </a>
-                </div>
-            </div>
-            {% empty %}
-            <div class="py-20 text-center bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-100">
-                <i class="fas fa-folder-open text-4xl text-gray-200 mb-4"></i>
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-300">No hay documentos cargados</p>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-{# --- SCRIPT DE FEEDBACK VISUAL --- #}
+{# SCRIPT MEJORADO #}
 <script>
     const fileInput = document.getElementById('file-input');
     const fileNameText = document.getElementById('file-name');
     const fileInfoText = document.getElementById('file-info');
     const dropZone = document.getElementById('drop-zone');
-    const uploadIcon = document.getElementById('upload-icon');
-    const submitBtn = document.querySelector('button[type="submit"]');
+    const submitBtn = document.getElementById('submit-btn');
 
     fileInput.addEventListener('change', function(e) {
-        const files = e.target.files;
-        const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-        let oversizedFiles = [];
-
-        if (files.length > 0) {
-            // Validar tamaños
-            for (let i = 0; i < files.length; i++) {
-                if (files[i].size > MAX_SIZE) {
-                    oversizedFiles.push(files[i].name);
-                }
-            }
-
-            if (oversizedFiles.length > 0) {
-                // Estado de Error
-                dropZone.classList.replace('border-gray-100', 'border-red-500');
-                dropZone.classList.add('bg-red-50');
-                uploadIcon.classList.replace('text-gray-300', 'text-red-500');
-                fileNameText.innerText = "Error: Archivo muy pesado";
-                fileInfoText.innerText = "El límite es 5MB por archivo";
-                fileInfoText.classList.remove('hidden', 'text-intu-blue');
-                fileInfoText.classList.add('text-red-600');
-                submitBtn.disabled = true;
-                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                alert("Uno o más archivos superan los 5MB permitidos.");
-            } else {
-                // Estado de Éxito (Listo para subir)
-                dropZone.className = "p-8 border-2 border-dashed border-intu-blue rounded-2xl text-center transition-all bg-blue-50/50";
-                uploadIcon.className = "fas fa-cloud-upload-alt text-2xl text-intu-blue mb-2";
-                fileNameText.innerText = files.length === 1 ? files[0].name : files.length + " Archivos seleccionados";
-                fileInfoText.innerText = "Tamaño validado correctamente";
-                fileInfoText.classList.remove('hidden', 'text-red-600');
-                fileInfoText.classList.add('text-intu-blue');
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
+        if (this.files.length > 0) {
+            const count = this.files.length;
+            dropZone.classList.add('border-intu-blue', 'bg-blue-50/50');
+            fileNameText.innerText = count === 1 ? this.files[0].name : count + " ARCHIVOS SELECCIONADOS";
+            fileNameText.classList.replace('text-slate-500', 'text-intu-blue');
+            fileInfoText.innerText = "LISTO PARA VINCULAR";
+            fileInfoText.classList.remove('hidden');
         }
     });
 </script>
-
 {% endblock %}
