@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Contrato, HistorialContrato, ConfiguracionInstitucional
+from .models import Contrato, ConfiguracionInstitucional
 
 @admin.register(ConfiguracionInstitucional)
 class ConfiguracionInstitucionalAdmin(admin.ModelAdmin):
@@ -22,6 +22,3 @@ class ContratoAdmin(admin.ModelAdmin):
         return ", ".join([b.nombre_completo for b in obj.beneficiarios.all()])
     
     get_beneficiarios.short_description = 'Beneficiarios'
-@admin.register(HistorialContrato)
-class HistorialContratoAdmin(admin.ModelAdmin):
-    list_display = ('contrato', 'accion', 'usuario', 'fecha')

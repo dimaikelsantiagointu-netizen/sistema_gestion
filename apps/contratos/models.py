@@ -139,12 +139,3 @@ class ConfiguracionInstitucional(models.Model):
     def __str__(self):
         return "Configuración Actual del Sistema"
 
-class HistorialContrato(models.Model):
-    contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='historial')
-    usuario = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True)
-    accion = models.CharField(max_length=100)
-    descripcion = models.TextField(blank=True)
-    fecha = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-fecha']

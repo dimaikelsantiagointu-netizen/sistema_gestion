@@ -8,7 +8,7 @@ from django.db.models import Count
 from django.conf import settings
 from django.core.paginator import Paginator
 # Modelos
-from .models import Contrato, HistorialContrato, ConfiguracionInstitucional
+from .models import Contrato, ConfiguracionInstitucional
 from apps.beneficiarios.models import Beneficiario
 
 # ReportLab para PDF profesional
