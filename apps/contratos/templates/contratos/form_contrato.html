@@ -150,9 +150,6 @@
             opciones.forEach(option => {
                 const texto = option.text.toLowerCase();
                 const coincide = texto.includes(termino);
-                
-                // Si coincide se muestra, si no se oculta
-                // Usamos display: none para que no ocupe espacio
                 if (coincide) {
                     option.style.display = 'block';
                 } else {

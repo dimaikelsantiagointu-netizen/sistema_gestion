@@ -7,11 +7,9 @@ from django.utils import timezone
 from django.db.models import Count
 from django.conf import settings
 from django.core.paginator import Paginator
-# Modelos
-from .models import Contrato, ConfiguracionInstitucional
+from django.db import transaction
+from .models import Contrato, ConfiguracionInstitucional, HistorialContrato
 from apps.beneficiarios.models import Beneficiario
-
-# ReportLab para PDF profesional
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -24,12 +22,10 @@ from django.db.models import Q
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 def generar_cuerpo_legal(beneficiarios, datos, config, tipo_contrato):
-    """ Genera el texto legal blindado y dinámico por tipo de contrato """
-    
     if not config: 
         return "Error: No se encontró la configuración del Gerente."
     
-    # --- 1. CONFIGURACIÓN Y DATOS (Igual a tu original) ---
+    # --- 1. CONFIGURACIÓN Y DATOS  ---
     nombre_gerente = (config.nombre_gerente or "SIN NOMBRE").upper()
     cedula_gerente = config.cedula_gerente or "S/D"
     providencia = config.providencia_nro or "S/D"
@@ -45,7 +41,7 @@ def generar_cuerpo_legal(beneficiarios, datos, config, tipo_contrato):
     este = (datos.get('este') or "S/D").upper()
     oeste = (datos.get('oeste') or "S/D").upper()
 
-    # --- 2. LÓGICA DE BENEFICIARIOS Y PLURALES (Igual a tu original) ---
+    # --- 2. LÓGICA DE BENEFICIARIOS Y PLURALES  ---
     total = beneficiarios.count() if hasattr(beneficiarios, 'count') else len(beneficiarios)
     es_plural = total > 1
     detalles_personas = []
@@ -98,13 +94,13 @@ def generar_cuerpo_legal(beneficiarios, datos, config, tipo_contrato):
         texto_precio = "El presente contrato se celebra de forma GRATUITA, en virtud del carácter social de la regularización, no generando obligación pecuniaria de compra por el tiempo establecido."
         transmision_propiedad = "Con el otorgamiento de este documento se formaliza la TENENCIA PRECARIA del terreno"
         termino_negocio = "comodato"
-    else: # VENTA (Tu texto original)
+    else:
         verbo_accion = f"doy en venta pura y simple, perfecta e irrevocable {op['art_ciudadano']}"
         texto_precio = f"El precio de esta venta es por la cantidad de una milésima de Bolívar soberano (0,001) por metro cuadrado, correspondiente a la alícuota de la parcela, por la cantidad de <b>UN BOLIVAR SOBERANO (Bs.1,0)</b>, el cual fue depositado en su totalidad al INTU bajo el Nº 139504167."
         transmision_propiedad = "Con el otorgamiento de este documento se transmite la propiedad del terreno"
         termino_negocio = "venta"
 
-    # --- 4. TEXTO FINAL (ESTRUCTURA ORIGINAL INTEGRADA) ---
+    # --- 4. TEXTO FINAL Cambiar cuando tenga los demas modelos de contratos ---
     texto_final = f"""Quien suscribe, <b>{nombre_gerente}</b>, venezolano, mayor de edad, con domicilio en Caracas, titular de la cédula de identidad Nº <b>{cedula_gerente}</b>, procediendo en mi carácter como Gerente del Distrito Capital Estadal, Designado mediante Nº Providencia Administrativa N° <b>{providencia}</b> de fecha <b>{fecha_prov}</b>, Publicada en Gaceta Oficial de la República Bolivariana de Venezuela N° <b>{gaceta}</b> para actuar en nombre del <b>INSTITUTO NACIONAL DE TIERRAS URBANAS (INTU)</b>; Ente creado y adscrito al Ministerio del Poder Popular para Hábitat y Vivienda, el cual acredita mediante documento Carta Poder, (el cual se anexa) según lo establecido en el artículo 34 del Decreto con Rango, Valor y Fuerza de Ley Especial de Regularización Integral de la Tenencia de la Tierra de los Asentamientos Urbanos o Periurbanos, Número 8.198 de fecha 05 de mayo de 2.011, publicado en Gaceta Oficial de la República Bolivariana de Venezuela Nº 39.668 de fecha 06/05/2011, inscrito en el Registro de Información Fiscal bajo el Número G-200101873, y fundamentado en los artículos 35, numerales 1 y 2; 36 numeral 19 y 65 de dicho Decreto, mediante el cual se inicia el proceso de regularización integral de la tenencia de la tierra de los asentamientos urbanos o periurbanos en tierras públicas y en concordancia con la Ley Orgánica de Procedimientos Administrativos publicada en la Gaceta Oficial Extraordinaria Nº 2.818 de fecha 01 de julio de 1981, declaro: con fines de garantizar a las familias que viven asentadas en forma espontánea y que han conformado comunidades de largo arraigo, la atención por parte del Estado para que se le reconozca la posesión de la tierra, haciéndolas acreedoras del derecho de propiedad de la tierra, por ende, el uso, goce, disfrute y disposición de la misma, cuyo objeto principal es el de mejorar y elevar su calidad de vida y garantizarles el derecho a la vivienda y a la seguridad social que consagra la Constitución de la República Bolivariana de Venezuela, por medio del presente documento el <b>INSTITUTO NACIONAL DE TIERRAS URBANAS (INTU)</b>.<br/><br/>
 
 En nombre de mi representado: {verbo_accion}: {bloque_id_completo}, una parcela de terreno, asignada con el código catastral <b>{catastro}</b>, con una superficie de: <b>{sup_letras} ({sup_num} M2)</b>, ubicada en la <b>{direccion}</b>, la cual pertenece a un lote de terreno de mayor extensión, propiedad del Instituto Nacional de la Vivienda (INAVI), según se evidencia de Documento Protocolizado por ante la Oficina Subalterna del Primer Circuito de Registro Público del Departamento Libertador del Distrito Federal (hoy Municipio Libertador del Distrito Capital), de fecha 20 de mayo de 1.986, anotado bajo el N°36, Tomo 11, Protocolo Primero, con una extensión total de SEISCIENTAS HECTARIAS (600,00 H), con los siguientes linderos generales: NORTE: Autopista Caracas-La Guaira; SUR: Alío de Guayabal, Loma La Paila, y Hoyo del Diablo; ESTE: Terrenos Propiedad de Inversiones Chellini; y OESTE: Divisoria de la Quebrada Tacagua Arriba y Lindero Parroquia Carayaca.<br/><br/>
@@ -163,10 +159,19 @@ def descargar_pdf(request, pk):
     story.append(Paragraph("LEOPOLDO PIÑA<br/>Abogado<br/>I.P.S.A. Nº 108617", style_abogado))
     story.append(Spacer(1, 0.3 * inch))
 
-    # --- 3. TÍTULO (Usando Código de Contrato) ---
+    # --- 3. TÍTULO DINÁMICO  ---
     style_titulo = ParagraphStyle(name='T', alignment=TA_CENTER, fontName='Helvetica-Bold', fontSize=12)
-    # Aquí ya tenías contrato.codigo_contrato, nos aseguramos que se mantenga así
-    story.append(Paragraph(f"CONTRATO DE ADJUDICACIÓN Y VENTA<br/>Nº {contrato.codigo_contrato}", style_titulo))
+    
+    # Mapeo de títulos según el tipo
+    titulos_map = {
+        'venta': 'CONTRATO DE ADJUDICACIÓN Y VENTA',
+        'arrendamiento': 'CONTRATO DE ARRENDAMIENTO CANONIZADO',
+        'comodato': 'CONTRATO DE COMODATO O PRÉSTAMO DE USO GRATUITO'
+    }
+    # Obtener el título o usar uno por defecto si no coincide
+    titulo_texto = titulos_map.get(contrato.tipo_contrato, "CONTRATO DE ADJUDICACIÓN")
+    
+    story.append(Paragraph(f"{titulo_texto}<br/>Nº {contrato.codigo_contrato}", style_titulo))
     story.append(Spacer(1, 0.3 * inch))
     
     # --- 4. CUERPO DEL CONTRATO ---
@@ -176,7 +181,7 @@ def descargar_pdf(request, pk):
         if p.strip():
             story.append(Paragraph(p, styles['LegalArial']))
 
-    # --- 5. FIRMAS ---
+    # --- 5. FIRMAS Posible cambio aca a futuro---
     story.append(Spacer(1, 0.8 * inch))
     style_f = ParagraphStyle(name='F', fontName='Helvetica-Bold', fontSize=10, alignment=TA_CENTER, leading=11)
     
@@ -196,7 +201,6 @@ def descargar_pdf(request, pk):
     doc.build(story)
     buffer.seek(0)
     
-    # --- CAMBIO FINAL: Nombre del archivo PDF con el Código de Contrato ---
     nombre_pdf = f"Contrato_{contrato.codigo_contrato}.pdf"
     return FileResponse(buffer, as_attachment=True, filename=nombre_pdf)
 
@@ -207,20 +211,19 @@ def detalle_contrato(request, pk):
     if request.method == 'POST':
         # CASO 1: Actualizar Ficha Técnica
         if 'actualizar_expediente' in request.POST:
-            # 1. Código Catastral (Correcto)
+            # 1. Código Catastral 
             contrato.codigo_catastral = request.POST.get('codigo_catastral')
             
-            # 2. Superficie Numérica (Correcto)
+            # 2. Superficie Numérica 
             sup_num = request.POST.get('superficie_num')
             contrato.superficie_num = float(sup_num) if sup_num else 0.0
             
-            # 3. Superficie Letras (Correcto)
+            # 3. Superficie Letras 
             contrato.superficie_letras = request.POST.get('superficie_letras')
             
-            # ERROR CORREGIDO AQUÍ: Tu HTML usa 'direccion_inmueble', no 'direccion_plano'
             contrato.direccion_inmueble = request.POST.get('direccion_inmueble')
             
-            # 4. Linderos (Correctos)
+            # 4. Linderos 
             contrato.lindero_norte = request.POST.get('lindero_norte')
             contrato.lindero_sur = request.POST.get('lindero_sur')
             contrato.lindero_este = request.POST.get('lindero_este')
@@ -230,14 +233,14 @@ def detalle_contrato(request, pk):
             messages.success(request, "Los datos del expediente han sido actualizados.")
             return redirect('contratos:detalle', pk=pk)
 
-        # CASO 2: Validar Contrato (Correcto)
+        # CASO 2: Validar Contrato 
         elif 'aprobar' in request.POST:
             contrato.estado = 'aprobado'
             contrato.save()
             messages.success(request, "Contrato validado correctamente.")
             return redirect('contratos:detalle', pk=pk)
 
-        # CASO 3: Observación Técnica (Correcto)
+        # CASO 3: Observación Técnica 
         elif 'guardar_observacion' in request.POST:
             contrato.observaciones = request.POST.get('observaciones')
             contrato.save()
@@ -249,19 +252,18 @@ def detalle_contrato(request, pk):
 @login_required
 def crear_contrato(request):
     if request.method == 'POST':
-        # 1. Recuperar IDs y validar que existan
+        # 1. Recuperar IDs y validar
         ids = request.POST.getlist('beneficiario')
         if not ids:
             messages.error(request, "Debe seleccionar al menos un beneficiario.")
-            return redirect('contratos:nuevo') # O la URL de tu formulario
+            return redirect('contratos:nuevo')
 
         beneficiarios = Beneficiario.objects.filter(id__in=ids)
         config = ConfiguracionInstitucional.objects.first()
         tipo_seleccionado = request.POST.get('tipo_contrato')
 
-        # 2. Limpieza de datos técnicos (Evitar errores de tipo de dato)
+        # 2. Limpieza de datos técnicos
         try:
-            # Reemplazamos coma por punto por si el usuario escribe "150,50"
             sup_num_raw = request.POST.get('superficie_num', '0').replace(',', '.')
             superficie_final = float(sup_num_raw) if sup_num_raw else 0.0
         except ValueError:
@@ -281,32 +283,47 @@ def crear_contrato(request):
         # 3. Generación del texto legal
         cuerpo = generar_cuerpo_legal(beneficiarios, datos, config, tipo_seleccionado)
 
-        # 4. Transacción Segura de Guardado
+        # 4. Guardado Seguro con Transacción
         try:
-            # Creamos el objeto principal
-            nuevo = Contrato.objects.create(
-                cuerpo_contrato=cuerpo, 
-                codigo_catastral=datos['catastro'], 
-                tipo_contrato=tipo_seleccionado,
-                superficie_num=datos['sup_num'],
-                # Asegúrate de guardar también los linderos si tu modelo los tiene:
-                lindero_norte=datos['norte'],
-                lindero_sur=datos['sur'],
-                lindero_este=datos['este'],
-                lindero_oeste=datos['oeste'],
-                direccion_inmueble=datos['direccion'],
-                creado_por=request.user,
-                estado='espera' # Estado inicial por defecto
-            )
-            
-            # 5. Guardar relación Muchos-a-Muchos
-            nuevo.beneficiarios.set(beneficiarios)
-            
-            messages.success(request, f"Contrato {nuevo.id} generado y guardado correctamente.")
+            with transaction.atomic():
+                # Creamos el objeto principal
+                nuevo = Contrato.objects.create(
+                    cuerpo_contrato=cuerpo, 
+                    codigo_catastral=datos['catastro'], 
+                    tipo_contrato=tipo_seleccionado,
+                    superficie_num=datos['sup_num'],
+                    lindero_norte=datos['norte'],
+                    lindero_sur=datos['sur'],
+                    lindero_este=datos['este'],
+                    lindero_oeste=datos['oeste'],
+                    direccion_inmueble=datos['direccion'],
+                    creado_por=request.user,
+                    estado='espera'
+                )
+                
+                # Guardar relación Muchos-a-Muchos
+                nuevo.beneficiarios.set(beneficiarios)
+
+                # --- REGISTRO EN EL HISTORIAL ---
+                HistorialContrato.objects.create(
+                    contrato=nuevo,
+                    estado='espera',
+                    usuario=request.user,
+                    accion="Creación de Registro",
+                    observacion_tecnica="Generación inicial del contrato desde el formulario legal.",
+                    datos_cambiados={
+                        "Tipo": tipo_seleccionado,
+                        "Catastro": datos['catastro'],
+                        "Superficie": f"{superficie_final} m2",
+                        "Ubicación": datos['direccion'][:50] + "..." if datos['direccion'] else "N/A"
+                    }
+                )
+
+            messages.success(request, f"Contrato {nuevo.id} generado y registrado en el historial.")
             return redirect('contratos:lista')
 
         except Exception as e:
-            messages.error(request, f"Error crítico al guardar en BD: {str(e)}")
+            messages.error(request, f"Error crítico al procesar el contrato: {str(e)}")
             return redirect('contratos:lista')
 
     # GET: Carga inicial del formulario
@@ -321,7 +338,7 @@ def lista_contratos(request):
     # 1. Capturar parámetros de búsqueda (Añadimos 'tipo')
     q = request.GET.get('q', '')
     estado = request.GET.get('estado', '')
-    tipo = request.GET.get('tipo', '') # <-- Nuevo parámetro
+    tipo = request.GET.get('tipo', '') 
 
     # Consulta base
     contratos_queryset = Contrato.objects.all().order_by('-fecha_creacion')
@@ -337,7 +354,7 @@ def lista_contratos(request):
     if estado:
         contratos_queryset = contratos_queryset.filter(estado=estado)
     
-    if tipo: # <-- Aplicar filtro de Tipo de Contrato
+    if tipo: 
         contratos_queryset = contratos_queryset.filter(tipo_contrato=tipo)
 
     # Paginación (10 por página)
@@ -353,7 +370,7 @@ def lista_contratos(request):
     espera = Contrato.objects.filter(estado='espera').count()
     aprobados = Contrato.objects.filter(estado='aprobado').count()
 
-    # 3. Contexto (Añadimos 'tipo_filtro')
+    # 3. Contexto
     context = {
         'contratos': contratos_paginados,
         'beneficiarios': beneficiarios_listado,
@@ -362,7 +379,7 @@ def lista_contratos(request):
         'aprobados': aprobados,
         'busqueda': q,
         'estado_filtro': estado,
-        'tipo_filtro': tipo, # <-- Importante para que el <select> mantenga la opción elegida
+        'tipo_filtro': tipo, 
     }
     
     return render(request, 'contratos/lista_contratos.html', context)
@@ -375,10 +392,9 @@ def estadisticas_contratos(request):
     for s in stats:
         s['porcentaje'] = round((s['total'] / total) * 100) if total > 0 else 0
 
-    # 2. Estadísticas por Tipo de Contrato (CORREGIDO A 'tipo_contrato')
+    # 2. Estadísticas por Tipo de Contrato
     conteo_tipos = Contrato.objects.values('tipo_contrato').annotate(total=Count('tipo_contrato')).order_by('-total')
     
-    # Usamos 'tipo_contrato' en el list comprehension también
     tipos_labels = [item['tipo_contrato'] for item in conteo_tipos]
     tipos_data = [item['total'] for item in conteo_tipos]
 
@@ -399,7 +415,7 @@ def exportar_excel(request):
     ws_stats = wb.active
     ws_stats.title = "Resumen Ejecutivo"
     
-    # Estilos Profesionales
+    # Estilos 
     header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
     white_font = Font(color="FFFFFF", bold=True, size=11)
     title_font = Font(bold=True, size=14, color="2563EB")
@@ -414,7 +430,7 @@ def exportar_excel(request):
     stats_tipo = Contrato.objects.values('tipo_contrato').annotate(total=Count('id'))
 
     # SECCIÓN A: RESUMEN POR ESTADO
-    ws_stats.append([]) # Espacio
+    ws_stats.append([]) 
     ws_stats.append(["RESUMEN POR ESTADO", "CANTIDAD", "PORCENTAJE"])
     start_row_estado = ws_stats.max_row
     for cell in ws_stats[start_row_estado]:
@@ -427,7 +443,7 @@ def exportar_excel(request):
         ws_stats.append([estado_label, s['total'], f"{porcentaje:.1f}%"])
 
     # SECCIÓN B: RESUMEN POR TIPO DE CONTRATO
-    ws_stats.append([]) # Espacio
+    ws_stats.append([])
     ws_stats.append(["RESUMEN POR TIPO DE CONTRATO", "CANTIDAD", "DISTRIBUCIÓN"])
     start_row_tipo = ws_stats.max_row
     for cell in ws_stats[start_row_tipo]:
@@ -442,7 +458,6 @@ def exportar_excel(request):
     # --- 2. HOJA DE DATOS DETALLADOS ---
     ws_data = wb.create_sheet(title="Listado de Contratos")
     
-    # Quitamos ID SISTEMA y ajustamos encabezados
     headers = [
         'ESTADO', 
         'FECHA REGISTRO', 
@@ -462,7 +477,6 @@ def exportar_excel(request):
 
     for c in contratos:
         nombres = ", ".join([b.nombre_completo for b in c.beneficiarios.all()])
-        # Mantenemos el formato de Cédula/RIF
         docs = ", ".join([f"{b.tipo_documento}-{b.documento_identidad}" for b in c.beneficiarios.all()])
         fecha = c.fecha_creacion.replace(tzinfo=None) if c.fecha_creacion else ""
 
@@ -502,24 +516,42 @@ def importar_contrato_existente(request):
 
         if archivo and beneficiario_ids and tipo_contrato:
             try:
-                doc = Document(archivo)
-                texto_original = "\n".join([para.text for para in doc.paragraphs])
+                with transaction.atomic():
+                    doc = Document(archivo)
+                    texto_original = "\n".join([para.text for para in doc.paragraphs])
 
-                nuevo_contrato = Contrato.objects.create(
-                    tipo_contrato=tipo_contrato,
-                    cuerpo_contrato=texto_original,
-                    archivo_escaneado=archivo,
-                    estado='aprobado',
-                    creado_por=request.user,
-                    observaciones=f"Importado de: {archivo.name}",
-                    codigo_catastral="POR DEFINIR",
-                    superficie_num=0.0
-                )
+                    # 1. Crear el contrato
+                    nuevo_contrato = Contrato.objects.create(
+                        tipo_contrato=tipo_contrato,
+                        cuerpo_contrato=texto_original,
+                        archivo_escaneado=archivo,
+                        estado='aprobado', 
+                        creado_por=request.user,
+                        observaciones=f"Importado de: {archivo.name}",
+                        codigo_catastral="POR DEFINIR",
+                        superficie_num=0.0
+                    )
 
-                beneficiarios = Beneficiario.objects.filter(id__in=beneficiario_ids)
-                nuevo_contrato.beneficiarios.set(beneficiarios)
-                
-                messages.success(request, f"Contrato de {tipo_contrato.upper()} importado correctamente.")
+                    # 2. Asignar beneficiarios
+                    beneficiarios = Beneficiario.objects.filter(id__in=beneficiario_ids)
+                    nuevo_contrato.beneficiarios.set(beneficiarios)
+                    
+                    # 3. CREAR REGISTRO DE HISTORIAL
+                    HistorialContrato.objects.create(
+                        contrato=nuevo_contrato,
+                        estado='aprobado',
+                        usuario=request.user, 
+                        accion="Importación de Archivo",
+                        observacion_tecnica=f"Se cargó un documento externo (.docx) titulado: {archivo.name}",
+                        datos_cambiados={
+                            "Origen": "Carga Manual de Word",
+                            "Tipo de Contrato": tipo_contrato.upper(),
+                            "Estado Asignado": "Aprobado",
+                            "Archivo": archivo.name
+                        }
+                    )
+
+                messages.success(request, f"Contrato de {tipo_contrato.upper()} importado y registrado en el historial.")
                 return redirect('contratos:lista')
 
             except Exception as e:
@@ -527,8 +559,18 @@ def importar_contrato_existente(request):
                 return redirect('contratos:lista')
     
     # CASO 2: El usuario solo hizo clic en el botón (GET)
-    # Aquí es donde mostramos la página de carga por primera vez
     beneficiarios = Beneficiario.objects.all().order_by('nombre_completo')
     return render(request, 'contratos/importar_existente.html', {
         'beneficiarios': beneficiarios,
+    })
+    
+
+def historial_contrato_view(request, pk):
+    contrato = get_object_or_404(Contrato, pk=pk)
+    
+    historial = contrato.historial_registros.select_related('usuario').all() 
+    
+    return render(request, 'contratos/historial_detalle.html', {
+        'contrato': contrato,
+        'historial': historial
     })
