@@ -12,3 +12,4 @@ reportlab
 xlsxwriter
 fontawesome
 unidecode
+python-docx

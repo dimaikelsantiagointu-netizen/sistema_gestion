@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-2xl mx-auto mt-10 mb-20 px-4">
+    <div class="flex items-center gap-2 mb-6 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+        <a href="{% url 'contratos:lista' %}" class="hover:text-blue-600 transition-colors">Contratos</a>
+        <i class="fas fa-chevron-right text-[8px]"></i>
+        <span class="text-slate-900">Importación Directa</span>
+    </div>
+
+    <div class="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl border border-slate-100 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full opacity-50 -mr-10 -mt-10"></div>
+        
+        <div class="relative">
+            <div class="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-200">
+                <i class="fas fa-file-import text-2xl"></i>
+            </div>
+            
+            <h2 class="text-3xl font-black text-slate-900 uppercase tracking-tighter mb-2">Importar Contrato</h2>
+            <p class="text-slate-400 text-sm mb-10 font-medium">Carga un documento Word existente para integrarlo al sistema.</p>
+
+            <form method="POST" enctype="multipart/form-data" class="space-y-8">
+                {% csrf_token %}
+
+                <div class="group">
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Documento Word (.docx)</label>
+                    <div class="relative">
+                        <input type="file" name="archivo_legal" accept=".docx" required 
+                            class="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl text-sm font-bold transition-all group-hover:border-blue-400 focus:outline-none
+                            file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:bg-blue-900 file:text-white hover:file:bg-blue-800 file:uppercase">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Tipo de Negocio Jurídico</label>
+                    <select name="tipo_contrato" required 
+                        class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-600 appearance-none">
+                        <option value="" disabled selected>Selecciona el tipo...</option>
+                        <option value="arrendamiento">ARRENDAMIENTO</option>
+                        <option value="venta">VENTA</option>
+                        <option value="comodato">COMODATO (INSTITUCIONAL)</option>
+                        <option value="alianza">ALIANZA COMERCIAL</option>
+                        <option value="titulo_tierra">TÍTULO DE TIERRA URBANA</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Beneficiario(s) a Vincular</label>
+                    
+                    <div class="relative mb-3">
+                        <input type="text" id="buscador-importar" placeholder="Filtrar por nombre o identificación..." 
+                               class="w-full p-3 pl-10 bg-white border-2 border-blue-50 rounded-xl text-xs font-bold focus:border-blue-200 outline-none transition-all shadow-sm">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                    </div>
+
+                    <div class="relative">
+                        <select name="beneficiario_ids" id="select-importar" required multiple 
+                            class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm font-bold h-48 focus:ring-2 focus:ring-blue-600 scrollbar-thin scrollbar-thumb-blue-200">
+                            {% for b in beneficiarios %}
+                                <option value="{{ b.id }}" class="py-2 px-2 rounded-lg hover:bg-blue-100 italic">
+                                    {{ b.nombre_completo }} ({{ b.tipo_documento }}-{{ b.documento_identidad }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 mt-3 px-2">
+                        <span class="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                            Manten presionado <kbd class="bg-slate-200 px-1 rounded">Ctrl</kbd> para selección múltiple
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row gap-4 pt-6">
+                    <a href="{% url 'contratos:lista' %}" 
+                        class="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-center text-[11px] hover:bg-slate-200 transition-all order-2 md:order-1">
+                        Cancelar Operación
+                    </a>
+                    <button type="submit" 
+                        class="flex-1 py-4 bg-blue-900 text-white rounded-2xl font-black uppercase text-[11px] shadow-xl shadow-blue-900/20 hover:bg-blue-800 hover:-translate-y-1 transition-all order-1 md:order-2">
+                        <i class="fas fa-check-circle mr-2"></i> Procesar e Importar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const buscador = document.getElementById('buscador-importar');
+        const select = document.getElementById('select-importar');
+        const opcionesOriginales = Array.from(select.options);
+
+        buscador.addEventListener('input', function(e) {
+            const termino = e.target.value.toLowerCase();
+            
+            opcionesOriginales.forEach(option => {
+                const texto = option.text.toLowerCase();
+                const coincide = texto.includes(termino);
+                
+                // Muestra u oculta manteniendo la lógica anterior que te funcionó
+                if (coincide) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

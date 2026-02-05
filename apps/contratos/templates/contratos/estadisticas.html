@@ -1,95 +1,95 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 pb-20">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+<div class="max-w-7xl mx-auto px-6 pb-24 mt-8">
+    
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
         <div class="flex items-center gap-5">
-            <a href="{% url 'contratos:lista' %}" class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 hover:text-blue-900 shadow-sm border border-slate-100 transition-all group">
-                <i class="fas fa-chevron-left text-xs group-hover:-translate-x-1 transition-transform"></i>
+            <a href="{% url 'contratos:lista' %}" class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 hover:text-blue-900 shadow-sm transition-all group">
+                <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
             </a>
+            
             <div>
-                <span class="text-[10px] font-black text-blue-900 uppercase tracking-[0.3em]">Inteligencia de Datos</span>
-                <h1 class="text-3xl font-black text-slate-900 uppercase tracking-tighter">Estadísticas de Gestión</h1>
+                <h1 class="text-4xl font-black text-slate-900 tracking-tighter leading-none">ESTADÍSTICAS DE<span class="text-blue-600"> CONTRATOS</span></h1>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.4em] mt-2">Panel de Control y Rendimiento Jurídico</p>
             </div>
         </div>
-        
-        <a href="{% url 'contratos:exportar_excel' %}" class="flex items-center gap-3 px-8 py-4 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-xl shadow-emerald-100 transform hover:-translate-y-1">
-            <i class="fas fa-cloud-download-alt text-lg"></i> Exportar Data Maestra
-        </a>
+
+        <div class="flex gap-3">
+            <a href="{% url 'contratos:exportar_excel' %}" class="group flex items-center gap-3 px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all duration-300 shadow-2xl shadow-slate-200">
+                <i class="fas fa-file-export group-hover:rotate-12 transition-transform"></i> Descargar Reporte Completo
+            </a>
+        </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        <div class="lg:col-span-4">
-            <div class="bg-white p-10 rounded-[3rem] shadow-xl shadow-slate-200/50 border border-slate-100 h-full flex flex-col items-center justify-between">
-                <div class="text-center">
-                    <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Composición de Estados</h2>
-                    <div class="relative inline-block group">
-                        <div class="w-64 h-64">
-                            <canvas id="chartEstados"></canvas>
-                        </div>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span class="text-4xl font-black text-slate-900">{{ total_general }}</span>
-                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</span>
-                        </div>
-                    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-4 space-y-6">
+            <div class="bg-gradient-to-br from-blue-700 to-blue-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                    <i class="fas fa-folder-open text-9xl"></i>
                 </div>
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Contratos Globales</p>
+                <h3 class="text-6xl font-black my-2">{{ total_general }}</h3>
+                <div class="inline-flex items-center px-3 py-1 bg-white/10 rounded-full text-[9px] font-bold backdrop-blur-md">
+                    <span class="w-2 h-2 bg-emerald-400 rounded-full mr-2 animate-pulse"></span> Sistema Sincronizado
+                </div>
+            </div>
 
-                <div class="w-full mt-10 p-6 bg-slate-50 rounded-[2rem] border border-slate-100/50">
-                    <p class="text-[10px] text-center font-black text-slate-500 uppercase leading-relaxed">
-                        Análisis basado en el volumen total de contratos registrados bajo el nuevo control correlativo.
-                    </p>
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
+                <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 text-center">Estado de Documentación</h2>
+                <div class="relative h-64">
+                    <canvas id="chartEstados"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="lg:col-span-8">
-            <div class="bg-white p-10 rounded-[3rem] shadow-xl shadow-slate-200/50 border border-slate-100 h-full">
-                <div class="flex items-center justify-between mb-10 pb-6 border-b border-slate-50">
-                    <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest">Distribución por Estatus</h2>
-                    <i class="fas fa-chart-line text-slate-200 text-xl"></i>
+        <div class="lg:col-span-8 space-y-6">
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
+                <div class="flex justify-between items-center mb-8 px-2">
+                    <h2 class="text-sm font-black text-slate-800 uppercase tracking-tighter">Volumen por Tipo de Contrato</h2>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Distribución Real</span>
+                        <i class="fas fa-chart-bar text-blue-600/20 text-xl"></i>
+                    </div>
                 </div>
-                
-                <div class="grid grid-cols-1 gap-10">
-                    {% for s in stats %}
-                    <div class="group">
-                        <div class="flex justify-between items-end mb-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xs shadow-sm
-                                    {% if s.estado == 'aprobado' %} bg-emerald-50 text-emerald-600 
-                                    {% elif s.estado == 'espera' or s.estado == 'borrador' %} bg-orange-50 text-orange-600 
-                                    {% else %} bg-slate-100 text-slate-400 {% endif %}">
-                                    <i class="fas {% if s.estado == 'aprobado' %}fa-check-double{% else %}fa-clock{% endif %}"></i>
-                                </div>
-                                <div>
-                                    <p class="text-[11px] font-black text-slate-900 uppercase tracking-wider">
-                                        {% if s.estado == 'borrador' or s.estado == 'espera' %} EN ESPERA 
-                                        {% elif s.estado == 'aprobado' %} VALIDADO 
-                                        {% else %} {{ s.estado }} {% endif %}
-                                    </p>
-                                    <p class="text-[10px] text-slate-400 font-bold uppercase">Rendimiento Actual</p>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-lg font-black text-slate-900">{{ s.total }}</span>
-                                <span class="text-[10px] text-slate-400 font-black ml-1">({{ s.porcentaje }}%)</span>
-                            </div>
-                        </div>
+                <div class="h-64">
+                    <canvas id="chartTipos"></canvas>
+                </div>
+            </div>
 
-                        <div class="w-full h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-0.5">
-                            <div class="h-full rounded-full transition-all duration-1000 ease-out shadow-sm
-                                {% if s.estado == 'aprobado' %} bg-emerald-500 
-                                {% elif s.estado == 'espera' or s.estado == 'borrador' %} bg-orange-500 
-                                {% else %} bg-slate-400 {% endif %}" 
-                                style="width: {{ s.porcentaje }}%">
+            <div class="bg-slate-900 p-10 rounded-[3rem] shadow-2xl text-white">
+                <div class="flex items-center gap-4 mb-10">
+                    <div class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
+                        <i class="fas fa-tasks text-white"></i>
+                    </div>
+                    <h2 class="text-sm font-black uppercase tracking-widest">Indicadores de Eficiencia</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                    {% for s in stats %}
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest">
+                                    {% if s.estado == 'borrador' or s.estado == 'espera' %} EN REVISIÓN 
+                                    {% elif s.estado == 'aprobado' %} COMPLETADOS 
+                                    {% else %} {{ s.estado|upper }} {% endif %}
+                                </p>
+                                <p class="text-2xl font-black leading-none mt-1">{{ s.total }}</p>
+                            </div>
+                            <span class="text-[11px] font-black opacity-40">{{ s.porcentaje|default:"0" }}%</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full transition-all duration-1000 ease-out 
+                                {% if s.estado == 'aprobado' %} bg-emerald-400 
+                                {% elif s.estado == 'espera' or s.estado == 'borrador' %} bg-blue-500 
+                                {% else %} bg-slate-500 {% endif %}" 
+                                style="width: {{ s.porcentaje|default:0 }}%">
                             </div>
                         </div>
                     </div>
                     {% empty %}
-                    <div class="text-center py-20 bg-slate-50 rounded-[2.5rem] border border-dashed border-slate-200">
-                        <i class="fas fa-database text-4xl text-slate-200 mb-4"></i>
-                        <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Sin datos para procesar</p>
-                    </div>
+                    <p class="text-slate-500 text-xs italic">No hay datos de estados disponibles.</p>
                     {% endfor %}
                 </div>
             </div>
@@ -99,42 +99,70 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('chartEstados').getContext('2d');
-    
-    const chart = new Chart(ctx, {
+    Chart.defaults.font.family = 'Inter, sans-serif';
+    Chart.defaults.color = '#94a3b8';
+
+    const ctxDonut = document.getElementById('chartEstados').getContext('2d');
+    new Chart(ctxDonut, {
         type: 'doughnut',
         data: {
-            labels: [
-                {% for s in stats %}
-                    '{% if s.estado == "borrador" or s.estado == "espera" %}EN ESPERA{% else %}{{ s.estado|upper }}{% endif %}',
-                {% endfor %}
-            ],
+            labels: [{% for s in stats %}'{{ s.estado|upper }}',{% endfor %}],
             datasets: [{
                 data: [{% for s in stats %}{{ s.total }},{% endfor %}],
-                backgroundColor: [
-                    '#10b981', // Emerald (Validado)
-                    '#f97316', // Orange (En Espera)
-                    '#1e3a8a', // Blue (Otros)
-                    '#94a3b8'  // Slate (Resto)
-                ],
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#64748b'],
+                borderWidth: 0,
                 hoverOffset: 20,
-                borderWidth: 8,
-                borderColor: '#ffffff',
                 borderRadius: 10
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '80%',
+            cutout: '82%',
             plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { boxWidth: 8, usePointStyle: true, font: { size: 9, weight: 'bold' } }
+                }
+            }
+        }
+    });
+
+    const ctxBar = document.getElementById('chartTipos').getContext('2d');
+    new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+            labels: {{ tipos_labels|safe|default:"[]" }}, 
+            datasets: [{
+                label: 'Cantidad',
+                data: {{ tipos_data|safe|default:"[]" }},
+                backgroundColor: '#3b82f6',
+                hoverBackgroundColor: '#2563eb',
+                borderRadius: 12,
+                barThickness: 35
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { 
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: '#1e293b',
-                    titleFont: { size: 12, weight: 'bold' },
+                    backgroundColor: '#0f172a',
                     padding: 12,
-                    cornerRadius: 10,
-                    displayColors: false
+                    titleFont: { size: 10 },
+                    bodyFont: { size: 13, weight: 'bold' }
+                }
+            },
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: '#f1f5f9', drawBorder: false },
+                    ticks: { stepSize: 1, font: { size: 10 } }
+                },
+                x: { 
+                    grid: { display: false },
+                    ticks: { font: { size: 10, weight: '600' } }
                 }
             }
         }
