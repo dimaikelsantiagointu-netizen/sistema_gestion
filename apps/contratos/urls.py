@@ -1,4 +1,3 @@
-# apps/contratos/urls.py
 from django.urls import path
 from . import views
 
@@ -9,13 +8,12 @@ urlpatterns = [
     path('crear/', views.crear_contrato, name='crear'),
     path('detalle/<int:pk>/', views.detalle_contrato, name='detalle'),
     
-    # Ajustado para coincidir con el nombre en views.py
-    path('descargar/<int:pk>/', views.descargar_pdf, name='descargar_pdf'),
+    path('historial/<int:pk>/', views.historial_contrato_view, name='historial'),
     
-    # Ajustado para coincidir con el nombre en views.py
+    path('descargar/<int:pk>/', views.descargar_pdf, name='descargar_pdf'),
     path('reporte/excel/', views.exportar_excel, name='exportar_excel'),
     
-    # Si no tienes la función de estadísticas aún, puedes comentarla 
-    # para que no te de error al arrancar:
     path('estadisticas/', views.estadisticas_contratos, name='estadisticas'),
+    
+    path('importar/', views.importar_contrato_existente, name='importar_existente'),
 ]

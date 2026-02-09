@@ -1,52 +1,54 @@
 from django.db import models
-from apps.beneficiarios.models import Beneficiario
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 Usuario = get_user_model()
 
-from django.db import models
-from datetime import datetime
-
 class Contrato(models.Model):
+    # --- Opciones del Sistema ---
     ESTADOS = [
         ('espera', 'En espera'),
-        ('revision', 'En Revisión'),
-        ('aprobado', 'Aprobado'),
-        ('firmado', 'Firmado'),
-        ('anulado', 'Anulado'),
+        ('aprobado', 'Validado'),
     ]
 
-    PRIORIDAD = [
-        ('baja', 'Baja'),
-        ('media', 'Media'),
-        ('alta', 'Alta'),
-        ('urgente', 'Urgente'),
+    TIPOS_CONTRATO = [
+        ('arrendamiento', 'Arrendamiento'),
+        ('venta', 'Venta'),
+        ('comodato', 'Comodato (Institucional)'),
+        ('alianza', 'Alianza Comercial'),
+        ('titulo_tierra', 'Título de Tierra Urbana'),
     ]
-
-    # --- Beneficiarios (Muchos a Muchos) ---
+    
+    archivo_adjunto = models.FileField(upload_to='contratos/adjuntos/', null=True, blank=True)
+    
+    # --- Beneficiarios ---
     beneficiarios = models.ManyToManyField(
         'beneficiarios.Beneficiario', 
         related_name='contratos',
         verbose_name="Beneficiarios"
     )
     
-    # --- Identificación (Código automático CT-AÑO-CORRELATIVO) ---
+    # --- Identificación ---
     codigo_contrato = models.CharField(
         max_length=50, 
         unique=True, 
         verbose_name="Nro. Contrato",
         blank=True
     )
-    tipo_contrato = models.CharField(max_length=100, default="VENTA PURA Y SIMPLE")
-    prioridad = models.CharField(max_length=10, choices=PRIORIDAD, default='media')
     
-    # Datos Técnicos
+    tipo_contrato = models.CharField(
+        max_length=50, 
+        choices=TIPOS_CONTRATO, 
+        default='arrendamiento',
+        verbose_name="Tipo de Instrumento Legal"
+    )
+    
+    # --- Datos Técnicos ---
     codigo_catastral = models.CharField(max_length=100, verbose_name="Código Catastral", null=True, blank=True)
-    superficie_num = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Superficie (m2)", null=True)
-    superficie_letras = models.CharField(max_length=255, verbose_name="Superficie en Letras", null=True)
-    direccion_inmueble = models.TextField(verbose_name="Dirección según Plano", null=True)
+    superficie_num = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Superficie (m2)", null=True, blank=True)
+    superficie_letras = models.CharField(max_length=255, verbose_name="Superficie en Letras", null=True, blank=True)
+    direccion_inmueble = models.TextField(verbose_name="Dirección según Plano", null=True, blank=True)
     
     # Linderos específicos
     lindero_norte = models.CharField(max_length=255, null=True, blank=True)
@@ -62,11 +64,14 @@ class Contrato(models.Model):
         verbose_name="Contrato Digitalizado (PDF/Imagen)"
     )
     
-    # Trazabilidad
+    # --- Trazabilidad ---
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     fecha_aprobacion = models.DateTimeField(null=True, blank=True)
-    estado = models.CharField(max_length=20, choices=ESTADOS, default='borrador')
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='espera')
+    
+    # Observaciones 
+    observaciones = models.TextField(verbose_name="Observaciones de Estado", blank=True, null=True)
     
     # Texto Legal
     cuerpo_contrato = models.TextField(help_text="Contenido principal generado automáticamente", blank=True)
@@ -91,38 +96,66 @@ class Contrato(models.Model):
         verbose_name = "Contrato"
         verbose_name_plural = "Contratos"
 
-    # --- LÓGICA DE AUTO-GENERACIÓN DE CÓDIGO MEJORADA ---
     def save(self, *args, **kwargs):
+        es_nuevo = self.pk is None
+        
         if not self.codigo_contrato:
-            # 1. Obtiene el año actual desde el servidor para evitar desfases
             anio = timezone.now().year
             prefijo = f"CT-{anio}"
-            
-            # 2. Busca el último contrato que empiece con el prefijo del año actual
-            # Usamos __startswith para mayor precisión en la consulta
             ultimo = Contrato.objects.filter(
                 codigo_contrato__startswith=prefijo
             ).order_by('-codigo_contrato').first()
             
             if ultimo:
                 try:
-                    # Extrae el número después del último guion
                     partes = ultimo.codigo_contrato.split('-')
                     ultimo_numero = int(partes[-1])
                     nuevo_numero = ultimo_numero + 1
                 except (ValueError, IndexError):
                     nuevo_numero = 1
             else:
-                # Primer contrato del año
                 nuevo_numero = 1
             
-            # 3. Formato final: CT-2026-001 (3 dígitos para el correlativo)
             self.codigo_contrato = f"{prefijo}-{nuevo_numero:04d}"
             
         super().save(*args, **kwargs)
 
+        HistorialContrato.objects.create(
+            contrato=self,
+            estado=self.estado,
+            observacion_tecnica=self.observaciones,
+            usuario=self.creado_por if es_nuevo else self.aprobado_por
+        )
+
     def __str__(self):
-        return f"{self.codigo_contrato}"
+        return f"{self.codigo_contrato} - {self.get_tipo_contrato_display()}"
+
+
+class HistorialContrato(models.Model):
+    contrato = models.ForeignKey(
+        'Contrato',
+        on_delete=models.CASCADE, 
+        related_name='historial_registros'
+    )
+    estado = models.CharField(max_length=20)
+    accion = models.CharField(max_length=100, help_text="Ej: Modificación de monto, Cambio de fecha", null=True, blank=True)
+    datos_cambiados = models.JSONField(null=True, blank=True, help_text="Diccionario con los cambios realizados")
+    observacion_tecnica = models.TextField(blank=True, null=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True
+    )
+
+    class Meta:
+        ordering = ['-fecha_registro']
+        verbose_name = "Historial de Contrato"
+        verbose_name_plural = "Historiales de Contratos"
+
+    def __str__(self):
+        return f"Historial {self.contrato.codigo_contrato} - {self.estado} ({self.fecha_registro.strftime('%d/%m/%Y')})"
+
 
 class ConfiguracionInstitucional(models.Model):
     nombre_gerente = models.CharField(max_length=200, default="ROSMEL DANIEL FLORES ÑAÑEZ")
@@ -138,13 +171,3 @@ class ConfiguracionInstitucional(models.Model):
 
     def __str__(self):
         return "Configuración Actual del Sistema"
-
-class HistorialContrato(models.Model):
-    contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='historial')
-    usuario = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True)
-    accion = models.CharField(max_length=100)
-    descripcion = models.TextField(blank=True)
-    fecha = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-fecha']
