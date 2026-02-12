@@ -7,19 +7,10 @@
 {% block content %}
 <style>
     /* Estilización de la barra de scroll para los Logs */
-    #log-display::-webkit-scrollbar {
-        width: 5px;
-    }
-    #log-display::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    #log-display::-webkit-scrollbar-thumb {
-        background: #e2e8f0;
-        border-radius: 10px;
-    }
-    #log-display::-webkit-scrollbar-thumb:hover {
-        background: #cbd5e1;
-    }
+    #log-display::-webkit-scrollbar { width: 5px; }
+    #log-display::-webkit-scrollbar-track { background: transparent; }
+    #log-display::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    #log-display::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
 </style>
 
 <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -94,7 +85,6 @@
         </div>
     </aside>
 
-
     {# --- SECCIÓN PRINCIPAL (FILTROS Y TABLA) --- #}
     <section class="flex-grow space-y-6">
 
@@ -104,6 +94,8 @@
             </h2>
 
             <form method="get" action="{% url 'recibos:dashboard' %}" id="filter-form" class="space-y-6">
+                <input type="hidden" name="search_triggered" value="true">
+
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="md:col-span-2">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha Inicial</label>
@@ -116,9 +108,11 @@
                     <div class="md:col-span-4">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado</label>
                         <select name="estado" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
-                            <option value="" {% if not request.GET.estado %}selected{% endif %}>Todos</option>
+                            <option value="">TODOS LOS ESTADOS</option>
                             {% for estado in estados_db %}
-                            <option value="{{ estado }}" {% if request.GET.estado|lower == estado|lower %}selected{% endif %}>{{ estado|title }}</option>
+                                <option value="{{ estado }}" {% if request.GET.estado == estado %}selected{% endif %}>
+                                    {{ estado|upper }}
+                                </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -138,9 +132,12 @@
                 </fieldset>
 
                 <div class="flex flex-wrap gap-3 pt-6 border-t border-gray-50">
-                    <button type="submit" name="action" value="filter" class="flex-1 py-3 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-intu-dark transition">
+                    <button type="submit" name="action" value="filter" class="flex-[2] py-3 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-intu-dark transition">
                         <i class="fas fa-search mr-2"></i> Aplicar Filtros
                     </button>
+                    <a href="{% url 'recibos:dashboard' %}" class="flex-1 py-3 bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 transition text-center flex items-center justify-center">
+                        <i class="fas fa-sync-alt mr-2"></i> Resetear Filtros
+                    </a>
                     <button type="submit" name="action" value="excel" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 py-3 bg-teal-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-teal-700 transition">
                         <i class="fas fa-file-excel mr-2"></i> Reporte Excel
                     </button>
@@ -154,16 +151,17 @@
         <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="p-8 border-b border-gray-50">
                 <form method="GET" action="." class="flex flex-col md:flex-row gap-4">
+                    <input type="hidden" name="search_triggered" value="true">
                     {% for key, value in request.GET.items %}
-                        {% if key != 'q' and key != 'page' and key != 'field' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}
+                        {% if key != 'q' and key != 'page' and key != 'field' and key != 'search_triggered' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}
                     {% endfor %}
                     
                     <div class="flex-none">
                         <select name="field" class="bg-gray-50 border-none rounded-xl text-[11px] font-bold uppercase py-2 px-4 focus:ring-2 focus:ring-intu-blue/10">
-                            <option value="" {% if not request.GET.field %}selected{% endif %}>Todos los campos</option>
-                            <option value="nombre" {% if request.GET.field == 'nombre' %}selected{% endif %}>Nombre</option>
-                            <option value="rif_cedula_identidad" {% if request.GET.field == 'rif_cedula_identidad' %}selected{% endif %}>Cédula/RIF</option>
-                            <option value="numero_recibo" {% if request.GET.field == 'numero_recibo' %}selected{% endif %}>Nº Recibo</option>
+                            <option value="">TODOS LOS CAMPOS</option>
+                            <option value="nombre" {% if request.GET.field == 'nombre' %}selected{% endif %}>NOMBRE</option>
+                            <option value="rif_cedula_identidad" {% if request.GET.field == 'rif_cedula_identidad' %}selected{% endif %}>CÉDULA/RIF</option>
+                            <option value="numero_recibo" {% if request.GET.field == 'numero_recibo' %}selected{% endif %}>Nº RECIBO</option>
                         </select>
                     </div>
                     <input type="text" name="q" placeholder="Introduce el texto a buscar..." value="{{ request.GET.q|default:'' }}"
@@ -179,7 +177,7 @@
                     <thead class="bg-gray-50/50">
                         <tr>
                             <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nº Recibo</th>
-                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nombre</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nombre del Contribuyente</th>
                             <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Cédula/RIF</th>
                             <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Monto (Bs.)</th>
                             <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
@@ -187,10 +185,9 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">
-                    {# 1. VALIDACIÓN MAESTRA: Se activa si existe CUALQUIER parámetro en la URL #}
-                    {% if request.GET.q or request.GET.fecha_inicio or request.GET.fecha_fin or request.GET.estado or request.GET.categoria1 or request.GET.categoria2 or request.GET.categoria3 or request.GET.categoria4 or request.GET.categoria5 or request.GET.categoria6 or request.GET.categoria7 or request.GET.categoria8 or request.GET.categoria9 or request.GET.categoria10 %}
+                    {# Lógica de visualización: Si el usuario activó una búsqueda o filtrado #}
+                    {% if request.GET.search_triggered == 'true' or request.GET.q %}
                         
-                        {# --- BUCLE DE RESULTADOS --- #}
                         {% for recibo in recibos %}
                         <tr class="hover:bg-gray-50/50 transition duration-150 {% if recibo.anulado %}bg-red-50/30 opacity-70{% endif %}">
                             <td class="px-6 py-4">
@@ -199,8 +196,9 @@
                                 </a>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="text-[11px] font-bold text-gray-700 uppercase truncate max-w-[200px]">{{ recibo.nombre }}</div>
-                                <div class="text-[9px] text-gray-400">{{ recibo.fecha|date:"d/m/Y" }}</div>
+                                {# El nombre ahora no se corta, usa break-words para bajar a la siguiente línea si es necesario #}
+                                <div class="text-[11px] font-bold text-gray-700 uppercase break-words max-w-[280px] leading-tight">{{ recibo.nombre }}</div>
+                                <div class="text-[9px] text-gray-400 mt-1">{{ recibo.fecha|date:"d/m/Y" }}</div>
                             </td>
                             <td class="px-6 py-4 text-[11px] text-gray-500 font-medium">{{ recibo.rif_cedula_identidad }}</td>
                             <td class="px-6 py-4 text-right font-black text-xs text-intu-blue">
@@ -236,20 +234,18 @@
                             </td>
                         </tr>
                         {% empty %}
-                        {# CASO: SE BUSCÓ PERO NO HAY COINCIDENCIAS #}
                         <tr>
                             <td colspan="6" class="p-20 text-center opacity-30">
                                 <div class="flex flex-col items-center">
                                     <i class="fas fa-search-minus text-5xl mb-4 text-intu-blue"></i>
-                                    <p class="text-[10px] font-black uppercase tracking-widest">No se encontraron recibos con esos criterios</p>
-                                    <p class="text-[9px] mt-2">Intente ajustando los filtros o el término de búsqueda.</p>
+                                    <p class="text-[10px] font-black uppercase tracking-widest">No se encontraron recibos</p>
                                 </div>
                             </td>
                         </tr>
                         {% endfor %}
 
                     {% else %}
-                        {# 2. ESTADO INICIAL: No se ha realizado ninguna acción de búsqueda #}
+                        {# ESTADO INICIAL SIN BÚSQUEDA #}
                         <tr>
                             <td colspan="6" class="p-32 text-center">
                                 <div class="flex flex-col items-center justify-center space-y-4">
@@ -262,14 +258,14 @@
                                     <div class="max-w-xs">
                                         <p class="text-[11px] font-black text-intu-blue uppercase tracking-[0.2em]">Búsqueda Requerida</p>
                                         <p class="text-[10px] text-gray-400 font-medium leading-relaxed mt-1">
-                                            Para visualizar los registros, por favor utilice el <strong>Módulo de Reportes</strong> o la <strong>Barra de Búsqueda</strong> superior.
+                                            Utilice los filtros superiores para visualizar los registros.
                                         </p>
                                     </div>
                                 </div>
                             </td>
                         </tr>
                     {% endif %}
-                </tbody>
+                    </tbody>
                 </table>
             </div>
 
@@ -291,6 +287,7 @@
     </section>
 </div>
 
+{# FORMULARIOS OCULTOS #}
 <form id="anular-form" method="POST" action="{% url 'recibos:dashboard' %}" class="hidden">
     {% csrf_token %}
     <input type="hidden" name="action" value="anular">
@@ -302,6 +299,7 @@
     <input type="hidden" name="action" value="clear_logs">
 </form>
 
+{# MODAL DE CONFIRMACIÓN #}
 <div id="confirmation-modal" class="fixed inset-0 bg-gray-900/60 z-50 hidden transition-opacity flex items-center justify-center p-4" style="opacity:0;">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all scale-95 opacity-0" id="modal-content">
         <h3 class="text-lg font-black text-intu-blue uppercase tracking-tight mb-4" id="modal-title">Confirmar Acción</h3>
