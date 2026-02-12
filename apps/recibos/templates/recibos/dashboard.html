@@ -212,22 +212,34 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex justify-center gap-2">
-                                    <a href="{% url 'recibos:generar_pdf_recibo' recibo.pk %}" title="Descargar PDF" class="text-emerald-500 hover:scale-110 transition"><i class="fas fa-file-pdf text-lg"></i></a>
+                                    {# Botón PDF: Siempre visible #}
+                                    <a href="{% url 'recibos:generar_pdf_recibo' recibo.pk %}" title="Descargar PDF" class="text-emerald-500 hover:scale-110 transition">
+                                        <i class="fas fa-file-pdf text-lg"></i>
+                                    </a>
                                     
                                     {% if not recibo.anulado %}
+                                        {# LÓGICA DE PERMISOS: Admin, SuperUser o Dueño del recibo #}
                                         {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' or recibo.usuario == user %}
-                                            <a href="{% url 'recibos:modificar_recibo' pk=recibo.pk %}" title="Modificar" class="text-blue-500 hover:scale-110 transition"><i class="fas fa-edit text-lg"></i></a>
-                                        {% else %}
-                                            <i class="fas fa-lock text-gray-300 text-lg" title="Solo lectura"></i>
-                                        {% endif %}
+                                            
+                                            {# Botón Modificar #}
+                                            <a href="{% url 'recibos:modificar_recibo' pk=recibo.pk %}" title="Modificar" class="text-blue-500 hover:scale-110 transition">
+                                                <i class="fas fa-edit text-lg"></i>
+                                            </a>
 
-                                        {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' %}
+                                            {# Botón Anular (Ahora restringido también por dueño) #}
                                             <button type="button" class="anular-recibo-btn text-red-500 hover:scale-110 transition"
                                                 title="Anular"
                                                 data-message="¿Estás seguro que deseas **ANULAR el recibo N°{{ recibo.numero_recibo|stringformat:'04d' }}**?"
-                                                data-confirm-text="Sí, Anular" data-color="red" data-action-url="{% url 'recibos:dashboard' %}" data-recibo-id="{{ recibo.pk }}">
+                                                data-confirm-text="Sí, Anular" 
+                                                data-color="red" 
+                                                data-action-url="{% url 'recibos:dashboard' %}" 
+                                                data-recibo-id="{{ recibo.pk }}">
                                                 <i class="fas fa-times-circle text-lg"></i>
                                             </button>
+
+                                        {% else %}
+                                            {# Icono de Bloqueo si no tiene permiso #}
+                                            <i class="fas fa-lock text-gray-300 text-lg" title="Solo lectura (Creado por: {{ recibo.usuario.username }})"></i>
                                         {% endif %}
                                     {% endif %}
                                 </div>
