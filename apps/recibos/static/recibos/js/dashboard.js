@@ -15,31 +15,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmButton = document.getElementById('confirm-action-button');
     const anularReciboIdInput = document.getElementById('anular-recibo-id');
 
-    // Componentes Específicos para Modificar Recibo
+    // Componentes Específicos
     const formActionInput = document.getElementById('form-action'); 
-    const anularReciboModificarBtn = document.getElementById('anular-recibo-btn'); // Corregido ID
+    const anularReciboModificarBtn = document.getElementById('anular-recibo-btn');
 
-    // Componentes de Filtros
-    const filterForm = document.getElementById('filter-form'); 
-
-    // 2. LÓGICA DE LOGS (Persistencia con LocalStorage)
     const LOG_STORAGE_KEY = 'receipt_logs';
 
+    // --- FUNCIONES DE APOYO ---
+
+    function resetUploadButton() {
+        if (triggerUploadButton) {
+            triggerUploadButton.disabled = false;
+            triggerUploadButton.className = 'mt-4 w-full py-3 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex justify-center items-center shadow-lg';
+            triggerUploadButton.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i> Procesar Ahora';
+        }
+    }
+
+    function setInitialUploadButtonState() {
+        if (triggerUploadButton) {
+            triggerUploadButton.disabled = true;
+            triggerUploadButton.className = 'mt-4 w-full py-3 bg-gray-100 text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex justify-center items-center';
+            triggerUploadButton.innerHTML = '<i class="fas fa-arrow-up mr-2"></i> Esperando Archivo';
+        }
+    }
+
+    // 2. LÓGICA DE LOGS
     function saveLog(message, type) {
         const logs = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || '[]');
-        // Limitar a los últimos 50 logs para no saturar el storage
         if (logs.length > 50) logs.shift();
         logs.push({ message, type, time: new Date().toLocaleTimeString() });
         localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(logs));
     }
     
-    /**
-     * Añade un mensaje al área visual de logs.
-     */
     function appendLog(message, type = 'info', persist = true) {
         if (!logDisplay) return;
 
-        // Eliminar el mensaje de "esperando actividad" si existe
         if (logDisplay.querySelector('.italic')) {
             logDisplay.innerHTML = '<div id="log-content-wrapper" class="space-y-2"></div>';
         }
@@ -51,42 +61,19 @@ document.addEventListener('DOMContentLoaded', function() {
         let icon = '•';
 
         switch (type) {
-            case 'success':
-                colorClass = 'text-green-700 font-bold';
-                icon = '🟢';
-                break;
-            case 'error':
-                colorClass = 'text-red-700 font-bold';
-                icon = '🔴';
-                break;
-            case 'warning':
-                colorClass = 'text-yellow-700 font-semibold';
-                icon = '⚠️';
-                break;
-            case 'action':
-                colorClass = 'text-blue-600 font-semibold';
-                icon = '🚀';
-                break;
-            case 'client':
-                colorClass = 'text-gray-500';
-                icon = '💻';
-                break;
-            default:
-                colorClass = 'text-indigo-700';
-                icon = 'ℹ️';
-                break;
+            case 'success': colorClass = 'text-green-700 font-bold'; icon = '🟢'; break;
+            case 'error': colorClass = 'text-red-700 font-bold'; icon = '🔴'; break;
+            case 'warning': colorClass = 'text-yellow-700 font-semibold'; icon = '⚠️'; break;
+            case 'action': colorClass = 'text-blue-600 font-semibold'; icon = '🚀'; break;
+            case 'client': colorClass = 'text-gray-500'; icon = '💻'; break;
+            default: colorClass = 'text-indigo-700'; icon = 'ℹ️'; break;
         }
 
         logItem.className = `${colorClass} py-1 border-b border-gray-100 last:border-0 leading-tight`;
         logItem.innerHTML = `<span class="opacity-50 text-[8px]">[${timestamp}]</span> ${icon} ${message}`;
         wrapper.appendChild(logItem);
 
-        // AUTO-SCROLL: Baja automáticamente al último mensaje
-        logDisplay.scrollTo({
-            top: logDisplay.scrollHeight,
-            behavior: 'smooth'
-        });
-
+        logDisplay.scrollTo({ top: logDisplay.scrollHeight, behavior: 'smooth' });
         if (persist) saveLog(message, type);
     }
 
@@ -98,20 +85,59 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 3. CAPTURAR MENSAJES DE DJANGO (Backend)
+    // 3. CAPTURAR MENSAJES DE DJANGO Y AUTO-DESCARGA
     const djangoMessageCatcher = document.getElementById('django-message-catcher');
     if (djangoMessageCatcher) {
         const messages = djangoMessageCatcher.querySelectorAll('.message-django');
         messages.forEach(msg => {
-            const type = msg.dataset.type;
-            appendLog(msg.textContent.trim(), type, true); 
+            appendLog(msg.textContent.trim(), msg.dataset.type, true); 
         });
         
-        if (messages.length > 0 && generationStatus) {
-            generationStatus.textContent = 'Proceso completado.';
-            excelFileInput.value = ''; 
+        if (messages.length > 0) {
+            if (generationStatus) generationStatus.textContent = 'Proceso completado.';
+            if (excelFileInput) excelFileInput.value = ''; 
+            resetUploadButton();
         }
     }
+
+    // --- NUEVA LÓGICA DE DESCARGA AUTOMÁTICA ---
+const urlParams = new URLSearchParams(window.location.search);
+const downloadPks = urlParams.get('download_pks');
+
+if (downloadPks) {
+    const pksArray = downloadPks.split(',');
+    let downloadUrl = '';
+
+    if (pksArray.length === 1) {
+        // Ajusta esta URL a la ruta real de tu PDF
+        downloadUrl = `/recibos/generar-pdf/${pksArray[0]}/`; 
+    } else {
+        // Ajusta esta URL a la ruta real de tu ZIP
+        downloadUrl = `/recibos/generar-zip/?pks=${downloadPks}`;
+    }
+
+    if (downloadUrl) {
+        // MÉTODO DE DESCARGA SEGURO (Evita bloqueos de popups)
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.target = '_blank';
+        link.download = ''; 
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // MENSAJE DE LOG CORREGIDO
+        const logMsg = pksArray.length === 1 
+            ? 'Recibo generado y descargado correctamente.' 
+            : 'Archivo comprimido (ZIP) generado y descargado correctamente.';
+        
+        appendLog(logMsg, 'success', true);
+        
+        // Limpiar la URL para evitar descargas infinitas
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
+}
 
     // 4. LÓGICA DE CARGA DE ARCHIVOS
     if (excelFileInput) {
@@ -120,28 +146,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 const fileName = this.files[0].name;
                 appendLog(`Archivo listo: "${fileName}"`, 'client', false);
                 uploadStatus.textContent = fileName;
-                triggerUploadButton.disabled = false;
-                triggerUploadButton.className = 'mt-4 w-full py-3 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex justify-center items-center shadow-lg';
-                triggerUploadButton.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i> Procesar Ahora';
+                resetUploadButton();
+            } else {
+                setInitialUploadButtonState();
             }
         });
 
         triggerUploadButton.addEventListener('click', function() {
-            appendLog('Iniciando subida y generación masiva...', 'action', true);
+            appendLog('Enviando archivo al servidor...', 'action', true);
             this.disabled = true;
             this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...';
-            uploadForm.submit();
+            
+            setTimeout(() => { uploadForm.submit(); }, 150);
         });
     }
 
-    // 5. LÓGICA DEL MODAL UNIVERSAL
+    // 5. SEGURO DE PERSISTENCIA (Pageshow)
+    window.addEventListener('pageshow', function(event) {
+        if (!excelFileInput || excelFileInput.value === "") {
+            setInitialUploadButtonState();
+        } else {
+            resetUploadButton();
+        }
+    });
+
+    // 6. LÓGICA DEL MODAL UNIVERSAL
     window.showModal = function(message, confirmText, color, formTarget, reciboId = null) {
         if (!modal) return;
         modalMessage.innerHTML = message;
         confirmButton.textContent = confirmText;
         confirmButton.dataset.targetForm = formTarget;
-        
-        // Ajuste de color dinámico
         confirmButton.className = `px-6 py-2 text-white text-[10px] font-black uppercase rounded-xl transition ${color === 'red' ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-500 hover:bg-gray-600'}`;
 
         if (reciboId) anularReciboIdInput.value = reciboId;
@@ -173,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
         hideModal();
     });
 
-    // 6. EVENTOS DE BOTONES
+    // 7. EVENTOS DE BOTONES DE TABLA
     document.querySelectorAll('.anular-recibo-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             showModal(this.dataset.message, this.dataset.confirmText, this.dataset.color, 'anular-form', this.dataset.reciboId);
@@ -193,6 +227,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Inicializar
+    // Inicializar aplicación
     loadPersistedLogs();
 });

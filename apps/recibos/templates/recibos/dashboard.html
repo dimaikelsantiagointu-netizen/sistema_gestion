@@ -187,6 +187,10 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">
+                    {# 1. VALIDACIÓN MAESTRA: Se activa si existe CUALQUIER parámetro en la URL #}
+                    {% if request.GET.q or request.GET.fecha_inicio or request.GET.fecha_fin or request.GET.estado or request.GET.categoria1 or request.GET.categoria2 or request.GET.categoria3 or request.GET.categoria4 or request.GET.categoria5 or request.GET.categoria6 or request.GET.categoria7 or request.GET.categoria8 or request.GET.categoria9 or request.GET.categoria10 %}
+                        
+                        {# --- BUCLE DE RESULTADOS --- #}
                         {% for recibo in recibos %}
                         <tr class="hover:bg-gray-50/50 transition duration-150 {% if recibo.anulado %}bg-red-50/30 opacity-70{% endif %}">
                             <td class="px-6 py-4">
@@ -232,14 +236,40 @@
                             </td>
                         </tr>
                         {% empty %}
+                        {# CASO: SE BUSCÓ PERO NO HAY COINCIDENCIAS #}
                         <tr>
                             <td colspan="6" class="p-20 text-center opacity-30">
-                                <i class="fas fa-search-minus text-5xl mb-4"></i>
-                                <p class="text-[10px] font-black uppercase tracking-widest">Sin resultados</p>
+                                <div class="flex flex-col items-center">
+                                    <i class="fas fa-search-minus text-5xl mb-4 text-intu-blue"></i>
+                                    <p class="text-[10px] font-black uppercase tracking-widest">No se encontraron recibos con esos criterios</p>
+                                    <p class="text-[9px] mt-2">Intente ajustando los filtros o el término de búsqueda.</p>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
-                    </tbody>
+
+                    {% else %}
+                        {# 2. ESTADO INICIAL: No se ha realizado ninguna acción de búsqueda #}
+                        <tr>
+                            <td colspan="6" class="p-32 text-center">
+                                <div class="flex flex-col items-center justify-center space-y-4">
+                                    <div class="relative">
+                                        <div class="absolute inset-0 bg-intu-blue/5 rounded-full animate-ping"></div>
+                                        <div class="relative w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100">
+                                            <i class="fas fa-search text-gray-300 text-3xl"></i>
+                                        </div>
+                                    </div>
+                                    <div class="max-w-xs">
+                                        <p class="text-[11px] font-black text-intu-blue uppercase tracking-[0.2em]">Búsqueda Requerida</p>
+                                        <p class="text-[10px] text-gray-400 font-medium leading-relaxed mt-1">
+                                            Para visualizar los registros, por favor utilice el <strong>Módulo de Reportes</strong> o la <strong>Barra de Búsqueda</strong> superior.
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
                 </table>
             </div>
 

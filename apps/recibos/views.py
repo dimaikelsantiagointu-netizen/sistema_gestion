@@ -109,7 +109,7 @@ def generar_zip_recibos(request):
 
 # DASHBOARD Y FILTROS (ReciboListView)
 
-class ReciboListView(LoginRequiredMixin, UserPassesTestMixin,PermissionRequiredMixin, ListView):
+class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin, ListView):
     model = Recibo
     template_name = 'recibos/dashboard.html'
     permission_required = 'users.ver_gestor_recibos'
@@ -122,9 +122,9 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin,PermissionRequiredM
     
     def post(self, request, *args, **kwargs):
         action = request.POST.get('action')
-        
         current_timezone = pytz.timezone(settings.TIME_ZONE) if hasattr(settings, 'TIME_ZONE') else timezone.get_current_timezone()
 
+        # --- Lógica de Anulación ---
         if action == 'anular':
             recibo_id = request.POST.get('recibo_id')
             if recibo_id:
@@ -142,11 +142,13 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin,PermissionRequiredM
                 messages.error(request, "No se proporcionó el ID del recibo a anular.")
             return redirect(reverse('recibos:dashboard'))
 
+        # --- Lógica de Limpiar Base de Datos ---
         elif action == 'clear_logs':
             Recibo.objects.all().delete()
             messages.success(request, "Todos los recibos han sido eliminados de la base de datos.")
             return redirect(reverse('recibos:dashboard'))
 
+        # --- Lógica de Carga de Excel (Corregida) ---
         elif action == 'upload':
             archivo_excel = request.FILES.get('archivo_recibo')
             if not archivo_excel:
@@ -154,27 +156,29 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin,PermissionRequiredM
             else:
                 try:
                     success, message, pks = importar_recibos_desde_excel(archivo_excel, request.user)
-                    if success and pks and isinstance(pks, list):
+                    if success:
                         messages.success(request, message)
-
-                        if len(pks) == 1:
-                            return redirect(reverse('recibos:generar_pdf_recibo', kwargs={'pk': pks[0]}))
-                        else:
+                        
+                        # Si hay recibos creados, los pasamos por la URL para que el JS los descargue
+                        if pks and isinstance(pks, list):
                             pks_str = ','.join(map(str, pks))
-                            return redirect(reverse('recibos:generar_zip_recibos') + f'?pks={pks_str}')
-
-                    elif success:
-                        messages.warning(request, message)
+                            url = reverse('recibos:dashboard') + f'?download_pks={pks_str}'
+                            return redirect(url)
                     else:
                         messages.error(request, f"Fallo en la carga de Excel: {message}")
-
                 except Exception as e:
-                    logger.error(f"Error al ejecutar la importación de Excel: {e}")
-                    messages.error(request, f"Error interno en la lógica de importación: {e}")
-
+                    # Usar logger si está disponible, sino imprimir o mostrar error
+                    messages.error(request, f"Error al ejecutar la importación: {e}")
+            
             return redirect(reverse('recibos:dashboard'))
 
         return redirect(reverse('recibos:dashboard'))
+
+    def get_queryset(self):
+        # ... (Tu lógica de filtrado se mantiene igual)
+        queryset = Recibo.objects.filter(anulado=False).order_by('-fecha', '-numero_recibo')
+        # ... resto del código que ya tienes ...
+        return queryset
 
 
     def get_queryset(self):
