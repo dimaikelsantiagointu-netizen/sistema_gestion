@@ -658,13 +658,21 @@ def draw_report_logo_and_page_number(canvas, doc):
 
 
 def generar_pdf_reporte(queryset, filtros_aplicados):
+    # --- FUNCIÓN DE TRUNCADO PARA TEXTOS EXTENSOS ---
+    def formatear_celda(texto, max_chars, estilo):
+        if not texto:
+            return Paragraph('', estilo)
+        texto = str(texto).strip()
+        if len(texto) > max_chars:
+            texto = texto[:max_chars] + "..."
+        return Paragraph(texto, estilo)
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=landscape(letter),
-        leftMargin=36,
-        rightMargin=36,
+        leftMargin=30,
+        rightMargin=30,
         topMargin=110, 
         bottomMargin=40
     )
@@ -672,82 +680,97 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     Story = []
     styles = getSampleStyleSheet()
 
-    # Definición de estilos
+    # --- DEFINICIÓN DE ESTILOS ---
     styles.add(ParagraphStyle(name='CenteredTitle', alignment=TA_CENTER, fontSize=16, fontName='Helvetica-Bold'))
+    
     styles.add(ParagraphStyle(
         name='FilterTextLeft',
         alignment=TA_LEFT,
         fontSize=9, 
         fontName='Helvetica', 
         spaceAfter=2,
-        leftIndent=0,
-        firstLineIndent=0,
         leading=12 
     ))
-    styles.add(ParagraphStyle(name='ResumenTitleLeft', alignment=TA_LEFT, fontSize=11, fontName='Helvetica-Bold', spaceBefore=5, spaceAfter=5, firstLineIndent=0, leftIndent=0))
+
+    styles.add(ParagraphStyle(
+        name='CustomCellStyle',
+        fontSize=8,
+        fontName='Helvetica',
+        leading=9,
+        alignment=TA_LEFT
+    ))
+
+    styles.add(ParagraphStyle(name='ResumenTitleLeft', alignment=TA_LEFT, fontSize=11, fontName='Helvetica-Bold', spaceBefore=5, spaceAfter=5))
 
     total_registros = queryset.count()
     total_monto_bs = queryset.aggregate(total=Sum('total_monto_bs'))['total'] or Decimal(0)
 
+    # --- ENCABEZADO ---
     Story.append(Paragraph("REPORTE DE RECIBOS DE PAGO", styles['CenteredTitle']))
     Story.append(Spacer(1, 10))
 
+    # --- FILTROS EN UNA SOLA LÍNEA (SOLO AL INICIO) ---
     periodo_str = filtros_aplicados.get('periodo', 'Todos los períodos')
     estado_str = filtros_aplicados.get('estado', 'Todos los estados')
     categorias_str = filtros_aplicados.get('categorias', 'Todas las categorías')
     
-    Story.append(Paragraph(f"<b>Período:</b> {periodo_str}", styles['FilterTextLeft']))
-    Story.append(Paragraph(f"<b>Estado:</b> {estado_str}, <b>Categorías:</b> {categorias_str}", styles['FilterTextLeft']))
+    filtros_linea = f"<b>Período:</b> {periodo_str}  |  <b>Estado:</b> {estado_str}  |  <b>Categorías:</b> {categorias_str}"
+    Story.append(Paragraph(filtros_linea, styles['FilterTextLeft']))
     Story.append(Spacer(1, 8))
 
-
+    # --- CONFIGURACIÓN DE TABLA ---
     table_data = []
-    table_headers = [
-        'Recibo', 'Nombre', 'Cédula/RIF', 'Monto (Bs)', 'Fecha', 'Estado',
-        'Transferencia', 'Concepto'
-    ]
+    table_headers = ['Recibo', 'Nombre', 'Cédula/RIF', 'Monto (Bs)', 'Fecha', 'Estado', 'Transferencia', 'Concepto']
     table_data.append(table_headers)
 
     col_widths = [
-        0.7 * inch, 1.7 * inch, 1.1 * inch, 1.0 * inch, 0.8 * inch, 0.9 * inch, 1.3 * inch, 2.5 * inch
+        0.6 * inch, # Recibo
+        2.1 * inch, # Nombre
+        1.1 * inch, # Cédula
+        1.0 * inch, # Monto
+        0.8 * inch, # Fecha
+        0.9 * inch, # Estado
+        1.6 * inch, # Transferencia
+        2.1 * inch  # Concepto
     ]
 
     for recibo in queryset:
-        concepto_paragrah = Paragraph(recibo.concepto.strip() if recibo.concepto else '', styles['FilterTextLeft']) 
+        nombre_p = formatear_celda(recibo.nombre, 60, styles['CustomCellStyle'])
+        transf_p = formatear_celda(recibo.numero_transferencia, 40, styles['CustomCellStyle'])
+        concepto_p = formatear_celda(recibo.concepto, 70, styles['CustomCellStyle'])
+        estado_p = formatear_celda(recibo.estado, 15, styles['CustomCellStyle'])
         
         table_data.append([
             "{:04d}".format(recibo.numero_recibo) if recibo.numero_recibo else '', 
-            recibo.nombre,
+            nombre_p,
             recibo.rif_cedula_identidad,
             format_currency(recibo.total_monto_bs),
             recibo.fecha.strftime('%d/%m/%Y'),
-            recibo.estado,
-            recibo.numero_transferencia if recibo.numero_transferencia else '',
-            concepto_paragrah 
+            estado_p,
+            transf_p,
+            concepto_p 
         ])
 
-    table = Table(table_data, colWidths=col_widths) 
+    table = Table(table_data, colWidths=col_widths, repeatRows=1) 
 
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), CUSTOM_BLUE_DARK_TABLE),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (3, 1), (3, -1), 'RIGHT'), 
-        ('ALIGN', (4, 1), (4, -1), 'CENTER'),
+        ('ALIGN', (3, 1), (3, -1), 'RIGHT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, CUSTOM_GREY_VERY_LIGHT]),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
-        ('BOX', (0, 0), (-1, -1), 0.5, colors.black),
-        ('VALIGN', (7, 1), (7, -1), 'TOP'), 
-        ('ALIGN', (7, 1), (7, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, CUSTOM_GREY_VERY_LIGHT]),
     ]))
 
     Story.append(table)
     Story.append(Spacer(1, 20))
 
-
+    # --- RESUMEN DEL REPORTE (MANTENIDO IGUAL POR LÍNEAS) ---
     Story.append(Paragraph("RESUMEN DEL REPORTE:", styles['ResumenTitleLeft']))
     Story.append(Paragraph(f"<b>Total de Recibos:</b> {total_registros}", styles['FilterTextLeft']))
     Story.append(Paragraph(f"<b>Monto Total Bs:</b> {format_currency(total_monto_bs)}", styles['FilterTextLeft']))
@@ -756,9 +779,7 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     Story.append(Paragraph(f"<b>Estado Filtrado:</b> {estado_str}", styles['FilterTextLeft']))
     Story.append(Paragraph(f"<b>Categorías Filtradas:</b> {categorias_str}", styles['FilterTextLeft']))
 
-    logo_footer_callback = lambda canvas, doc: draw_report_logo_and_page_number(
-        canvas, doc
-    )
+    logo_footer_callback = lambda canvas, doc: draw_report_logo_and_page_number(canvas, doc)
 
     doc.build(
         Story,
@@ -767,11 +788,7 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     )
 
     buffer.seek(0)
-
-    filename = f"Reporte_Recibos_PDF_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    response = HttpResponse(
-        buffer.getvalue(),
-        content_type='application/pdf'
-    )
+    filename = f"Reporte_Recibos_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment;filename="{filename}"'
     return response
