@@ -36,7 +36,7 @@
 
         <form method="POST" action="{% url 'recibos:modificar_recibo' pk=recibo.pk %}" class="space-y-12">
             {% csrf_token %}
-            <input type="hidden" name="action" id="form-action" value="modificar">
+            <input type="hidden" name="action" value="modificar">
 
             <section>
                 <h2 class="text-xs font-black text-intu-blue uppercase tracking-[0.2em] mb-8 flex items-center">
@@ -47,44 +47,36 @@
                 <div class="grid grid-cols-1 md:grid-cols-6 gap-6">
                     <div class="md:col-span-2">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Número de Recibo</label>
-                        <div class="hidden">
-                            {{ form.numero_recibo }}
-                        </div>
+                        <div class="hidden">{{ form.numero_recibo }}</div>
                         <div class="mt-2 bg-gray-50 rounded-xl px-4 py-3 text-sm font-black text-intu-blue border border-gray-100 flex items-center justify-between">
                             <span>{{ recibo.numero_recibo|stringformat:"04d" }}</span>
                             <span class="text-[8px] text-gray-400 uppercase tracking-tighter italic">Protegido</span>
                         </div>
-                        {% if form.numero_recibo.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.numero_recibo.errors.as_text }}</p> {% endif %}
                     </div>
 
                     <div class="md:col-span-2">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ form.estado.label }}</label>
                         <div class="mt-1">{{ form.estado }}</div>
-                        {% if form.estado.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.estado.errors.as_text }}</p> {% endif %}
                     </div>
 
                     <div class="md:col-span-2">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ form.ente_liquidado.label }}</label>
                         <div class="mt-1">{{ form.ente_liquidado }}</div>
-                        {% if form.ente_liquidado.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.ente_liquidado.errors.as_text }}</p> {% endif %}
                     </div>
                     
                     <div class="md:col-span-3">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ form.nombre.label }}</label>
                         <div class="mt-1">{{ form.nombre }}</div>
-                        {% if form.nombre.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.nombre.errors.as_text }}</p> {% endif %}
                     </div>
 
                     <div class="md:col-span-3">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ form.rif_cedula_identidad.label }}</label>
                         <div class="mt-1">{{ form.rif_cedula_identidad }}</div>
-                        {% if form.rif_cedula_identidad.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.rif_cedula_identidad.errors.as_text }}</p> {% endif %}
                     </div>
                     
                     <div class="md:col-span-6">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ form.direccion_inmueble.label }}</label>
                         <div class="mt-1">{{ form.direccion_inmueble }}</div>
-                        {% if form.direccion_inmueble.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.direccion_inmueble.errors.as_text }}</p> {% endif %}
                     </div>
                 </div>
             </section>
@@ -99,17 +91,14 @@
                     <div>
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Gastos Admin. (Bs)</label>
                         <div class="mt-1">{{ form.gastos_administrativos }}</div>
-                        {% if form.gastos_administrativos.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.gastos_administrativos.errors.as_text }}</p> {% endif %}
                     </div>
                     <div>
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ form.tasa_dia.label }}</label>
                         <div class="mt-1">{{ form.tasa_dia }}</div>
-                        {% if form.tasa_dia.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.tasa_dia.errors.as_text }}</p> {% endif %}
                     </div>
                     <div>
                         <label class="text-[10px] font-black text-intu-blue uppercase tracking-widest">Total General (Bs)</label>
                         <div class="mt-1">{{ form.total_monto_bs }}</div>
-                        {% if form.total_monto_bs.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.total_monto_bs.errors.as_text }}</p> {% endif %}
                     </div>
                 </div>
             </section>
@@ -119,14 +108,11 @@
                     <span class="w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center mr-3 text-[10px]">03</span>
                     Categorización del Pago
                 </h2>
-                
                 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {% for field in form %}
                         {% if field.name|slice:":9" == 'categoria' %}
-                        <div class="flex items-center gap-3 p-3 rounded-xl border border-gray-50 hover:bg-gray-50 transition cursor-pointer">
-                            <div class="flex items-center h-5">
-                                {{ field }}
-                            </div>
+                        <div class="flex items-center gap-3 p-3 rounded-xl border border-gray-50 hover:bg-gray-50 transition">
+                            <div class="flex items-center h-5">{{ field }}</div>
                             <label for="{{ field.id_for_label }}" class="text-[10px] font-bold text-gray-600 uppercase leading-none cursor-pointer">
                                 {{ field.label }}
                             </label>
@@ -148,13 +134,19 @@
                         <input type="date" name="{{ form.fecha.name }}" id="{{ form.fecha.id_for_label }}" 
                                value="{{ recibo.fecha|date:'Y-m-d' }}"
                                class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
-                        {% if form.fecha.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.fecha.errors.as_text }}</p> {% endif %}
                     </div>
 
                     <div class="md:col-span-2">
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ form.numero_transferencia.label }}</label>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ form.numero_transferencia.label }}</label>
                         <div class="mt-1">{{ form.numero_transferencia }}</div>
-                        {% if form.numero_transferencia.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.numero_transferencia.errors.as_text }}</p> {% endif %}
+                        
+                        {% if form.numero_transferencia.errors %}
+                            {% for error in form.numero_transferencia.errors %}
+                                <p class="text-red-500 text-[9px] mt-1 font-bold uppercase italic">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i> {{ error }}
+                                </p>
+                            {% endfor %}
+                        {% endif %}
                     </div>
                     
                     <div class="md:col-span-2 flex items-end pb-2">
@@ -169,26 +161,19 @@
                     <div class="md:col-span-6">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ form.concepto.label }}</label>
                         <div class="mt-1">{{ form.concepto }}</div>
-                        {% if form.concepto.errors %} <p class="text-red-500 text-[9px] mt-1 font-bold uppercase">{{ form.concepto.errors.as_text }}</p> {% endif %}
                     </div>
                 </div>
             </section>
 
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 pt-10 border-t border-gray-100">
-                <button type="button" id="anular-recibo-btn"
-                    data-recibo-num="{{ recibo.numero_recibo|stringformat:'04d' }}"
-                    class="w-full md:w-auto px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-red-500 hover:bg-red-50 rounded-2xl transition">
-                    <i class="fas fa-ban mr-2"></i> Anular de forma permanente
-                </button>
-
+            <div class="flex flex-col md:flex-row justify-end items-center gap-4 pt-10 border-t border-gray-100">
                 <div class="flex gap-3 w-full md:w-auto">
                     <a href="{% url 'recibos:dashboard' %}"
-                        class="flex-1 md:flex-none px-8 py-4 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 bg-gray-100 rounded-2xl hover:bg-gray-200 transition">
-                        Cancelar
+                        class="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 bg-gray-100 rounded-2xl hover:bg-gray-200 transition">
+                        Cancelar y Volver
                     </a>
                     
                     <button type="submit" 
-                        class="flex-1 md:flex-none px-10 py-4 bg-intu-blue text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-intu-dark transition shadow-lg shadow-blue-900/20">
+                        class="px-10 py-4 bg-intu-blue text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-intu-dark transition shadow-lg shadow-blue-900/20">
                         <i class="fas fa-save mr-2"></i> Guardar Cambios
                     </button>
                 </div>
@@ -197,48 +182,3 @@
     </div>
 </div>
 {% endblock content %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const anularBtn = document.getElementById('anular-recibo-btn'); 
-    const formAction = document.getElementById('form-action');
-    const confirmButton = document.getElementById('confirm-action-button'); 
-
-    if (anularBtn) {
-        anularBtn.addEventListener('click', function() {
-            const reciboNum = this.dataset.reciboNum;
-            
-            // Intenta usar el modal del Dashboard si está disponible globalmente
-            if (window.showModal) {
-                window.showModal(
-                    'Atención: Acción Irreversible',
-                    `¿Estás seguro que deseas **ANULAR** el recibo N°${reciboNum}? Esta acción lo archivará permanentemente.`,
-                    'Confirmar Anulación',
-                    'anular_confirm', 
-                    'red'
-                );
-            } else {
-                // Fallback a confirm estándar si el modal no cargó
-                if (confirm(`¿Estás seguro que deseas ANULAR el recibo N°${reciboNum}?`)) {
-                    formAction.value = 'anular';
-                    document.querySelector('form').submit();
-                }
-            }
-        });
-    }
-
-    // Manejador del botón de confirmación del modal
-    if (confirmButton) {
-        confirmButton.onclick = function() {
-            const actionType = this.getAttribute('data-action-type');
-            if (actionType === 'anular_confirm') {
-                formAction.value = 'anular'; 
-                if (window.hideModal) window.hideModal();
-                document.querySelector('form').submit();
-            } 
-        };
-    }
-});
-</script>
-{% endblock extra_js %}

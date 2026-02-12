@@ -387,13 +387,11 @@ def generar_reporte_view(request):
 # VISTAS DE MODIFICACIÓN Y ANULACIÓN
 @login_required
 def modificar_recibo(request, pk):
-
     recibo = get_object_or_404(Recibo, pk=pk)
 
     num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
     
     current_timezone = pytz.timezone(settings.TIME_ZONE) if hasattr(settings, 'TIME_ZONE') else timezone.get_current_timezone()
-
 
     if recibo.anulado:
         messages.error(request, f"El recibo N°{num_recibo_zfill} se encuentra ANULADO y es irreversible. No se pueden realizar cambios.")
@@ -403,12 +401,10 @@ def modificar_recibo(request, pk):
         action = request.POST.get('action')
 
         if action == 'anular':
-            
             recibo.anulado = True
             recibo.fecha_anulacion = datetime.now(current_timezone)
             recibo.save()
             messages.warning(request, f"¡Recibo N°{num_recibo_zfill} ha sido ANULADO exitosamente! (Acción irreversible)")
-
             return redirect(reverse('recibos:dashboard'))
 
         else:
@@ -418,9 +414,13 @@ def modificar_recibo(request, pk):
                 form.save()
                 messages.success(request, f"¡Recibo N°{num_recibo_zfill} modificado exitosamente!")
                 return redirect(reverse('recibos:dashboard'))
-            else:
-                messages.error(request, "Error al guardar los cambios. Por favor, revisa los campos.")
 
+            else:
+                if 'numero_transferencia' in form.errors:
+                    error_puro = form.errors['numero_transferencia'][0]
+                    messages.error(request, error_puro)
+                else:
+                    messages.error(request, "Error al guardar: Por favor, verifique los datos.")
 
     else:
         form = ReciboForm(instance=recibo)

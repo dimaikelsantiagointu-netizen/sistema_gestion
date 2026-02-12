@@ -4,11 +4,12 @@ from django.core.exceptions import ValidationError
 from unidecode import unidecode
 
 # CLASE BASE PARA LA MAYORÍA DE LOS INPUTS
-TAILWIND_CLASS = 'form-input w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition duration-150'
+TAILWIND_CLASS = 'form-input w-full rounded-xl border border-gray-200 shadow-sm focus:border-intu-blue focus:ring-intu-blue/20 transition duration-150 text-sm py-3 px-4'
 DATE_INPUT_CLASS = TAILWIND_CLASS
 
 class ReciboForm(forms.ModelForm):
-    # 1. NORMALIZACIÓN DE DATOS (clean methods)
+    
+    # 1. NORMALIZACIÓN DE DATOS 
 
     def clean_nombre(self):
         data = self.cleaned_data.get('nombre', '').strip()
@@ -30,23 +31,20 @@ class ReciboForm(forms.ModelForm):
         return data
     
     def clean_numero_transferencia(self):
-        # 1. Obtenemos el dato y normalizamos a Mayúsculas
         data = self.cleaned_data.get('numero_transferencia', '').strip().upper()
         
-        # 2. Si el campo está vacío, no validamos duplicados
         if not data:
             return None
 
         # 3. VALIDACIÓN DE DUPLICADOS
-        # Buscamos si existe otro recibo con este número.
-        # .exclude(pk=self.instance.pk) es vital para que al EDITAR no te diga que ya existe.
         qs = Recibo.objects.filter(numero_transferencia=data)
-        if self.instance.pk:
+        
+        if self.instance and self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
         
         if qs.exists():
             raise ValidationError(
-                f"ALERTA: El número de transferencia '{data}' ya fue registrado en otro recibo. Por favor, verifique el comprobante."
+                f"Error: El número de transferencia '{data}' ya existe en otro registro."
             )
             
         return data
@@ -56,29 +54,12 @@ class ReciboForm(forms.ModelForm):
         model = Recibo
         
         fields = [
-            'numero_recibo', 
-            'estado',
-            'nombre',
-            'rif_cedula_identidad',
-            'direccion_inmueble',
-            'ente_liquidado',
-            'categoria1',
-            'categoria2',
-            'categoria3',
-            'categoria4',
-            'categoria5',
-            'categoria6',
-            'categoria7',
-            'categoria8',
-            'categoria9',
-            'categoria10',
-            'gastos_administrativos',
-            'tasa_dia',
-            'total_monto_bs',
-            'numero_transferencia',
-            'conciliado',
-            'fecha', 
-            'concepto',
+            'numero_recibo', 'estado', 'nombre', 'rif_cedula_identidad',
+            'direccion_inmueble', 'ente_liquidado', 'categoria1', 'categoria2',
+            'categoria3', 'categoria4', 'categoria5', 'categoria6',
+            'categoria7', 'categoria8', 'categoria9', 'categoria10',
+            'gastos_administrativos', 'tasa_dia', 'total_monto_bs',
+            'numero_transferencia', 'conciliado', 'fecha', 'concepto',
         ]
         
         labels = {
@@ -92,15 +73,16 @@ class ReciboForm(forms.ModelForm):
             'categoria8': '8.Estudios Técnico',
             'categoria9': '9.Locales Comerciales',
             'categoria10': '10.Arrendamiento Terrenos',
-            'conciliado': 'Conciliado (Pago Confirmado)',
-            'gastos_administrativos': 'Gastos Admin.',
-            'tasa_dia': 'Tasa del Día (BCV)',
+            'conciliado': 'Confirmar Conciliación',
+            'gastos_administrativos': 'Gastos Administrativos (Bs)',
+            'tasa_dia': 'Tasa BCV',
+            'total_monto_bs': 'Total a Pagar (Bs)',
         }
         
         widgets = {
             'numero_recibo': forms.TextInput(attrs={
                 'readonly': 'readonly', 
-                'class': 'mt-1 block w-full rounded-lg border border-gray-300 bg-gray-100 shadow-inner text-gray-700 font-semibold' 
+                'class': 'mt-1 block w-full rounded-xl border border-gray-100 bg-gray-50 shadow-inner text-intu-blue font-black' 
             }),
 
             'estado': forms.TextInput(attrs={'class': TAILWIND_CLASS}),
@@ -115,9 +97,22 @@ class ReciboForm(forms.ModelForm):
             
             'numero_transferencia': forms.TextInput(attrs={
                 'class': TAILWIND_CLASS,
-                'placeholder': 'Ingrese el número de referencia'
+                'placeholder': 'Referencia Bancaria'
             }),
             
             'fecha': forms.DateInput(attrs={'type': 'date', 'class': DATE_INPUT_CLASS}), 
             'concepto': forms.Textarea(attrs={'class': TAILWIND_CLASS, 'rows': 2}),
+
+            # Estilo para los checkboxes de categorías
+            'categoria1': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria2': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria3': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria4': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria5': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria6': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria7': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria8': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria9': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria10': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'conciliado': forms.CheckboxInput(attrs={'class': 'w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500'}),
         }

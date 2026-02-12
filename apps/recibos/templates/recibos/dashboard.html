@@ -196,7 +196,6 @@
                                 </a>
                             </td>
                             <td class="px-6 py-4">
-                                {# El nombre ahora no se corta, usa break-words para bajar a la siguiente línea si es necesario #}
                                 <div class="text-[11px] font-bold text-gray-700 uppercase break-words max-w-[280px] leading-tight">{{ recibo.nombre }}</div>
                                 <div class="text-[9px] text-gray-400 mt-1">{{ recibo.fecha|date:"d/m/Y" }}</div>
                             </td>
@@ -224,6 +223,7 @@
 
                                         {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' %}
                                             <button type="button" class="anular-recibo-btn text-red-500 hover:scale-110 transition"
+                                                title="Anular"
                                                 data-message="¿Estás seguro que deseas **ANULAR el recibo N°{{ recibo.numero_recibo|stringformat:'04d' }}**?"
                                                 data-confirm-text="Sí, Anular" data-color="red" data-action-url="{% url 'recibos:dashboard' %}" data-recibo-id="{{ recibo.pk }}">
                                                 <i class="fas fa-times-circle text-lg"></i>
