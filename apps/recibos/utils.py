@@ -91,7 +91,6 @@ def format_currency(amount):
         return "0,00"
 
 # II. FUNCIÓN CLAVE: IMPORTACIÓN DE EXCEL
-
 def importar_recibos_desde_excel(archivo_excel, usuario):
     RIF_COL = 'rif_cedula_identidad'
     recibos_creados_pks = []
@@ -105,7 +104,7 @@ def importar_recibos_desde_excel(archivo_excel, usuario):
     ]
 
     try:
-        # 1. LECTURA Y VALIDACIÓN INICIAL DE EXCEL
+        # 1. LECTURA Y VALIDACIÓN INICIAL
         try:
             df = pd.read_excel(
                 archivo_excel,
@@ -113,24 +112,19 @@ def importar_recibos_desde_excel(archivo_excel, usuario):
                 header=3,
                 dtype={'fecha': str, RIF_COL: str, 'numero_transferencia': str} 
             )
-        except ValueError as e:
-            return False, "Error de archivo: Asegúrate de que existe la hoja 'Hoja2' y el formato es válido.", None
+        except ValueError:
+            return False, "Error de archivo: Asegúrate de que existe la hoja 'Hoja2'.", None
 
         df.dropna(how='all', inplace=True)
-
         if df.empty:
-            return False, "El archivo Excel está vacío o la hoja 'Hoja2' no contiene datos válidos.", None
+            return False, "El archivo Excel está vacío.", None
 
-        if df.shape[1] < len(COLUMNAS_CANONICAS):
-            return False, f"Error: Se encontraron {df.shape[1]} columnas, se esperaban {len(COLUMNAS_CANONICAS)}. Revise el encabezado (Fila 4).", None
-
+        # Ajuste de columnas
         df = df.iloc[:, :len(COLUMNAS_CANONICAS)]
         df.columns = COLUMNAS_CANONICAS
         
-        # 2. PRE-PROCESAMIENTO DE DATOS EN DATAFRAME
-        
+        # 2. PRE-PROCESAMIENTO
         df['fecha_procesada'] = pd.to_datetime(df['fecha'], errors='coerce', dayfirst=True).dt.date
-        
         df = df.dropna(subset=['fecha_procesada']) 
 
         df['gastos_admin_proc'] = df['gastos_administrativos'].apply(limpiar_y_convertir_decimal)
@@ -138,29 +132,37 @@ def importar_recibos_desde_excel(archivo_excel, usuario):
         df['total_monto_proc'] = df['total_monto_bs'].apply(limpiar_y_convertir_decimal)
         
         for i in range(1, 11):
-            key = f'categoria{i}'
-            df[key] = df[key].apply(to_boolean)
+            df[f'categoria{i}'] = df[f'categoria{i}'].apply(to_boolean)
         df['conciliado'] = df['conciliado'].apply(to_boolean)
         
+        # 3. TRANSACCIÓN ATÓMICA PARA EVITAR CARGAS PARCIALES
         with transaction.atomic():
             ultimo_recibo = Recibo.objects.aggregate(Max('numero_recibo'))['numero_recibo__max']
             consecutivo_actual = (ultimo_recibo or 0) + 1
 
             for index, fila_datos in df.iterrows():
-                
-                fila_numero = index + 5
+                fila_numero = index + 5  # Índice de Excel real
                 
                 rif_cedula_raw = str(fila_datos.get(RIF_COL, '')).strip()
                 nombre_raw = str(fila_datos.get('nombre', '')).strip()
+                
+                # --- NUEVA VALIDACIÓN DE TRANSFERENCIA DUPLICADA ---
+                num_transf_raw = str(fila_datos.get('numero_transferencia', '')).strip().upper()
+                
+                if num_transf_raw and num_transf_raw not in ['N/A', 'NAN', '']:
+                    # Buscamos en la DB si ya existe
+                    if Recibo.objects.filter(numero_transferencia=num_transf_raw).exists():
+                        raise ValueError(
+                            f"Fila {fila_numero}: El número de transferencia '{num_transf_raw}' ya está registrado en el sistema. "
+                            f"Por favor, verifique el Excel."
+                        )
+                # ----------------------------------------------------
 
                 if not rif_cedula_raw and not nombre_raw:
-                    logger.warning(f"Fila {fila_numero}: Saltada por no tener RIF/Cédula ni Nombre.")
                     continue
                 if not rif_cedula_raw:
-                    # RIF/Cédula es obligatorio
-                    raise ValueError(f"Fila {fila_numero}: El campo RIF/Cédula es obligatorio y está vacío.")
+                    raise ValueError(f"Fila {fila_numero}: El campo RIF/Cédula es obligatorio.")
                 
-                # Construcción del diccionario de datos (usa los campos pre-procesados)
                 data_a_insertar = {
                     'numero_recibo': consecutivo_actual,
                     'estado': unidecode(str(fila_datos.get('estado', '')).strip()).upper(),
@@ -168,44 +170,31 @@ def importar_recibos_desde_excel(archivo_excel, usuario):
                     'rif_cedula_identidad': str(rif_cedula_raw).strip().replace('.', '').replace('-', '').replace(' ', '').upper(),
                     'direccion_inmueble': str(fila_datos.get('direccion_inmueble', 'DIRECCION NO ESPECIFICADA')).strip().title(),
                     'ente_liquidado': str(fila_datos.get('ente_liquidado', 'ENTE NO ESPECIFICADO')).strip().title(),
-                    'numero_transferencia': str(fila_datos.get('numero_transferencia', '')).strip().upper(),
+                    'numero_transferencia': num_transf_raw if num_transf_raw not in ['NAN', ''] else None,
                     'concepto': str(fila_datos.get('concepto', '')).strip().title(),
-                    
                     'gastos_administrativos': fila_datos['gastos_admin_proc'],
                     'tasa_dia': fila_datos['tasa_dia_proc'],
                     'total_monto_bs': fila_datos['total_monto_proc'],
-                    
                     'fecha': fila_datos['fecha_procesada'],
                     'conciliado': fila_datos['conciliado'],
                     'usuario': usuario
                 }
                 
                 for i in range(1, 11):
-                    key = f'categoria{i}'
-                    data_a_insertar[key] = fila_datos[key]
+                    data_a_insertar[f'categoria{i}'] = fila_datos[f'categoria{i}']
                 
                 recibo_creado = Recibo.objects.create(**data_a_insertar)
                 recibos_creados_pks.append(recibo_creado.pk)
                 consecutivo_actual += 1
-                logger.info(f"ÉXITO: Recibo N°{recibo_creado.numero_recibo} generado para {data_a_insertar['nombre']} (Fila {fila_numero}).")
 
+            return True, f"Importación masiva exitosa. Se generaron {len(recibos_creados_pks)} recibos.", recibos_creados_pks
 
-            if recibos_creados_pks:
-                total_creados = len(recibos_creados_pks)
-                primer_num = str(consecutivo_actual - total_creados).zfill(4)
-                ultimo_num = str(consecutivo_actual - 1).zfill(4)
-                mensaje = f"Importación masiva exitosa. Se generaron {total_creados} recibos, desde N°{primer_num} hasta N°{ultimo_num}."
-                return True, mensaje, recibos_creados_pks
-            else:
-                mensaje = "Importación terminada. No se encontraron registros válidos para crear recibos (todas las filas vacías, sin RIF, o con fecha inválida)."
-                return True, mensaje, []
-
+    except ValueError as ve:
+        # Errores controlados de validación (como el de transferencia)
+        return False, str(ve), None
     except Exception as e:
-        error_message = f"FALLO FATAL DE CARGA: {e}"
-        logger.error(error_message, exc_info=True)
-        if "Fila " in str(e):
-             return False, str(e), None
-        return False, f"Fallo en la carga de Excel: Error desconocido.", None
+        logger.error(f"FALLO FATAL: {e}", exc_info=True)
+        return False, f"Fallo en la carga: Error desconocido en el procesamiento.", None
 
 
 # III. GENERACIÓN DE REPORTES (Excel y PDF)
@@ -303,18 +292,11 @@ def generar_reporte_excel(request_filters, queryset, filtros_aplicados):
         worksheet_info.set_column('A:A', 30)
         worksheet_info.set_column('B:B', 40)
 
-        # 1. Aplicamos el formato negrita a los encabezados
         worksheet_info.write(0, 0, 'Parámetro', bold_format)
         worksheet_info.write(0, 1, 'Valor', bold_format)
         
-        # 2. Re-escribimos los valores numéricos con el formato correcto 
-        # para que no se vean como texto o con formatos cruzados.
-        
-        # El índice 4 de tu info_data (Total Registros) está en la FILA 5 de Excel 
-        # (porque la fila 0 es el encabezado)
         worksheet_info.write_number(5, 1, total_registros)
         
-        # El índice 5 de tu info_data (Monto Total) está en la FILA 6 de Excel
         worksheet_info.write_number(6, 1, total_monto_bs, money_format)
     
     output.seek(0)
@@ -350,7 +332,6 @@ CUSTOM_GREY_VERY_LIGHT = colors.HexColor("#F7F7F7")
 # --- FUNCIONES AUXILIARES PARA EL PDF UNITARIO 
 
 def draw_text_line_unit(canvas_obj, text, x_start, y_start, font_name="Helvetica", font_size=10, is_bold=False):
-    """Dibuja una línea de texto y ajusta la posición Y."""
     font = font_name + "-Bold" if is_bold else font_name
     canvas_obj.setFont(font, font_size)
     canvas_obj.drawString(x_start, y_start, str(text))
@@ -395,59 +376,89 @@ def _draw_recibo_header(c, width, height):
     return current_y
 
 def _draw_recibo_body_data(c, recibo_obj, y_start, X1_TITLE, X1_DATA, X2_TITLE, X2_DATA):
-    """Dibuja los datos principales del recibo (Estado, Nombre, Monto, etc.)."""
-    
+    """
+    Dibuja los datos del recibo permitiendo que el texto largo salte de línea
+    si supera el ancho asignado, evitando solapamientos.
+    """
+    # 1. Preparación de datos
     num_recibo = str(recibo_obj.numero_recibo).zfill(4) if recibo_obj.numero_recibo else 'N/A'
     monto_formateado = format_currency(recibo_obj.total_monto_bs)
     fecha_str = recibo_obj.fecha.strftime("%d/%m/%Y")
     num_transf = recibo_obj.numero_transferencia if recibo_obj.numero_transferencia else 'N/A'
+
+    # 2. Configuración de Estilos para los Párrafos
+    styles = getSampleStyleSheet()
+    style_dato = ParagraphStyle(
+        'DatoStyle',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=8,
+        leading=9, # Espacio entre líneas dentro del mismo párrafo
+        alignment=TA_LEFT
+    )
     
+    # 3. Definición de anchos de columna (para evitar que choquen)
+    # Calculamos cuánto espacio tiene el dato antes de llegar a la siguiente columna
+    ancho_col1 = X2_TITLE - X1_DATA - 10 
+    ancho_col2 = 550 - X2_DATA # Hasta el margen derecho
+
+    def dibujar_campo_con_salto(canvas, label, texto, x_label, x_dato, y, ancho_max):
+        # Dibujar etiqueta en negrita
+        canvas.setFont("Helvetica-Bold", 9)
+        canvas.drawString(x_label, y, label)
+        
+        # Crear y dibujar párrafo para el dato
+        p = Paragraph(str(texto), style_dato)
+        # wrap() calcula el espacio. drawOn() lo dibuja.
+        w, h = p.wrap(ancho_max, 100) 
+        p.drawOn(canvas, x_dato, y - h + 7) # Ajuste fino de altura
+        return h # Retornamos la altura que ocupó el texto
+
     y_line = y_start
 
-    # --- FILA 1: Estado / Nº Recibo ---
-    # Dibujar Títulos. draw_text_line_unit DECREMENTA y_line
-    y_line = draw_text_line_unit(c, "Estado:", X1_TITLE, y_line, is_bold=True)
-    
-    # Dibujar Datos. 
-    draw_text_line_unit(c, recibo_obj.estado, X1_DATA, y_line + 15, is_bold=False)
-    
-    # Dibujar Título Columna 2.
-    draw_text_line_unit(c, "Nº Recibo:", X2_TITLE, y_line + 15, is_bold=True)
-    
-    # Dibujar Dato Columna 2.
-    draw_text_line_unit(c, num_recibo, X2_DATA, y_line + 15, is_bold=False)
-    y_line -= 5 
+    # --- FILA 1: Estado / Nº Recibo (Suelen ser cortos, una sola línea) ---
+    h1 = dibujar_campo_con_salto(c, "Estado:", recibo_obj.estado, X1_TITLE, X1_DATA, y_line, ancho_col1)
+    h2 = dibujar_campo_con_salto(c, "Nº Recibo:", num_recibo, X2_TITLE, X2_DATA, y_line, ancho_col2)
+    y_line -= max(h1, h2, 15) + 5
 
     # --- FILA 2: Recibí de / Monto Recibido (Bs.) ---
-    y_line = draw_text_line_unit(c, "Recibí de:", X1_TITLE, y_line, is_bold=True)
-    draw_text_line_unit(c, recibo_obj.nombre, X1_DATA, y_line + 15, is_bold=False)
-    draw_text_line_unit(c, "Monto Recibido (Bs.):", X2_TITLE, y_line + 15, is_bold=True)
-    draw_text_line_unit(c, monto_formateado, X2_DATA, y_line + 15, is_bold=False)
-    y_line -= 5
+    # Aquí el nombre del beneficiario puede ser muy largo
+    h1 = dibujar_campo_con_salto(c, "Recibí de:", recibo_obj.nombre, X1_TITLE, X1_DATA, y_line, ancho_col1)
+    h2 = dibujar_campo_con_salto(c, "Monto Recibido (Bs.):", monto_formateado, X2_TITLE, X2_DATA, y_line, ancho_col2)
+    y_line -= max(h1, h2, 15) + 5
 
     # --- FILA 3: Rif/C.I / Nº Transferencia ---
-    y_line = draw_text_line_unit(c, "Rif/C.I:", X1_TITLE, y_line, is_bold=True)
-    draw_text_line_unit(c, recibo_obj.rif_cedula_identidad, X1_DATA, y_line + 15, is_bold=False)
-    draw_text_line_unit(c, "Nº Transferencia:", X2_TITLE, y_line + 15, is_bold=True)
-    draw_text_line_unit(c, num_transf, X2_DATA, y_line + 15, is_bold=False)
-    y_line -= 5
+    h1 = dibujar_campo_con_salto(c, "Rif/C.I:", recibo_obj.rif_cedula_identidad, X1_TITLE, X1_DATA, y_line, ancho_col1)
+    h2 = dibujar_campo_con_salto(c, "Nº Transferencia:", num_transf, X2_TITLE, X2_DATA, y_line, ancho_col2)
+    y_line -= max(h1, h2, 15) + 5
 
     # --- FILA 4: Dirección / Fecha ---
-    y_line = draw_text_line_unit(c, "Dirección:", X1_TITLE, y_line, is_bold=True)
-    draw_text_line_unit(c, recibo_obj.direccion_inmueble, X1_DATA, y_line + 15, is_bold=False)
-    draw_text_line_unit(c, "Fecha:", X2_TITLE, y_line + 15, is_bold=True)
-    draw_text_line_unit(c, fecha_str, X2_DATA, y_line + 15, is_bold=False)
-    y_line -= 5
+    # La dirección suele ser el campo que más se solapa
+    h1 = dibujar_campo_con_salto(c, "Dirección:", recibo_obj.direccion_inmueble, X1_TITLE, X1_DATA, y_line, ancho_col1)
+    h2 = dibujar_campo_con_salto(c, "Fecha:", fecha_str, X2_TITLE, X2_DATA, y_line, ancho_col2)
+    y_line -= max(h1, h2, 15) + 5
 
-    # --- FILA 5: Concepto ---
-    y_line = draw_text_line_unit(c, "Concepto:", X1_TITLE, y_line, is_bold=True)
-    draw_text_line_unit(c, recibo_obj.concepto, X1_DATA, y_line + 15, is_bold=False)
+    # --- FILA 5: Concepto (Ancho completo) ---
+    h_concepto = dibujar_campo_con_salto(c, "Concepto:", recibo_obj.concepto, X1_TITLE, X1_DATA, y_line, 550 - X1_DATA)
     
-    return y_line - 25
+    return y_line - h_concepto - 10
 
 def _draw_categorias_section(c, recibo_obj, y_start, X1_TITLE):
-    """Dibuja la sección de categorías detalladas en el recibo unitario."""
-    
+    """
+    Dibuja la sección de categorías detalladas.
+    Usa Paragraph para que las descripciones largas no se solapen ni se salgan del margen.
+    """
+    # 1. Preparación de estilos
+    styles = getSampleStyleSheet()
+    style_titulo_cat = ParagraphStyle(
+        'CatTitulo', parent=styles['Normal'], fontName='Helvetica-Bold',
+        fontSize=8, leading=9, alignment=TA_LEFT
+    )
+    style_detalle_cat = ParagraphStyle(
+        'CatDetalle', parent=styles['Normal'], fontName='Helvetica',
+        fontSize=7, leading=8, alignment=TA_LEFT, leftIndent=10 # Sangría para el detalle
+    )
+
     categorias = {
         f'categoria{i}': getattr(recibo_obj, f'categoria{i}') for i in range(1, 11)
     }
@@ -455,11 +466,11 @@ def _draw_categorias_section(c, recibo_obj, y_start, X1_TITLE):
     current_y = y_start
 
     if hay_categorias:
+        # Título de la Sección
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(X1_TITLE, current_y, "FORMA DE PAGO Y DESCRIPCION DE LA REGULARIZACION")
-        current_y -= 25
+        c.drawString(X1_TITLE, current_y, "FORMA DE PAGO Y DESCRIPCIÓN DE LA REGULARIZACIÓN")
+        current_y -= 20
 
-        # Diccionario auxiliar para simplificar la lógica repetitiva
         CATEGORY_DESCRIPTIONS = {
             'categoria1': ("TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION EN PROPIEDAD", "Una milésima de Bolívar, Art. 58 de la Ley Especial de Regularización"),
             'categoria2': ("TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION MAS VIVIENDA", "Una milésima de Bolívar, más gastos administrativos (140 unidades ancladas a la moneda de mayor valor estipulada por el BCV)"),
@@ -473,55 +484,102 @@ def _draw_categorias_section(c, recibo_obj, y_start, X1_TITLE):
             'categoria10': ("ARRENDAMIENTOS DE TERRENOS", "Número de unidades establecidas en el contrato, ancladas a la moneda de mayor valor estipulada por el BCV"),
         }
         
+        ancho_disponible = 450 # Dejamos espacio a la derecha para la "X"
+
         for key, (title, detail) in CATEGORY_DESCRIPTIONS.items():
             if categorias.get(key, False):
-                current_y = draw_text_line_unit(c, title, X1_TITLE, current_y, font_size=9, is_bold=True)
-                c.drawString(520, current_y + 15, "X")
-                current_y = draw_text_line_unit(c, detail, X1_TITLE, current_y, font_size=8, is_bold=False)
-                current_y -= 5
+                # --- Dibujar Título de Categoría ---
+                p_title = Paragraph(title, style_titulo_cat)
+                w_t, h_t = p_title.wrap(ancho_disponible, 100)
+                
+                # Verificar si el texto cabe en la página actual (Salto de página preventivo)
+                if current_y - h_t < 100:
+                    c.showPage()
+                    current_y = 750 # Reiniciar en la parte superior de la nueva hoja
 
-    return current_y - 70
+                p_title.drawOn(c, X1_TITLE, current_y - h_t)
+                
+                # Dibujar la "X" indicadora a la derecha del título
+                c.setFont("Helvetica-Bold", 10)
+                c.drawString(520, current_y - 5, "X")
+                
+                current_y -= (h_t + 2)
+
+                # --- Dibujar Detalle (Sub-texto) ---
+                p_detail = Paragraph(detail, style_detalle_cat)
+                w_d, h_d = p_detail.wrap(ancho_disponible - 10, 100)
+                
+                p_detail.drawOn(c, X1_TITLE, current_y - h_d)
+                
+                # Espacio para la siguiente categoría
+                current_y -= (h_d + 10)
+
+    return current_y - 30
 
 def _draw_signatures_section(c, recibo_obj, y_start, width):
-    """Dibuja la sección de firmas del recibo unitario."""
+    """Dibuja la sección de firmas con corrección de coordenadas para nombres multilínea."""
     current_y = y_start
-    line_width = 200
-    left_line_x = (width / 2 - line_width - 20)
-    right_line_x = (width / 2 + 20)
+    line_width = 180
+    
+    left_line_x = (width / 4) - (line_width / 2)
+    right_line_x = (3 * width / 4) - (line_width / 2)
 
-    # LÍNEAS DE FIRMA
+    # --- LÍNEAS DE FIRMA ---
+    c.setLineWidth(1)
     c.line(left_line_x, current_y, left_line_x + line_width, current_y)
     c.line(right_line_x, current_y, right_line_x + line_width, current_y)
 
-    # FIRMA CLIENTE
-    y_sig = current_y - 15
-    draw_centered_text_right_unit(c, y_sig, "Firma", left_line_x, line_width)
-    y_sig -= 13
-    draw_centered_text_right_unit(c, y_sig, recibo_obj.nombre, left_line_x, line_width, is_bold=True)
-    y_sig -= 12
-    draw_centered_text_right_unit(c, y_sig, f"C.I./RIF: {recibo_obj.rif_cedula_identidad}", left_line_x, line_width, font_size=9)
+    # --- FIRMA CLIENTE (IZQUIERDA) ---
+    # 1. Título "Firma del Cliente"
+    y_sig = current_y - 12
+    draw_centered_text_right_unit(c, y_sig, "Firma del Cliente", left_line_x, line_width, font_size=9)
+    
+    # 2. Configuración del Nombre con salto de línea
+    styles = getSampleStyleSheet()
+    nombre_style = ParagraphStyle(
+        'NombreStyle',
+        fontName='Helvetica-Bold',
+        fontSize=9,
+        leading=10, 
+        alignment=TA_CENTER
+    )
+    
+    p_nombre = Paragraph(recibo_obj.nombre.upper(), nombre_style)
+    w_p, h_p = p_nombre.wrap(line_width, 100) 
+    
+    y_pos_nombre = y_sig - h_p - 5 
+    p_nombre.drawOn(c, left_line_x, y_pos_nombre)
+    
+    # 3. Dibujar C.I./RIF debajo del párrafo 
+    y_rif = y_pos_nombre - 12 
+    draw_centered_text_right_unit(c, y_rif, f"C.I./RIF: {recibo_obj.rif_cedula_identidad}", left_line_x, line_width, font_size=8)
 
-    # FIRMA INSTITUCIÓN
-    y_sig_inst = current_y - 15
-    draw_centered_text_right_unit(c, y_sig_inst, "Recibido por:", right_line_x, line_width)
-    y_sig_inst -= 13
-    draw_centered_text_right_unit(c, y_sig_inst, "PRESLEY ORTEGA", right_line_x, line_width, is_bold=True)
+    # --- FIRMA INSTITUCIÓN (DERECHA) ---
+    y_sig_inst = current_y - 12
+    draw_centered_text_right_unit(c, y_sig_inst, "Recibido por:", right_line_x, line_width, font_size=9)
+    
+    y_sig_inst -= 14
+    draw_centered_text_right_unit(c, y_sig_inst, "PRESLEY ORTEGA", right_line_x, line_width, is_bold=True, font_size=9)
+    
     y_sig_inst -= 12
-    draw_centered_text_right_unit(c, y_sig_inst, "GERENTE DE ADMINISTRACIÓN Y SERVICIOS", right_line_x, line_width, font_size=9)
-    y_sig_inst -= 15
-    draw_centered_text_right_unit(c, y_sig_inst, "Designado según gaceta oficial n°43.062 de fecha", right_line_x, line_width, font_size=8)
-    y_sig_inst -= 10
-    draw_centered_text_right_unit(c, y_sig_inst, "16 de febrero de 2025 y Providencia de", right_line_x, line_width, font_size=8)
-    y_sig_inst -= 10
-    draw_centered_text_right_unit(c, y_sig_inst, "n°016-2024 de fecha 16 de diciembre de 2024", right_line_x, line_width, font_size=8)
-
+    draw_centered_text_right_unit(c, y_sig_inst, "GERENTE DE ADMINISTRACIÓN Y SERVICIOS", right_line_x, line_width, font_size=7)
+    
+    # Texto Legal Gaceta
+    y_sig_inst -= 14
+    textos_legales = [
+        "Designado según Gaceta Oficial N° 43.062,",
+        "de fecha 16 de febrero de 2025 y",
+        "Providencia N° 016-2024 de fecha",
+        "16 de diciembre de 2024"
+    ]
+    
+    for linea in textos_legales:
+        draw_centered_text_right_unit(c, y_sig_inst, linea, right_line_x, line_width, font_size=7)
+        y_sig_inst -= 9
 
 # FUNCIÓN PRINCIPAL DE PDF UNITARIO
 def generar_pdf_recibo_unitario(recibo_obj):
-    """
-    Genera el contenido del PDF individual para un recibo de forma modular.
-    Retorna directamente el HttpResponse para forzar la descarga.
-    """
+
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
@@ -600,13 +658,21 @@ def draw_report_logo_and_page_number(canvas, doc):
 
 
 def generar_pdf_reporte(queryset, filtros_aplicados):
+    # --- FUNCIÓN DE TRUNCADO PARA TEXTOS EXTENSOS ---
+    def formatear_celda(texto, max_chars, estilo):
+        if not texto:
+            return Paragraph('', estilo)
+        texto = str(texto).strip()
+        if len(texto) > max_chars:
+            texto = texto[:max_chars] + "..."
+        return Paragraph(texto, estilo)
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=landscape(letter),
-        leftMargin=36,
-        rightMargin=36,
+        leftMargin=30,
+        rightMargin=30,
         topMargin=110, 
         bottomMargin=40
     )
@@ -614,82 +680,97 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     Story = []
     styles = getSampleStyleSheet()
 
-    # Definición de estilos
+    # --- DEFINICIÓN DE ESTILOS ---
     styles.add(ParagraphStyle(name='CenteredTitle', alignment=TA_CENTER, fontSize=16, fontName='Helvetica-Bold'))
+    
     styles.add(ParagraphStyle(
         name='FilterTextLeft',
         alignment=TA_LEFT,
         fontSize=9, 
         fontName='Helvetica', 
         spaceAfter=2,
-        leftIndent=0,
-        firstLineIndent=0,
         leading=12 
     ))
-    styles.add(ParagraphStyle(name='ResumenTitleLeft', alignment=TA_LEFT, fontSize=11, fontName='Helvetica-Bold', spaceBefore=5, spaceAfter=5, firstLineIndent=0, leftIndent=0))
+
+    styles.add(ParagraphStyle(
+        name='CustomCellStyle',
+        fontSize=8,
+        fontName='Helvetica',
+        leading=9,
+        alignment=TA_LEFT
+    ))
+
+    styles.add(ParagraphStyle(name='ResumenTitleLeft', alignment=TA_LEFT, fontSize=11, fontName='Helvetica-Bold', spaceBefore=5, spaceAfter=5))
 
     total_registros = queryset.count()
     total_monto_bs = queryset.aggregate(total=Sum('total_monto_bs'))['total'] or Decimal(0)
 
+    # --- ENCABEZADO ---
     Story.append(Paragraph("REPORTE DE RECIBOS DE PAGO", styles['CenteredTitle']))
     Story.append(Spacer(1, 10))
 
+    # --- FILTROS EN UNA SOLA LÍNEA (SOLO AL INICIO) ---
     periodo_str = filtros_aplicados.get('periodo', 'Todos los períodos')
     estado_str = filtros_aplicados.get('estado', 'Todos los estados')
     categorias_str = filtros_aplicados.get('categorias', 'Todas las categorías')
     
-    Story.append(Paragraph(f"<b>Período:</b> {periodo_str}", styles['FilterTextLeft']))
-    Story.append(Paragraph(f"<b>Estado:</b> {estado_str}, <b>Categorías:</b> {categorias_str}", styles['FilterTextLeft']))
+    filtros_linea = f"<b>Período:</b> {periodo_str}  |  <b>Estado:</b> {estado_str}  |  <b>Categorías:</b> {categorias_str}"
+    Story.append(Paragraph(filtros_linea, styles['FilterTextLeft']))
     Story.append(Spacer(1, 8))
 
-
+    # --- CONFIGURACIÓN DE TABLA ---
     table_data = []
-    table_headers = [
-        'Recibo', 'Nombre', 'Cédula/RIF', 'Monto (Bs)', 'Fecha', 'Estado',
-        'Transferencia', 'Concepto'
-    ]
+    table_headers = ['Recibo', 'Nombre', 'Cédula/RIF', 'Monto (Bs)', 'Fecha', 'Estado', 'Transferencia', 'Concepto']
     table_data.append(table_headers)
 
     col_widths = [
-        0.7 * inch, 1.7 * inch, 1.1 * inch, 1.0 * inch, 0.8 * inch, 0.9 * inch, 1.3 * inch, 2.5 * inch
+        0.6 * inch, # Recibo
+        2.1 * inch, # Nombre
+        1.1 * inch, # Cédula
+        1.0 * inch, # Monto
+        0.8 * inch, # Fecha
+        0.9 * inch, # Estado
+        1.6 * inch, # Transferencia
+        2.1 * inch  # Concepto
     ]
 
     for recibo in queryset:
-        concepto_paragrah = Paragraph(recibo.concepto.strip() if recibo.concepto else '', styles['FilterTextLeft']) 
+        nombre_p = formatear_celda(recibo.nombre, 60, styles['CustomCellStyle'])
+        transf_p = formatear_celda(recibo.numero_transferencia, 40, styles['CustomCellStyle'])
+        concepto_p = formatear_celda(recibo.concepto, 70, styles['CustomCellStyle'])
+        estado_p = formatear_celda(recibo.estado, 15, styles['CustomCellStyle'])
         
         table_data.append([
             "{:04d}".format(recibo.numero_recibo) if recibo.numero_recibo else '', 
-            recibo.nombre,
+            nombre_p,
             recibo.rif_cedula_identidad,
             format_currency(recibo.total_monto_bs),
             recibo.fecha.strftime('%d/%m/%Y'),
-            recibo.estado,
-            recibo.numero_transferencia if recibo.numero_transferencia else '',
-            concepto_paragrah 
+            estado_p,
+            transf_p,
+            concepto_p 
         ])
 
-    table = Table(table_data, colWidths=col_widths) 
+    table = Table(table_data, colWidths=col_widths, repeatRows=1) 
 
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), CUSTOM_BLUE_DARK_TABLE),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (3, 1), (3, -1), 'RIGHT'), 
-        ('ALIGN', (4, 1), (4, -1), 'CENTER'),
+        ('ALIGN', (3, 1), (3, -1), 'RIGHT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, CUSTOM_GREY_VERY_LIGHT]),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
-        ('BOX', (0, 0), (-1, -1), 0.5, colors.black),
-        ('VALIGN', (7, 1), (7, -1), 'TOP'), 
-        ('ALIGN', (7, 1), (7, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, CUSTOM_GREY_VERY_LIGHT]),
     ]))
 
     Story.append(table)
     Story.append(Spacer(1, 20))
 
-
+    # --- RESUMEN DEL REPORTE (MANTENIDO IGUAL POR LÍNEAS) ---
     Story.append(Paragraph("RESUMEN DEL REPORTE:", styles['ResumenTitleLeft']))
     Story.append(Paragraph(f"<b>Total de Recibos:</b> {total_registros}", styles['FilterTextLeft']))
     Story.append(Paragraph(f"<b>Monto Total Bs:</b> {format_currency(total_monto_bs)}", styles['FilterTextLeft']))
@@ -698,9 +779,7 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     Story.append(Paragraph(f"<b>Estado Filtrado:</b> {estado_str}", styles['FilterTextLeft']))
     Story.append(Paragraph(f"<b>Categorías Filtradas:</b> {categorias_str}", styles['FilterTextLeft']))
 
-    logo_footer_callback = lambda canvas, doc: draw_report_logo_and_page_number(
-        canvas, doc
-    )
+    logo_footer_callback = lambda canvas, doc: draw_report_logo_and_page_number(canvas, doc)
 
     doc.build(
         Story,
@@ -709,11 +788,7 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     )
 
     buffer.seek(0)
-
-    filename = f"Reporte_Recibos_PDF_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    response = HttpResponse(
-        buffer.getvalue(),
-        content_type='application/pdf'
-    )
+    filename = f"Reporte_Recibos_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment;filename="{filename}"'
     return response

@@ -1,7 +1,7 @@
 from urllib import request
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
-from django.db.models import Q, Sum 
+from django.db.models import Q, Sum, Count
 from django.contrib import messages
 from .models import Recibo
 import io
@@ -20,7 +20,7 @@ import pytz
 from django.core.paginator import Paginator
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
 from django.views.generic import ListView
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 logger = logging.getLogger(__name__)
 
 # --- CONFIGURACIÓN DE RUTAS Y CONSTANTES (Mantener por si otras funciones lo usan) ---
@@ -109,7 +109,7 @@ def generar_zip_recibos(request):
 
 # DASHBOARD Y FILTROS (ReciboListView)
 
-class ReciboListView(LoginRequiredMixin, UserPassesTestMixin,PermissionRequiredMixin, ListView):
+class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin, ListView):
     model = Recibo
     template_name = 'recibos/dashboard.html'
     permission_required = 'users.ver_gestor_recibos'
@@ -122,9 +122,9 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin,PermissionRequiredM
     
     def post(self, request, *args, **kwargs):
         action = request.POST.get('action')
-        
         current_timezone = pytz.timezone(settings.TIME_ZONE) if hasattr(settings, 'TIME_ZONE') else timezone.get_current_timezone()
 
+        # --- Lógica de Anulación ---
         if action == 'anular':
             recibo_id = request.POST.get('recibo_id')
             if recibo_id:
@@ -142,11 +142,13 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin,PermissionRequiredM
                 messages.error(request, "No se proporcionó el ID del recibo a anular.")
             return redirect(reverse('recibos:dashboard'))
 
+        # --- Lógica de Limpiar Base de Datos ---
         elif action == 'clear_logs':
             Recibo.objects.all().delete()
             messages.success(request, "Todos los recibos han sido eliminados de la base de datos.")
             return redirect(reverse('recibos:dashboard'))
 
+        # --- Lógica de Carga de Excel (Corregida) ---
         elif action == 'upload':
             archivo_excel = request.FILES.get('archivo_recibo')
             if not archivo_excel:
@@ -154,27 +156,29 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin,PermissionRequiredM
             else:
                 try:
                     success, message, pks = importar_recibos_desde_excel(archivo_excel, request.user)
-                    if success and pks and isinstance(pks, list):
+                    if success:
                         messages.success(request, message)
-
-                        if len(pks) == 1:
-                            return redirect(reverse('recibos:generar_pdf_recibo', kwargs={'pk': pks[0]}))
-                        else:
+                        
+                        # Si hay recibos creados, los pasamos por la URL para que el JS los descargue
+                        if pks and isinstance(pks, list):
                             pks_str = ','.join(map(str, pks))
-                            return redirect(reverse('recibos:generar_zip_recibos') + f'?pks={pks_str}')
-
-                    elif success:
-                        messages.warning(request, message)
+                            url = reverse('recibos:dashboard') + f'?download_pks={pks_str}'
+                            return redirect(url)
                     else:
                         messages.error(request, f"Fallo en la carga de Excel: {message}")
-
                 except Exception as e:
-                    logger.error(f"Error al ejecutar la importación de Excel: {e}")
-                    messages.error(request, f"Error interno en la lógica de importación: {e}")
-
+                    # Usar logger si está disponible, sino imprimir o mostrar error
+                    messages.error(request, f"Error al ejecutar la importación: {e}")
+            
             return redirect(reverse('recibos:dashboard'))
 
         return redirect(reverse('recibos:dashboard'))
+
+    def get_queryset(self):
+        # ... (Tu lógica de filtrado se mantiene igual)
+        queryset = Recibo.objects.filter(anulado=False).order_by('-fecha', '-numero_recibo')
+        # ... resto del código que ya tienes ...
+        return queryset
 
 
     def get_queryset(self):
@@ -383,13 +387,11 @@ def generar_reporte_view(request):
 # VISTAS DE MODIFICACIÓN Y ANULACIÓN
 @login_required
 def modificar_recibo(request, pk):
-
     recibo = get_object_or_404(Recibo, pk=pk)
 
     num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
     
     current_timezone = pytz.timezone(settings.TIME_ZONE) if hasattr(settings, 'TIME_ZONE') else timezone.get_current_timezone()
-
 
     if recibo.anulado:
         messages.error(request, f"El recibo N°{num_recibo_zfill} se encuentra ANULADO y es irreversible. No se pueden realizar cambios.")
@@ -399,12 +401,10 @@ def modificar_recibo(request, pk):
         action = request.POST.get('action')
 
         if action == 'anular':
-            
             recibo.anulado = True
             recibo.fecha_anulacion = datetime.now(current_timezone)
             recibo.save()
             messages.warning(request, f"¡Recibo N°{num_recibo_zfill} ha sido ANULADO exitosamente! (Acción irreversible)")
-
             return redirect(reverse('recibos:dashboard'))
 
         else:
@@ -414,9 +414,13 @@ def modificar_recibo(request, pk):
                 form.save()
                 messages.success(request, f"¡Recibo N°{num_recibo_zfill} modificado exitosamente!")
                 return redirect(reverse('recibos:dashboard'))
-            else:
-                messages.error(request, "Error al guardar los cambios. Por favor, revisa los campos.")
 
+            else:
+                if 'numero_transferencia' in form.errors:
+                    error_puro = form.errors['numero_transferencia'][0]
+                    messages.error(request, error_puro)
+                else:
+                    messages.error(request, "Error al guardar: Por favor, verifique los datos.")
 
     else:
         form = ReciboForm(instance=recibo)
@@ -454,3 +458,80 @@ def recibos_anulados(request):
         'recibos': recibos_page,
     }
     return render(request, 'recibos/recibos_anulados.html', context)
+
+def es_administrador(user):
+    return user.is_superuser or (hasattr(user, 'rol') and user.rol in ['admin', 'superadmin'])
+
+@login_required
+@user_passes_test(es_administrador, login_url='recibos:dashboard')
+def estadisticas_view(request):
+    # 1. Obtener parámetros de filtrado desde la URL (GET)
+    fecha_filtro = request.GET.get('fecha')
+    estado_filtro = request.GET.get('estado')
+    
+    # 2. Queryset Base: Excluimos siempre los anulados para integridad financiera
+    queryset = Recibo.objects.filter(anulado=False)
+
+    # 3. Aplicar Filtros Dinámicos
+    if fecha_filtro:
+        queryset = queryset.filter(fecha=fecha_filtro)
+    if estado_filtro and estado_filtro != 'Todos':
+        queryset = queryset.filter(estado=estado_filtro)
+
+    # 4. Cálculos Generales
+    hoy = timezone.now().date()
+    total_recibos = queryset.count()
+    # Los generados hoy no se ven afectados por el filtro de fecha para dar contexto global
+    recibos_hoy = Recibo.objects.filter(fecha=hoy, anulado=False).count()
+    monto_total = queryset.aggregate(Sum('total_monto_bs'))['total_monto_bs__sum'] or 0
+
+    # 5. Mapeo de Categorías (Campos reales de tu BD: categoria1...categoria10)
+    # Aquí puedes cambiar los nombres de la derecha por los conceptos reales de tu app
+    categorias_config = [
+        ('categoria1', 'Título Tierra Urbana'),
+        ('categoria2', 'Título + Vivienda'),
+        ('categoria3', 'Municipal'),
+        ('categoria4', 'Tierra Privada'),
+        ('categoria5', 'Tierra INAVI'),
+        ('categoria6', 'Excedentes Título'),
+        ('categoria7', 'Excedentes INAVI'),
+        ('categoria8', 'Estudio Técnico'),
+        ('categoria9', 'Locales Comerciales'),
+        ('categoria10', 'Arrendamiento Terrenos'),
+    ]
+    
+    estadisticas_categorias = []
+    for campo, nombre_real in categorias_config:
+        # Contamos cuántos registros tienen esta categoría marcada como True
+        count = queryset.filter(**{campo: True}).count()
+        
+        # Agregamos a la lista (incluso si es 0 para que siempre aparezcan las 10)
+        estadisticas_categorias.append({
+            'nombre': nombre_real,
+            'total': count
+        })
+
+    # 6. Top 5 Estados (Agrupación dinámica)
+    top_estados = queryset.values('estado').annotate(
+        total=Count('id')
+    ).order_by('-total')[:5]
+
+    # 7. Obtener lista de estados únicos para el selector del filtro
+    estados_disponibles = Recibo.objects.exclude(
+        estado__isnull=True
+    ).values_list('estado', flat=True).distinct().order_by('estado')
+
+    context = {
+        'total_recibos': total_recibos,
+        'recibos_hoy': recibos_hoy,
+        'monto_total': monto_total,
+        'categorias': estadisticas_categorias,
+        'top_estados': top_estados,
+        'estados_db': estados_disponibles,
+        'filtros': {
+            'fecha': fecha_filtro,
+            'estado': estado_filtro
+        }
+    }
+    
+    return render(request, 'recibos/estadisticas.html', context)

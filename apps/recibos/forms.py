@@ -3,73 +3,65 @@ from .models import Recibo
 from django.core.exceptions import ValidationError
 from unidecode import unidecode
 
-
-# CLASE BASE PARA LA MAYORÍA DE LOS INPUTS (CON BORDE LEVE AHORA)
-TAILWIND_CLASS = 'form-input w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition duration-150'
+# CLASE BASE PARA LA MAYORÍA DE LOS INPUTS
+TAILWIND_CLASS = 'form-input w-full rounded-xl border border-gray-200 shadow-sm focus:border-intu-blue focus:ring-intu-blue/20 transition duration-150 text-sm py-3 px-4'
 DATE_INPUT_CLASS = TAILWIND_CLASS
 
-
 class ReciboForm(forms.ModelForm):
-    # 1. NORMALIZACIÓN DE DATOS (clean methods) - ACTUALIZADOS
+    
+    # 1. NORMALIZACIÓN DE DATOS 
 
     def clean_nombre(self):
-        data = self.cleaned_data['nombre'].strip()
+        data = self.cleaned_data.get('nombre', '').strip()
         return data.title()
 
     def clean_rif_cedula_identidad(self):
-        data = self.cleaned_data['rif_cedula_identidad'].strip().upper()
+        data = self.cleaned_data.get('rif_cedula_identidad', '').strip().upper()
         return data.replace(' ', '').replace('-', '')
     
     def clean_ente_liquidado(self):
-        data = self.cleaned_data['ente_liquidado'].strip()
+        data = self.cleaned_data.get('ente_liquidado', '').strip()
         return data.upper()
     
-    #NORMALIZAR ESTADO A MAYÚSCULAS Y SIN ACENTOS
     def clean_estado(self):
-        data = self.cleaned_data['estado'].strip()
+        data = self.cleaned_data.get('estado', '').strip()
         if data:
-            # 1. Eliminar acentos
             data_sin_acentos = unidecode(data)
-            # 2. Convertir a MAYÚSCULAS
             return data_sin_acentos.upper()
         return data
     
     def clean_numero_transferencia(self):
-        data = self.cleaned_data['numero_transferencia'].strip()
-        return data.upper()
+        data = self.cleaned_data.get('numero_transferencia', '').strip().upper()
+        
+        if not data:
+            return None
 
-    # 2. META y WIDGETS - (USANDO TAILWIND_CLASS CON BORDE)
+        # 3. VALIDACIÓN DE DUPLICADOS
+        qs = Recibo.objects.filter(numero_transferencia=data)
+        
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        
+        if qs.exists():
+            raise ValidationError(
+                f"Error: El número de transferencia '{data}' ya existe en otro registro."
+            )
+            
+        return data
 
+    # 2. META y WIDGETS
     class Meta:
         model = Recibo
         
         fields = [
-            'numero_recibo', 
-            'estado',
-            'nombre',
-            'rif_cedula_identidad',
-            'direccion_inmueble',
-            'ente_liquidado',
-            'categoria1',
-            'categoria2',
-            'categoria3',
-            'categoria4',
-            'categoria5',
-            'categoria6',
-            'categoria7',
-            'categoria8',
-            'categoria9',
-            'categoria10',
-            'gastos_administrativos',
-            'tasa_dia',
-            'total_monto_bs',
-            'numero_transferencia',
-            'conciliado',
-            'fecha', 
-            'concepto',
+            'numero_recibo', 'estado', 'nombre', 'rif_cedula_identidad',
+            'direccion_inmueble', 'ente_liquidado', 'categoria1', 'categoria2',
+            'categoria3', 'categoria4', 'categoria5', 'categoria6',
+            'categoria7', 'categoria8', 'categoria9', 'categoria10',
+            'gastos_administrativos', 'tasa_dia', 'total_monto_bs',
+            'numero_transferencia', 'conciliado', 'fecha', 'concepto',
         ]
         
-        # ETIQUETAS PERSONALIZADAS PARA CATEGORÍAS
         labels = {
             'categoria1': '1.Título Tierra Urbana',
             'categoria2': '2.Título + Vivienda',
@@ -80,36 +72,47 @@ class ReciboForm(forms.ModelForm):
             'categoria7': '7.Excedentes INAVI',
             'categoria8': '8.Estudios Técnico',
             'categoria9': '9.Locales Comerciales',
-            'categoria10': '10.Arrendamiento Terrenos)',
-            'conciliado': 'Conciliado (Pago Confirmado)',
-            'gastos_administrativos': 'Gastos Admin.',
-            'tasa_dia': 'Tasa del Día (BCV)',
+            'categoria10': '10.Arrendamiento Terrenos',
+            'conciliado': 'Confirmar Conciliación',
+            'gastos_administrativos': 'Gastos Administrativos (Bs)',
+            'tasa_dia': 'Tasa BCV',
+            'total_monto_bs': 'Total a Pagar (Bs)',
         }
         
         widgets = {
-            # CAMPO READONLY: Estilo distinto para readonly
             'numero_recibo': forms.TextInput(attrs={
                 'readonly': 'readonly', 
-                'class': 'mt-1 block w-full rounded-lg border border-gray-300 bg-gray-100 shadow-inner text-gray-700 font-semibold' 
+                'class': 'mt-1 block w-full rounded-xl border border-gray-100 bg-gray-50 shadow-inner text-intu-blue font-black' 
             }),
 
-            # 1. Datos del Cliente
             'estado': forms.TextInput(attrs={'class': TAILWIND_CLASS}),
             'nombre': forms.TextInput(attrs={'class': TAILWIND_CLASS}),
             'rif_cedula_identidad': forms.TextInput(attrs={'class': TAILWIND_CLASS}),
             'direccion_inmueble': forms.Textarea(attrs={'class': TAILWIND_CLASS, 'rows': 2}),
             'ente_liquidado': forms.TextInput(attrs={'class': TAILWIND_CLASS}),
             
-            # 2. Montos
             'gastos_administrativos': forms.NumberInput(attrs={'class': TAILWIND_CLASS, 'step': '0.01'}),
             'tasa_dia': forms.NumberInput(attrs={'class': TAILWIND_CLASS, 'step': '0.0001'}),
             'total_monto_bs': forms.NumberInput(attrs={'class': TAILWIND_CLASS, 'step': '0.01'}),
             
-            # 3. Conciliación
-            'numero_transferencia': forms.TextInput(attrs={'class': TAILWIND_CLASS}),
+            'numero_transferencia': forms.TextInput(attrs={
+                'class': TAILWIND_CLASS,
+                'placeholder': 'Referencia Bancaria'
+            }),
             
-            # DateInput para mantener la fecha. 
             'fecha': forms.DateInput(attrs={'type': 'date', 'class': DATE_INPUT_CLASS}), 
-            
             'concepto': forms.Textarea(attrs={'class': TAILWIND_CLASS, 'rows': 2}),
+
+            # Estilo para los checkboxes de categorías
+            'categoria1': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria2': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria3': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria4': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria5': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria6': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria7': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria8': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria9': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria10': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'conciliado': forms.CheckboxInput(attrs={'class': 'w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500'}),
         }
