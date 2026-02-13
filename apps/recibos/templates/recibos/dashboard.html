@@ -24,6 +24,11 @@
         <a href="{% url 'recibos:recibos_anulados' %}" class="px-4 py-2 text-[10px] font-black bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition uppercase tracking-wider flex items-center">
             <i class="fas fa-archive mr-2"></i> Ver Recibos Anulados
         </a>
+        {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' %}
+<a href="{% url 'recibos:estadisticas' %}" class="px-4 py-2 text-[10px] font-black bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition uppercase tracking-wider flex items-center shadow-lg shadow-blue-200">
+    <i class="fas fa-chart-pie mr-2"></i> Estadísticas Globales
+</a>
+{% endif %}
     </div>
 </div>
 

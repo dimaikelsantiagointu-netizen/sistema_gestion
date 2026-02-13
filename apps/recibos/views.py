@@ -1,7 +1,7 @@
 from urllib import request
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
-from django.db.models import Q, Sum 
+from django.db.models import Q, Sum, Count
 from django.contrib import messages
 from .models import Recibo
 import io
@@ -20,7 +20,7 @@ import pytz
 from django.core.paginator import Paginator
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
 from django.views.generic import ListView
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 logger = logging.getLogger(__name__)
 
 # --- CONFIGURACIÓN DE RUTAS Y CONSTANTES (Mantener por si otras funciones lo usan) ---
@@ -458,3 +458,80 @@ def recibos_anulados(request):
         'recibos': recibos_page,
     }
     return render(request, 'recibos/recibos_anulados.html', context)
+
+def es_administrador(user):
+    return user.is_superuser or (hasattr(user, 'rol') and user.rol in ['admin', 'superadmin'])
+
+@login_required
+@user_passes_test(es_administrador, login_url='recibos:dashboard')
+def estadisticas_view(request):
+    # 1. Obtener parámetros de filtrado desde la URL (GET)
+    fecha_filtro = request.GET.get('fecha')
+    estado_filtro = request.GET.get('estado')
+    
+    # 2. Queryset Base: Excluimos siempre los anulados para integridad financiera
+    queryset = Recibo.objects.filter(anulado=False)
+
+    # 3. Aplicar Filtros Dinámicos
+    if fecha_filtro:
+        queryset = queryset.filter(fecha=fecha_filtro)
+    if estado_filtro and estado_filtro != 'Todos':
+        queryset = queryset.filter(estado=estado_filtro)
+
+    # 4. Cálculos Generales
+    hoy = timezone.now().date()
+    total_recibos = queryset.count()
+    # Los generados hoy no se ven afectados por el filtro de fecha para dar contexto global
+    recibos_hoy = Recibo.objects.filter(fecha=hoy, anulado=False).count()
+    monto_total = queryset.aggregate(Sum('total_monto_bs'))['total_monto_bs__sum'] or 0
+
+    # 5. Mapeo de Categorías (Campos reales de tu BD: categoria1...categoria10)
+    # Aquí puedes cambiar los nombres de la derecha por los conceptos reales de tu app
+    categorias_config = [
+        ('categoria1', 'Título Tierra Urbana'),
+        ('categoria2', 'Título + Vivienda'),
+        ('categoria3', 'Municipal'),
+        ('categoria4', 'Tierra Privada'),
+        ('categoria5', 'Tierra INAVI'),
+        ('categoria6', 'Excedentes Título'),
+        ('categoria7', 'Excedentes INAVI'),
+        ('categoria8', 'Estudio Técnico'),
+        ('categoria9', 'Locales Comerciales'),
+        ('categoria10', 'Arrendamiento Terrenos'),
+    ]
+    
+    estadisticas_categorias = []
+    for campo, nombre_real in categorias_config:
+        # Contamos cuántos registros tienen esta categoría marcada como True
+        count = queryset.filter(**{campo: True}).count()
+        
+        # Agregamos a la lista (incluso si es 0 para que siempre aparezcan las 10)
+        estadisticas_categorias.append({
+            'nombre': nombre_real,
+            'total': count
+        })
+
+    # 6. Top 5 Estados (Agrupación dinámica)
+    top_estados = queryset.values('estado').annotate(
+        total=Count('id')
+    ).order_by('-total')[:5]
+
+    # 7. Obtener lista de estados únicos para el selector del filtro
+    estados_disponibles = Recibo.objects.exclude(
+        estado__isnull=True
+    ).values_list('estado', flat=True).distinct().order_by('estado')
+
+    context = {
+        'total_recibos': total_recibos,
+        'recibos_hoy': recibos_hoy,
+        'monto_total': monto_total,
+        'categorias': estadisticas_categorias,
+        'top_estados': top_estados,
+        'estados_db': estados_disponibles,
+        'filtros': {
+            'fecha': fecha_filtro,
+            'estado': estado_filtro
+        }
+    }
+    
+    return render(request, 'recibos/estadisticas.html', context)

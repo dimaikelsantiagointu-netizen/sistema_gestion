@@ -17,4 +17,5 @@ urlpatterns = [
     path('anulados/', views.recibos_anulados, name='recibos_anulados'), 
     path('', PaginaBaseView.as_view(), name='base'),
     path('generar-zip-recibos/', views.generar_zip_recibos, name='generar_zip_recibos'),
+    path('estadisticas/', views.estadisticas_view, name='estadisticas'),
 ]

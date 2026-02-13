@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'django.contrib.humanize',
     # NUEVAS APPS:
     'apps.recibos.apps.RecibosConfig',
     'apps.users',
