@@ -25,10 +25,10 @@
             <i class="fas fa-archive mr-2"></i> Ver Recibos Anulados
         </a>
         {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' %}
-<a href="{% url 'recibos:estadisticas' %}" class="px-4 py-2 text-[10px] font-black bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition uppercase tracking-wider flex items-center shadow-lg shadow-blue-200">
-    <i class="fas fa-chart-pie mr-2"></i> Estadísticas Globales
-</a>
-{% endif %}
+        <a href="{% url 'recibos:estadisticas' %}" class="px-4 py-2 text-[10px] font-black bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition uppercase tracking-wider flex items-center shadow-lg shadow-blue-200">
+            <i class="fas fa-chart-pie mr-2"></i> Estadísticas Globales
+        </a>
+        {% endif %}
     </div>
 </div>
 
@@ -44,7 +44,6 @@
 
     {# --- PANEL LATERAL (CARGA Y LOGS) --- #}
     <aside class="w-full lg:w-1/3 xl:w-1/4 space-y-6">
-        
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
             <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-4 flex items-center">
                 <i class="fas fa-file-upload mr-2 text-intu-red"></i> Carga de Archivos Excel
@@ -74,13 +73,11 @@
             <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-4 flex items-center shrink-0">
                 <i class="fas fa-clipboard-list mr-2 text-intu-red"></i> Procesos y Logs
             </h2>
-            
             <div id="log-display" class="flex-grow overflow-y-auto bg-gray-50 p-4 rounded-2xl text-[10px] font-mono text-gray-600 border border-gray-100">
                 <div id="log-content-wrapper" class="space-y-2">
                     <p class="text-gray-400 italic">Esperando actividad...</p>
                 </div>
             </div>
-            
             <button type="button" id="clear-visual-logs-button" 
                 data-message="¿Estás seguro que deseas LIMPIAR el contenido visual de los Logs?"
                 data-confirm-text="Sí, Limpiar" data-color="gray"
@@ -95,7 +92,7 @@
 
         <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
             <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-6 flex items-center">
-                <i class="fas fa-filter mr-2 text-intu-red"></i> Módulo de Reportes y Filtrado
+                <i class="fas fa-filter mr-2 text-intu-red"></i> Módulo de Reportes (Filtro por Registro)
             </h2>
 
             <form method="get" action="{% url 'recibos:dashboard' %}" id="filter-form" class="space-y-6">
@@ -103,11 +100,11 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="md:col-span-2">
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha Inicial</label>
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Desde (Fecha Registro)</label>
                         <input type="date" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
                     </div>
                     <div class="md:col-span-2">
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha Final</label>
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hasta (Fecha Registro)</label>
                         <input type="date" name="fecha_fin" value="{{ request.GET.fecha_fin }}" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
                     </div>
                     <div class="md:col-span-4">
@@ -182,7 +179,7 @@
                     <thead class="bg-gray-50/50">
                         <tr>
                             <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nº Recibo</th>
-                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nombre del Contribuyente</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Contribuyente e Historial</th>
                             <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Cédula/RIF</th>
                             <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Monto (Bs.)</th>
                             <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
@@ -190,9 +187,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">
-                    {# Lógica de visualización: Si el usuario activó una búsqueda o filtrado #}
                     {% if request.GET.search_triggered == 'true' or request.GET.q %}
-                        
                         {% for recibo in recibos %}
                         <tr class="hover:bg-gray-50/50 transition duration-150 {% if recibo.anulado %}bg-red-50/30 opacity-70{% endif %}">
                             <td class="px-6 py-4">
@@ -202,7 +197,14 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="text-[11px] font-bold text-gray-700 uppercase break-words max-w-[280px] leading-tight">{{ recibo.nombre }}</div>
-                                <div class="text-[9px] text-gray-400 mt-1">{{ recibo.fecha|date:"d/m/Y" }}</div>
+                                <div class="flex gap-3 mt-1.5">
+                                    <span class="text-[9px] text-gray-400 flex items-center" title="Fecha de Pago">
+                                        <i class="far fa-calendar-alt mr-1 text-gray-300"></i> {{ recibo.fecha|date:"d/m/Y" }}
+                                    </span>
+                                    <span class="text-[9px] text-intu-blue font-bold flex items-center" title="Fecha de creación en sistema">
+                                        <i class="fas fa-history mr-1 opacity-50"></i> Reg: {{ recibo.fecha_creacion|date:"d/m/Y" }}
+                                    </span>
+                                </div>
                             </td>
                             <td class="px-6 py-4 text-[11px] text-gray-500 font-medium">{{ recibo.rif_cedula_identidad }}</td>
                             <td class="px-6 py-4 text-right font-black text-xs text-intu-blue">
@@ -217,33 +219,20 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex justify-center gap-2">
-                                    {# Botón PDF: Siempre visible #}
                                     <a href="{% url 'recibos:generar_pdf_recibo' recibo.pk %}" title="Descargar PDF" class="text-emerald-500 hover:scale-110 transition">
                                         <i class="fas fa-file-pdf text-lg"></i>
                                     </a>
-                                    
                                     {% if not recibo.anulado %}
-                                        {# LÓGICA DE PERMISOS: Admin, SuperUser o Dueño del recibo #}
                                         {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' or recibo.usuario == user %}
-                                            
-                                            {# Botón Modificar #}
                                             <a href="{% url 'recibos:modificar_recibo' pk=recibo.pk %}" title="Modificar" class="text-blue-500 hover:scale-110 transition">
                                                 <i class="fas fa-edit text-lg"></i>
                                             </a>
-
-                                            {# Botón Anular (Ahora restringido también por dueño) #}
                                             <button type="button" class="anular-recibo-btn text-red-500 hover:scale-110 transition"
-                                                title="Anular"
                                                 data-message="¿Estás seguro que deseas **ANULAR el recibo N°{{ recibo.numero_recibo|stringformat:'04d' }}**?"
-                                                data-confirm-text="Sí, Anular" 
-                                                data-color="red" 
-                                                data-action-url="{% url 'recibos:dashboard' %}" 
-                                                data-recibo-id="{{ recibo.pk }}">
+                                                data-confirm-text="Sí, Anular" data-color="red" data-action-url="{% url 'recibos:dashboard' %}" data-recibo-id="{{ recibo.pk }}">
                                                 <i class="fas fa-times-circle text-lg"></i>
                                             </button>
-
                                         {% else %}
-                                            {# Icono de Bloqueo si no tiene permiso #}
                                             <i class="fas fa-lock text-gray-300 text-lg" title="Solo lectura (Creado por: {{ recibo.usuario.username }})"></i>
                                         {% endif %}
                                     {% endif %}
@@ -260,9 +249,7 @@
                             </td>
                         </tr>
                         {% endfor %}
-
                     {% else %}
-                        {# ESTADO INICIAL SIN BÚSQUEDA #}
                         <tr>
                             <td colspan="6" class="p-32 text-center">
                                 <div class="flex flex-col items-center justify-center space-y-4">
@@ -275,7 +262,7 @@
                                     <div class="max-w-xs">
                                         <p class="text-[11px] font-black text-intu-blue uppercase tracking-[0.2em]">Búsqueda Requerida</p>
                                         <p class="text-[10px] text-gray-400 font-medium leading-relaxed mt-1">
-                                            Utilice los filtros superiores para visualizar los registros.
+                                            Filtre por **Fecha de Registro** para ver la actividad real del sistema.
                                         </p>
                                     </div>
                                 </div>
@@ -304,7 +291,7 @@
     </section>
 </div>
 
-{# FORMULARIOS OCULTOS #}
+{# FORMULARIOS Y MODALES (Sin cambios) #}
 <form id="anular-form" method="POST" action="{% url 'recibos:dashboard' %}" class="hidden">
     {% csrf_token %}
     <input type="hidden" name="action" value="anular">
@@ -316,7 +303,6 @@
     <input type="hidden" name="action" value="clear_logs">
 </form>
 
-{# MODAL DE CONFIRMACIÓN #}
 <div id="confirmation-modal" class="fixed inset-0 bg-gray-900/60 z-50 hidden transition-opacity flex items-center justify-center p-4" style="opacity:0;">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all scale-95 opacity-0" id="modal-content">
         <h3 class="text-lg font-black text-intu-blue uppercase tracking-tight mb-4" id="modal-title">Confirmar Acción</h3>

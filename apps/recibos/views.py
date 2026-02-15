@@ -214,7 +214,7 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequired
 
                 queryset = queryset.filter(q_objects)
 
-        # --- Filtros de Estado y Fechas  ---
+        # --- Filtros de Estado y Fechas--
         estado_seleccionado = self.request.GET.get('estado')
         if estado_seleccionado and estado_seleccionado != "":
             queryset = queryset.filter(estado__iexact=estado_seleccionado)
@@ -223,11 +223,12 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequired
         fecha_fin_str = self.request.GET.get('fecha_fin')
 
         try:
+            # IMPORTANTE: Cambiamos 'fecha' por 'fecha_creacion__date'
             if fecha_inicio_str:
-                queryset = queryset.filter(fecha__gte=fecha_inicio_str)
+                queryset = queryset.filter(fecha_creacion__date__gte=fecha_inicio_str)
             if fecha_fin_str:
-                queryset = queryset.filter(fecha__lte=fecha_fin_str)
-        except ValueError:
+                queryset = queryset.filter(fecha_creacion__date__lte=fecha_fin_str)
+        except (ValueError, TypeError):
             pass
 
         # --- Filtros de Categoría  ---
@@ -465,28 +466,31 @@ def es_administrador(user):
 @login_required
 @user_passes_test(es_administrador, login_url='recibos:dashboard')
 def estadisticas_view(request):
-    # 1. Obtener parámetros de filtrado desde la URL (GET)
+    # 1. Obtener parámetros de filtrado
     fecha_filtro = request.GET.get('fecha')
     estado_filtro = request.GET.get('estado')
     
-    # 2. Queryset Base: Excluimos siempre los anulados para integridad financiera
+    # 2. Queryset Base: Excluimos anulados
     queryset = Recibo.objects.filter(anulado=False)
 
-    # 3. Aplicar Filtros Dinámicos
+    # 3. Aplicar Filtros Dinámicos usando la FECHA DE REGISTRO
     if fecha_filtro:
-        queryset = queryset.filter(fecha=fecha_filtro)
+        # Usamos __date para comparar un DateTimeField con un input date de HTML
+        queryset = queryset.filter(fecha_creacion__date=fecha_filtro)
+    
     if estado_filtro and estado_filtro != 'Todos':
-        queryset = queryset.filter(estado=estado_filtro)
+        queryset = queryset.filter(estado__iexact=estado_filtro)
 
     # 4. Cálculos Generales
     hoy = timezone.now().date()
     total_recibos = queryset.count()
-    # Los generados hoy no se ven afectados por el filtro de fecha para dar contexto global
-    recibos_hoy = Recibo.objects.filter(fecha=hoy, anulado=False).count()
+    
+    # IMPORTANTE: Recibos creados hoy según el sistema (reloj del servidor)
+    recibos_hoy = Recibo.objects.filter(fecha_creacion__date=hoy, anulado=False).count()
+    
     monto_total = queryset.aggregate(Sum('total_monto_bs'))['total_monto_bs__sum'] or 0
 
-    # 5. Mapeo de Categorías (Campos reales de tu BD: categoria1...categoria10)
-    # Aquí puedes cambiar los nombres de la derecha por los conceptos reales de tu app
+    # 5. Mapeo de Categorías (Se filtran automáticamente según el queryset ya filtrado arriba)
     categorias_config = [
         ('categoria1', 'Título Tierra Urbana'),
         ('categoria2', 'Título + Vivienda'),
@@ -502,21 +506,18 @@ def estadisticas_view(request):
     
     estadisticas_categorias = []
     for campo, nombre_real in categorias_config:
-        # Contamos cuántos registros tienen esta categoría marcada como True
         count = queryset.filter(**{campo: True}).count()
-        
-        # Agregamos a la lista (incluso si es 0 para que siempre aparezcan las 10)
         estadisticas_categorias.append({
             'nombre': nombre_real,
             'total': count
         })
 
-    # 6. Top 5 Estados (Agrupación dinámica)
+    # 6. Top 5 Estados (Basado en el filtro aplicado)
     top_estados = queryset.values('estado').annotate(
         total=Count('id')
     ).order_by('-total')[:5]
 
-    # 7. Obtener lista de estados únicos para el selector del filtro
+    # 7. Lista de estados para el selector (Global, no filtrada por fecha)
     estados_disponibles = Recibo.objects.exclude(
         estado__isnull=True
     ).values_list('estado', flat=True).distinct().order_by('estado')
