@@ -1,7 +1,7 @@
 from urllib import request
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, Max
 from django.contrib import messages
 from .models import Recibo
 import io
@@ -17,12 +17,17 @@ import zipfile
 from django.utils import timezone
 from datetime import datetime
 import pytz 
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 from django.core.paginator import Paginator
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
 from django.views.generic import ListView
+from django.db.models.functions import TruncDay, Cast
+from django.db.models import DateField
 from django.contrib.auth.decorators import login_required, user_passes_test
 logger = logging.getLogger(__name__)
-
 # --- CONFIGURACIÓN DE RUTAS Y CONSTANTES (Mantener por si otras funciones lo usan) ---
 try:
     HEADER_IMAGE = os.path.join(
@@ -148,7 +153,7 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequired
             messages.success(request, "Todos los recibos han sido eliminados de la base de datos.")
             return redirect(reverse('recibos:dashboard'))
 
-        # --- Lógica de Carga de Excel (Corregida) ---
+        # --- Lógica de Carga de Excel ---
         elif action == 'upload':
             archivo_excel = request.FILES.get('archivo_recibo')
             if not archivo_excel:
@@ -158,45 +163,31 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequired
                     success, message, pks = importar_recibos_desde_excel(archivo_excel, request.user)
                     if success:
                         messages.success(request, message)
-                        
-                        # Si hay recibos creados, los pasamos por la URL para que el JS los descargue
                         if pks and isinstance(pks, list):
                             pks_str = ','.join(map(str, pks))
                             url = reverse('recibos:dashboard') + f'?download_pks={pks_str}'
                             return redirect(url)
                     else:
-                        messages.error(request, f"Fallo en la carga de Excel: {message}")
+                        messages.error(request, f"Fallo en la carga: {message}")
                 except Exception as e:
-                    # Usar logger si está disponible, sino imprimir o mostrar error
                     messages.error(request, f"Error al ejecutar la importación: {e}")
-            
             return redirect(reverse('recibos:dashboard'))
 
         return redirect(reverse('recibos:dashboard'))
 
     def get_queryset(self):
-        # ... (Tu lógica de filtrado se mantiene igual)
-        queryset = Recibo.objects.filter(anulado=False).order_by('-fecha', '-numero_recibo')
-        # ... resto del código que ya tienes ...
-        return queryset
-
-
-    def get_queryset(self):
-        queryset = Recibo.objects.filter(anulado=False).order_by('-fecha', '-numero_recibo')
+        # Empezamos con el queryset base ordenado cronológicamente
+        queryset = Recibo.objects.filter(anulado=False).order_by('-fecha_creacion', '-numero_recibo')
 
         search_query = self.request.GET.get('q')
         search_field = self.request.GET.get('field', '')
 
-        # --- Lógica de Búsqueda 
+        # --- Búsqueda por texto ---
         if search_query:
             query_normalizado = search_query.strip()
-            
             if search_field and search_field != 'todos' and hasattr(Recibo, search_field):
-                try:
-                    filtro = {f'{search_field}__icontains': query_normalizado}
-                    queryset = queryset.filter(**filtro)
-                except Exception as e:
-                    logger.error(f"Error al filtrar por campo dinámico {search_field}: {e}")
+                filtro = {f'{search_field}__icontains': query_normalizado}
+                queryset = queryset.filter(**filtro)
             else:
                 q_objects = (
                     Q(nombre__icontains=query_normalizado) |
@@ -205,37 +196,31 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequired
                     Q(numero_transferencia__icontains=query_normalizado) |
                     Q(estado__icontains=query_normalizado)
                 )
-
                 try:
                     recibo_id = int(query_normalizado)
                     q_objects |= Q(pk=recibo_id)
                 except ValueError:
                     pass
-
                 queryset = queryset.filter(q_objects)
 
-        # --- Filtros de Estado y Fechas  ---
+        # --- Filtros de Estado y Fechas ---
         estado_seleccionado = self.request.GET.get('estado')
-        if estado_seleccionado and estado_seleccionado != "":
+        if estado_seleccionado:
             queryset = queryset.filter(estado__iexact=estado_seleccionado)
 
         fecha_inicio_str = self.request.GET.get('fecha_inicio')
         fecha_fin_str = self.request.GET.get('fecha_fin')
 
-        try:
-            if fecha_inicio_str:
-                queryset = queryset.filter(fecha__gte=fecha_inicio_str)
-            if fecha_fin_str:
-                queryset = queryset.filter(fecha__lte=fecha_fin_str)
-        except ValueError:
-            pass
+        if fecha_inicio_str:
+            queryset = queryset.filter(fecha_creacion__date__gte=fecha_inicio_str)
+        if fecha_fin_str:
+            queryset = queryset.filter(fecha_creacion__date__lte=fecha_fin_str)
 
-        # --- Filtros de Categoría  ---
+        # --- Filtros de Categoría ---
         category_filters = Q()
         for codigo, _ in CATEGORY_CHOICES:
             if self.request.GET.get(codigo) == 'on':
                 category_filters |= Q(**{f'{codigo}': True})
-
         if category_filters:
             queryset = queryset.filter(category_filters)
 
@@ -243,31 +228,29 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequired
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        hoy = timezone.now().date()
 
-        # Consulta eficiente de estados únicos.
+        # CLAVE: Aquí calculamos los registros de hoy para las tarjetas superiores
+        context['recibos_hoy'] = Recibo.objects.filter(
+            fecha_creacion__date=hoy, 
+            anulado=False
+        ).count()
+
+        # Estados únicos para el selector
         context['estados_db'] = Recibo.objects.filter(anulado=False).exclude(
             estado__isnull=True
-        ).exclude(
-            estado__exact=''
-        ).values_list(
-            'estado', flat=True
-        ).distinct().order_by('estado')
+        ).exclude(estado='').values_list('estado', flat=True).distinct().order_by('estado')
 
         context['categorias_list'] = CATEGORY_CHOICES
+        
+        # Mantener estados de filtros en el HTML
         context['current_estado'] = self.request.GET.get('estado')
         context['current_start_date'] = self.request.GET.get('fecha_inicio')
         context['current_end_date'] = self.request.GET.get('fecha_fin')
 
-        # Manejo de parámetros GET para la paginación 
+        # Limpieza de parámetros GET para la paginación
         request_get_copy = self.request.GET.copy()
-        if 'page' in request_get_copy:
-            del request_get_copy['page']
-
-        if 'q' in request_get_copy and not request_get_copy['q']:
-            del request_get_copy['q']
-        if 'field' in request_get_copy and not request_get_copy['field']:
-            del request_get_copy['field']
-
+        request_get_copy.pop('page', None)
         context['request_get'] = request_get_copy
 
         return context
@@ -465,62 +448,98 @@ def es_administrador(user):
 @login_required
 @user_passes_test(es_administrador, login_url='recibos:dashboard')
 def estadisticas_view(request):
-    # 1. Obtener parámetros de filtrado desde la URL (GET)
-    fecha_filtro = request.GET.get('fecha')
+    # 1. Obtener parámetros de filtrado
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
     estado_filtro = request.GET.get('estado')
     
-    # 2. Queryset Base: Excluimos siempre los anulados para integridad financiera
+    # Definimos la zona horaria de Venezuela para evitar el error de las 10 PM
+    tz_vzl = pytz.timezone('America/Caracas')
+    ahora_local = timezone.localtime(timezone.now(), tz_vzl)
+    hoy = ahora_local.date()
+
+    # 2. Queryset Base (Integridad: No anulados)
     queryset = Recibo.objects.filter(anulado=False)
 
     # 3. Aplicar Filtros Dinámicos
-    if fecha_filtro:
-        queryset = queryset.filter(fecha=fecha_filtro)
+    if fecha_inicio:
+        queryset = queryset.filter(fecha_creacion__date__gte=fecha_inicio)
+    if fecha_fin:
+        queryset = queryset.filter(fecha_creacion__date__lte=fecha_fin)
     if estado_filtro and estado_filtro != 'Todos':
-        queryset = queryset.filter(estado=estado_filtro)
+        queryset = queryset.filter(estado__iexact=estado_filtro)
 
-    # 4. Cálculos Generales
-    hoy = timezone.now().date()
+    # 4. Cálculos para Tarjetas Principales
     total_recibos = queryset.count()
-    # Los generados hoy no se ven afectados por el filtro de fecha para dar contexto global
-    recibos_hoy = Recibo.objects.filter(fecha=hoy, anulado=False).count()
+    # Para recibos_hoy, también forzamos la fecha local de Venezuela
+    recibos_hoy = Recibo.objects.filter(fecha_creacion__date=hoy, anulado=False).count()
     monto_total = queryset.aggregate(Sum('total_monto_bs'))['total_monto_bs__sum'] or 0
 
-    # 5. Mapeo de Categorías (Campos reales de tu BD: categoria1...categoria10)
-    # Aquí puedes cambiar los nombres de la derecha por los conceptos reales de tu app
+    # 5. Lógica de Historial (SOLUCIÓN AL ERROR DE FECHA)
+    # Usamos TruncDay con tzinfo para que a las 10pm siga siendo el mismo día en la gráfica
+    datos_historial = queryset.annotate(
+        dia_solo=TruncDay('fecha_creacion', tzinfo=tz_vzl)
+    ).values('dia_solo').annotate(total=Count('id')).order_by('dia_solo')
+
+    max_dia = max([d['total'] for d in datos_historial]) if datos_historial else 0
+    
+    historial_dias = []
+    for item in datos_historial:
+        if item['dia_solo']:
+            # Convertimos el objeto datetime truncado a date simple
+            porcentaje = (item['total'] / max_dia * 100) if max_dia > 0 else 0
+            historial_dias.append({
+                'fecha': item['dia_solo'].date(),
+                'total': item['total'],
+                'porcentaje': porcentaje
+            })
+
+    # 6. Lógica de Categorías
     categorias_config = [
-        ('categoria1', 'Título Tierra Urbana'),
-        ('categoria2', 'Título + Vivienda'),
-        ('categoria3', 'Municipal'),
-        ('categoria4', 'Tierra Privada'),
-        ('categoria5', 'Tierra INAVI'),
-        ('categoria6', 'Excedentes Título'),
-        ('categoria7', 'Excedentes INAVI'),
-        ('categoria8', 'Estudio Técnico'),
-        ('categoria9', 'Locales Comerciales'),
-        ('categoria10', 'Arrendamiento Terrenos'),
+        ('categoria1', 'Título Tierra Urbana'), ('categoria2', 'Título + Vivienda'),
+        ('categoria3', 'Municipal'), ('categoria4', 'Tierra Privada'),
+        ('categoria5', 'Tierra INAVI'), ('categoria6', 'Excedentes Título'),
+        ('categoria7', 'Excedentes INAVI'), ('categoria8', 'Estudio Técnico'),
+        ('categoria9', 'Locales Comerciales'), ('categoria10', 'Arrendamiento Terrenos'),
     ]
     
     estadisticas_categorias = []
     for campo, nombre_real in categorias_config:
-        # Contamos cuántos registros tienen esta categoría marcada como True
         count = queryset.filter(**{campo: True}).count()
-        
-        # Agregamos a la lista (incluso si es 0 para que siempre aparezcan las 10)
-        estadisticas_categorias.append({
-            'nombre': nombre_real,
-            'total': count
-        })
+        if count > 0:
+            porcentaje_cat = (count / total_recibos * 100) if total_recibos > 0 else 0
+            estadisticas_categorias.append({
+                'nombre': nombre_real, 
+                'total': count,
+                'porcentaje': porcentaje_cat
+            })
 
-    # 6. Top 5 Estados (Agrupación dinámica)
+    # 7. Distribución Regional
     top_estados = queryset.values('estado').annotate(
         total=Count('id')
-    ).order_by('-total')[:5]
+    ).order_by('-total')[:10]
 
-    # 7. Obtener lista de estados únicos para el selector del filtro
     estados_disponibles = Recibo.objects.exclude(
         estado__isnull=True
-    ).values_list('estado', flat=True).distinct().order_by('estado')
+    ).exclude(estado='').values_list('estado', flat=True).distinct().order_by('estado')
 
+    # 8. Rendimiento de Usuarios
+    ranking_raw = queryset.values('usuario').annotate(total=Count('id')).order_by('-total')
+    
+    ranking_usuarios = []
+    for item in ranking_raw:
+        if item['usuario']:
+            try:
+                # Usamos el modelo User detectado (Usuario)
+                user_obj = User.objects.get(pk=item['usuario'])
+                ranking_usuarios.append({
+                    'usuario': user_obj,
+                    'total': item['total']
+                })
+            except User.DoesNotExist:
+                continue
+
+    # 9. Contexto Unificado
     context = {
         'total_recibos': total_recibos,
         'recibos_hoy': recibos_hoy,
@@ -528,10 +547,47 @@ def estadisticas_view(request):
         'categorias': estadisticas_categorias,
         'top_estados': top_estados,
         'estados_db': estados_disponibles,
+        'historial_dias': historial_dias,
+        'ranking_usuarios': ranking_usuarios,
         'filtros': {
-            'fecha': fecha_filtro,
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin,
             'estado': estado_filtro
         }
     }
     
     return render(request, 'recibos/estadisticas.html', context)
+
+def rendimiento_usuarios(request):
+    # 1. Obtener fechas del filtro
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    
+    # Filtro base
+    filtros = Q()
+    if fecha_inicio and fecha_fin:
+        filtros &= Q(created_at__range=[fecha_inicio, fecha_fin])
+    
+    # 2. Query Principal: Agrupar por usuario y contar recibos
+    # Asumimos que el modelo Recibo tiene un campo 'usuario' o 'created_by'
+    ranking = Recibo.objects.filter(filtros).values('usuario').annotate(total=Count('id')).order_by('-total')
+    
+    # 3. Formatear datos para el template (unir con modelo User para nombres)
+    ranking_data = []
+    total_general = 0
+    
+    for item in ranking:
+        if item['usuario']: # Evitar nulos
+            user = User.objects.get(pk=item['usuario'])
+            ranking_data.append({
+                'usuario': user,
+                'total': item['total']
+            })
+            total_general += item['total']
+            
+    context = {
+        'ranking_usuarios': ranking_data, # Lista ordenada de diccionarios
+        'total_general_periodo': total_general,
+    }
+    
+    return render(request, 'usuarios_performance.html', context)

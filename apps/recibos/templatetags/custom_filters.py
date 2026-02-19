@@ -82,3 +82,22 @@ def remove_query_param(url_querystring, param_name):
     
     # Devuelve la cadena con un '&' inicial si hay otros parámetros, sino una cadena vacía
     return '&' + new_querystring if new_querystring else ''
+
+@register.filter
+def moneda_ve(value):
+    """
+    Convierte un número al formato: 1.234.567,89
+    """
+    if value is None or value == "":
+        return "0,00"
+    
+    try:
+        # Formateamos con comas para miles y punto para decimales (estándar)
+        value = "{:,.2f}".format(float(value))
+        # Intercambiamos los signos usando una técnica de reemplazo temporal
+        # 1,234,567.89 -> 1.234.567,89
+        main_part, decimal_part = value.split('.')
+        main_part = main_part.replace(',', '.')
+        return f"{main_part},{decimal_part}"
+    except (ValueError, TypeError):
+        return value

@@ -36,20 +36,17 @@ class Recibo(models.Model):
     # 2. DATOS DEL CLIENTE E IDENTIFICACIÓN
 
     # Estado o región del cliente. 
-    # Aumentado a 150 
     estado = models.CharField(
         max_length=150, 
         db_index=True 
     )
     
     # Nombre completo del cliente.
-    # Aumentado a 500 
     nombre = models.CharField(
         max_length=500,
     )
     
     # RIF o Cédula de Identidad.
-    # Aumentado a 100 
     rif_cedula_identidad = models.CharField(
         max_length=100, 
         db_index=True 
@@ -59,7 +56,6 @@ class Recibo(models.Model):
     direccion_inmueble = models.TextField()
     
     # Ente/organización que liquida o realiza el pago.
-    # Aumentado a 500 
     ente_liquidado = models.CharField(
         max_length=500,
     )
@@ -77,12 +73,11 @@ class Recibo(models.Model):
     categoria10 = models.BooleanField(default=False)
 
     # 4. MONTOS Y FINANZAS
-    # AUMENTADO max_digits=19 
     gastos_administrativos = models.DecimalField(max_digits=19, decimal_places=2)
     
     tasa_dia = models.DecimalField(max_digits=19, decimal_places=4) 
     
-    # total_monto_bs: Aumentado a 19 dígitos 
+    # total_monto_bs
     total_monto_bs = models.DecimalField(
         max_digits=19, 
         decimal_places=2,
@@ -92,7 +87,6 @@ class Recibo(models.Model):
     # 5. CONCILIACIÓN Y DETALLES DE PAGO
     
     # Número de referencia de la transferencia/pago.
-    # Aumentado a 255 
     numero_transferencia = models.CharField(
         max_length=255, 
         blank=True, 
