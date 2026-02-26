@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h2>Listado de Bienes</h2>
+
+<a href="{% url 'bien_create' %}">Registrar Bien</a>
+<a href="{% url 'generar_etiqueta' bien.pk %}">Imprimir Etiqueta</a>
+
+<table border="1">
+<tr>
+    <th>ID</th>
+    <th>Descripción</th>
+    <th>Serial</th>
+    <th>Responsable</th>
+    <th>Unidad</th>
+    <th>Estado</th>
+    <th>Acciones</th>
+    <th>QR</th>
+</tr>
+
+{% for bien in bienes %}
+<tr>
+    <td>{{ bien.nro_identificacion }}</td>
+    <td>{{ bien.descripcion }}</td>
+    <td>{{ bien.serial }}</td>
+    <td>{{ bien.empleado_uso }}</td>
+    <td>{{ bien.unidad_trabajo }}</td>
+    <td>{{ bien.estado_bien }}</td>
+    <td>
+        <a href="{% url 'bien_update' bien.pk %}">Editar</a>
+    </td>
+    <td>
+    {% if bien.qr_imagen %}
+        <img src="{{ bien.qr_imagen.url }}" width="80">
+    {% endif %}
+</td>
+</tr>
+{% endfor %}
+
+</table>
+
+{% endblock %}

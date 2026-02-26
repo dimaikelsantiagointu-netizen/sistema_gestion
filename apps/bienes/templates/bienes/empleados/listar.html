@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h2>Lista de Empleados</h2>
+
+<form method="get">
+    <input type="text" name="q" placeholder="Buscar..." />
+    <button type="submit">Buscar</button>
+</form>
+
+<a href="{% url 'empleado_create' %}">Nuevo Empleado</a>
+
+<table border="1">
+    <tr>
+        <th>Cédula</th>
+        <th>Nombre</th>
+        <th>Cargo</th>
+        <th>Unidad</th>
+        <th>Estatus</th>
+        <th>Acciones</th>
+    </tr>
+
+    {% for emp in empleados %}
+    <tr>
+        <td>{{ emp.cedula }}</td>
+        <td>{{ emp.nombre }} {{ emp.apellido }}</td>
+        <td>{{ emp.cargo }}</td>
+        <td>{{ emp.unidad_trabajo }}</td>
+        <td>
+            {% if emp.estatus %}Activo{% else %}Inactivo{% endif %}
+        </td>
+        <td>
+            <a href="{% url 'empleado_update' emp.pk %}">Editar</a>
+        </td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+{% endblock %}
