@@ -1,40 +1,106 @@
 {% extends 'base.html' %}
+
 {% block content %}
+<div class="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+    <div>
+        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Gestión de Personal</h1>
+        <div class="h-1 w-16 bg-intu-red mt-2"></div>
+    </div>
 
-<h2>Lista de Empleados</h2>
+    <div class="flex flex-col sm:flex-row gap-4 items-center">
+        <form method="get" class="relative w-full sm:w-80">
+            <input type="text" name="q" placeholder="Buscar por nombre o cédula..." 
+                   class="w-full pl-12 pr-4 py-3 rounded-2xl border border-gray-100 focus:border-intu-blue focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm font-medium shadow-sm"
+                   value="{{ request.GET.q }}">
+            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <i class="fas fa-search"></i>
+            </div>
+            <button type="submit" class="hidden">Buscar</button>
+        </form>
 
-<form method="get">
-    <input type="text" name="q" placeholder="Buscar..." />
-    <button type="submit">Buscar</button>
-</form>
+        <a href="{% url 'bienes:empleado_create' %}" class="w-full sm:w-auto bg-intu-blue text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-opacity-90 transition shadow-lg flex items-center justify-center">
+            <i class="fas fa-user-plus mr-2"></i> Nuevo Empleado
+        </a>
+    </div>
+</div>
 
-<a href="{% url 'empleado_create' %}">Nuevo Empleado</a>
+<div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-50 border-b border-gray-100">
+                    <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Identificación</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Nombre y Apellido</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Cargo / Unidad</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Estatus</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for emp in empleados %}
+                <tr class="hover:bg-gray-50/50 transition-colors group">
+                    <td class="px-6 py-4">
+                        <span class="font-bold text-intu-blue text-sm uppercase tracking-tight">
+                            {{ emp.cedula }}
+                        </span>
+                    </td>
+                    
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 text-intu-blue flex items-center justify-center mr-3 font-black text-xs shadow-sm">
+                                {{ emp.nombre|slice:":1" }}{{ emp.apellido|slice:":1" }}
+                            </div>
+                            <div class="max-w-[200px]">
+                                <p class="font-black text-gray-800 text-sm leading-tight uppercase break-words">
+                                    {{ emp.nombre }} {{ emp.apellido }}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
 
-<table border="1">
-    <tr>
-        <th>Cédula</th>
-        <th>Nombre</th>
-        <th>Cargo</th>
-        <th>Unidad</th>
-        <th>Estatus</th>
-        <th>Acciones</th>
-    </tr>
+                    <td class="px-6 py-4">
+                        <div class="max-w-[250px]">
+                            <p class="text-xs font-bold text-gray-700 leading-tight uppercase">{{ emp.cargo }}</p>
+                            <p class="text-[10px] text-gray-400 font-medium tracking-wide mt-1 uppercase">
+                                <i class="fas fa-map-marker-alt mr-1"></i> {{ emp.unidad_trabajo }}
+                            </p>
+                        </div>
+                    </td>
 
-    {% for emp in empleados %}
-    <tr>
-        <td>{{ emp.cedula }}</td>
-        <td>{{ emp.nombre }} {{ emp.apellido }}</td>
-        <td>{{ emp.cargo }}</td>
-        <td>{{ emp.unidad_trabajo }}</td>
-        <td>
-            {% if emp.estatus %}Activo{% else %}Inactivo{% endif %}
-        </td>
-        <td>
-            <a href="{% url 'empleado_update' emp.pk %}">Editar</a>
-        </td>
-    </tr>
-    {% endfor %}
+                    <td class="px-6 py-4">
+                        {% if emp.estatus %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span> Activo
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-gray-100 text-gray-400">
+                            <span class="w-1.5 h-1.5 rounded-full bg-gray-400 mr-2"></span> Inactivo
+                        </span>
+                        {% endif %}
+                    </td>
 
-</table>
-
+                    <td class="px-6 py-4">
+                        <div class="flex items-center justify-center">
+                            <a href="{% url 'bienes:empleado_update' emp.pk %}" 
+                               class="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-blue-50 hover:text-intu-blue transition-all"
+                               title="Editar Expediente">
+                                <i class="fas fa-edit text-sm"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-16 text-center">
+                        <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-users text-gray-200 text-3xl"></i>
+                        </div>
+                        <p class="text-gray-400 font-bold uppercase text-[10px] tracking-widest">No se encontraron empleados</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

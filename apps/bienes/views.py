@@ -1,4 +1,4 @@
-from django.views.generic import ListView, CreateView, UpdateView
+from django.views.generic import *
 from django.urls import reverse_lazy
 from .models import *
 from .forms import *
@@ -34,15 +34,15 @@ class EmpleadoCreateView(CreateView):
     model = Empleado
     form_class = EmpleadoForm
     template_name = 'bienes/empleados/crear.html'
-    success_url = reverse_lazy('empleado_list')
-
+    # CORRECCIÓN AQUÍ: Añadir 'bienes:'
+    success_url = reverse_lazy('bienes:empleado_list') 
 
 class EmpleadoUpdateView(UpdateView):
     model = Empleado
     form_class = EmpleadoForm
-    template_name = 'bienes/empleados/editar.html'
-    success_url = reverse_lazy('empleado_list')
-    
+    template_name = 'bienes/empleados/crear.html'
+    # CORRECCIÓN AQUÍ: Añadir 'bienes:'
+    success_url = reverse_lazy('bienes:empleado_list')
 
 #=========================
 # VISTAS DE BIENES
@@ -59,13 +59,13 @@ class BienCreateView(CreateView):
     model = BienNacional
     form_class = BienForm
     template_name = 'bienes/bienes/crear.html'
-    success_url = reverse_lazy('bien_list')
+    success_url = reverse_lazy('bienes:biene_list')
 
 class BienUpdateView(UpdateView):
     model = BienNacional
     form_class = BienForm
-    template_name = 'bienes/bienes/editar.html'
-    success_url = reverse_lazy('bien_list')
+    template_name = 'bienes/bienes/crear.html'
+    success_url = reverse_lazy('bienes:bien_list')
 
     def form_valid(self, form):
         bien = self.get_object()
@@ -210,3 +210,29 @@ def carga_masiva_bienes(request):
         form = CargaMasivaForm()
 
     return render(request, "bienes/carga_masiva.html", {"form": form})
+
+
+class BienesDashboardView(TemplateView):
+    template_name = 'bienes/dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Estadísticas rápidas para las tarjetas
+        context['total_bienes'] = BienNacional.objects.count()
+        context['total_empleados'] = Empleado.objects.count()
+        # Contamos cuántos bienes están en buen estado (ejemplo)
+        context['bienes_operativos'] = BienNacional.objects.filter(estado_bien='Buen Estado').count()
+        return context
+    
+
+
+class BienDetailView(DetailView):
+    model = BienNacional
+    template_name = 'bienes/bienes/detalle_historial.html'
+    context_object_name = 'bien'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Obtenemos los movimientos ordenados del más reciente al más antiguo
+        context['historial'] = MovimientoBien.objects.filter(bien=self.object).order_of_recent()
+        return context

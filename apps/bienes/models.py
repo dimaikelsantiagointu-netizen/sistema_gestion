@@ -92,7 +92,15 @@ class BienNacional(models.Model):
 
     monto = models.DecimalField(max_digits=12, decimal_places=2)
 
-    estado_bien = models.CharField(max_length=30, default="Activo")
+    ESTADOS_CHOICES = [
+        ('Buen Estado', 'Buen Estado'),
+        ('Regular', 'Regular'),
+        ('Malo', 'Malo'),
+        ('En Reparación', 'En Reparación'),
+        ('Desincorporado', 'Desincorporado'),
+    ]
+    estado_bien = models.CharField(max_length=30, choices=ESTADOS_CHOICES, default="Buen Estado")
+    
     fecha_registro = models.DateTimeField(auto_now_add=True)
 
     empleado_uso = models.ForeignKey('Empleado', on_delete=models.PROTECT)
