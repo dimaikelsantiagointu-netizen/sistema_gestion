@@ -13,3 +13,4 @@ xlsxwriter
 fontawesome
 unidecode
 python-docx
+qrcode

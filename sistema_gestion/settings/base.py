@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.beneficiarios',
     'apps.contratos',
+    'apps.bienes',
 ]
 
 MIDDLEWARE = [
