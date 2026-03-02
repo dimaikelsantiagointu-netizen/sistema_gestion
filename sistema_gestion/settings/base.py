@@ -10,7 +10,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-clave-temporal-cambiar-en-
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True' 
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost'] 
+# En producción, asegúrate de configurar ALLOWED_HOSTS correctamente
+ALLOWED_HOSTS = ['192.168.0.102', 'localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     # APPS ESTÁNDAR DE DJANGO
@@ -107,3 +108,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# 5. DOMINIO PARA GENERACIÓN DE CÓDIGOS QR usanndo el modelo BienNacional
+SITE_DOMAIN = os.getenv('SITE_DOMAIN', 'http://127.0.0.1:8000')
+#Agregar SITE_DOMAIN al .env con el dominio real en producción, ej: 'https://www.tu-sitio.com'

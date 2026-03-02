@@ -30,7 +30,6 @@ class EmpleadoForm(forms.ModelForm):
 class BienForm(forms.ModelForm):
     class Meta:
         model = BienNacional
-        # En lugar de __all__, mejor deja que exclude maneje el resto
         exclude = ['qr_imagen', 'uuid', 'fecha_registro'] 
         
         widgets = {
@@ -45,33 +44,41 @@ class BienForm(forms.ModelForm):
             'estado_bien': forms.Select(attrs={'class': CLASS_INPUT}),
             'empleado_uso': forms.Select(attrs={'class': CLASS_INPUT}),
             'unidad_trabajo': forms.Select(attrs={'class': CLASS_INPUT}),
+            
+            # --- NUEVOS CAMPOS DE AUDITORÍA ---
+            'responsable_patrimonial': forms.TextInput(attrs={
+                'class': CLASS_INPUT, 
+                'placeholder': 'Nombre de la autoridad patrimonial'
+            }),
+            'jefe_inventariado': forms.TextInput(attrs={
+                'class': CLASS_INPUT, 
+                'placeholder': 'Quién supervisó el conteo'
+            }),
+            'registro_persona': forms.TextInput(attrs={
+                'class': CLASS_INPUT, 
+                'placeholder': 'Nombre del transcriptor'
+            }),
+            'observaciones': forms.Textarea(attrs={
+                'class': CLASS_INPUT, 
+                'rows': '3', 
+                'placeholder': 'Detalles adicionales, estado físico al recibir, etc.'
+            }),
         }
 
-    # Optimizamos las validaciones para evitar errores si el campo viene vacío
     def clean_serial(self):
         serial = self.cleaned_data.get('serial')
-        if not serial:
-            return serial
-        
+        if not serial: return serial
         qs = BienNacional.objects.filter(serial=serial)
-        if self.instance.pk:
-            qs = qs.exclude(pk=self.instance.pk)
-        
-        if qs.exists():
-            raise forms.ValidationError("Este serial ya está registrado.")
+        if self.instance.pk: qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists(): raise forms.ValidationError("Este serial ya está registrado.")
         return serial
 
     def clean_nro_identificacion(self):
         nro = self.cleaned_data.get('nro_identificacion')
-        if not nro:
-            return nro
-            
+        if not nro: return nro
         qs = BienNacional.objects.filter(nro_identificacion=nro)
-        if self.instance.pk:
-            qs = qs.exclude(pk=self.instance.pk)
-            
-        if qs.exists():
-            raise forms.ValidationError("Este número de identificación ya existe.")
+        if self.instance.pk: qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists(): raise forms.ValidationError("Este número de identificación ya existe.")
         return nro
 
 # ==========================

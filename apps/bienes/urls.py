@@ -32,6 +32,35 @@ urlpatterns = [
     # ==========================
     # URLS PÚBLICAS (Sin necesidad de login)
     # ==========================
-    # Esta es la URL que se codifica en el código QR (RF-05)
+    # Esta es la URL que se codifica en el código QR 
     path('consulta/<uuid:uuid>/', consulta_publica, name='consulta_publica'),
+
+
+
+    path('estadisticas/', views.EstadisticasView.as_view(), name='estadisticas'),
+
+
+    path('detalle/<int:pk>/', views.BienDetailView.as_view(), name='bien_detail'),
+    
+    # Historial de movimientos (RF-05 / BR-03)
+    path('historial/<int:pk>/', views.BienHistorialView.as_view(), name='bien_historial'),
+
+    path('unidades/nueva/', views.UnidadTrabajoCreateView.as_view(), name='unidad_create'),
+
+
+    path('geografia/gestion/', views.GestionGeograficaView.as_view(), name='geografia_gestion'),
+    path('region/nueva/', views.RegionCreateView.as_view(), name='region_create'),
+
+    path('geografia/region/crear/', views.RegionCreateView.as_view(), name='region_create'),
+    path('geografia/estado/crear/', views.EstadoCreateView.as_view(), name='estado_create'),
+    path('geografia/municipio/crear/', views.MunicipioCreateView.as_view(), name='municipio_create'),
+    path('geografia/ciudad/crear/', views.CiudadCreateView.as_view(), name='ciudad_create'),
+    path('geografia/parroquia/crear/', views.ParroquiaCreateView.as_view(), name='parroquia_create'),
+
+
+
+    # urls.py de la app bienes
+path('ajax/load-parroquias/', views.load_parroquias, name='ajax_load_parroquias'),
 ]
+
+

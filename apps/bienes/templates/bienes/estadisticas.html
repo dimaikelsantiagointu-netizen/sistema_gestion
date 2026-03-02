@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4">
+    <div class="mb-8">
+        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Panel de Estadísticas</h1>
+        <p class="text-gray-500 font-bold text-sm">Análisis en tiempo real del Patrimonio Nacional</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Total Activos</p>
+            <h2 class="text-4xl font-black text-intu-blue">{{ total_bienes }}</h2>
+            <p class="text-xs text-emerald-500 font-bold mt-2"><i class="fas fa-check-circle mr-1"></i> Registrados</p>
+        </div>
+        <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Inversión Patrimonial</p>
+            <h2 class="text-4xl font-black text-gray-800">{{ inversion_total }} <span class="text-sm font-bold">Bs.</span></h2>
+            <p class="text-xs text-gray-400 font-bold mt-2">Valor acumulado</p>
+        </div>
+        <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Unidades de Trabajos Operativas</p>
+            <h2 class="text-4xl font-black text-purple-600">{{ labels_unidades|length }}</h2>
+            <p class="text-xs text-purple-400 font-bold mt-2">Sedes vinculadas</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Distribución por Unidades</h3>
+            <canvas id="chartUnidades" height="250"></canvas>
+        </div>
+
+        <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Estado de Conservación</h3>
+            <div class="max-w-[300px] mx-auto">
+                <canvas id="chartEstado"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Configuración Gráfico Unidades
+    const ctxUnidades = document.getElementById('chartUnidades').getContext('2d');
+    new Chart(ctxUnidades, {
+        type: 'bar',
+        data: {
+            labels: {{ labels_unidades|safe }},
+            datasets: [{
+                label: 'Cantidad de Bienes',
+                data: {{ data_unidades|safe }},
+                backgroundColor: '#1e3a8a',
+                borderRadius: 10,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { font: { size: 10, weight: 'bold' } } } }
+        }
+    });
+
+    // Configuración Gráfico Estado
+    const ctxEstado = document.getElementById('chartEstado').getContext('2d');
+    new Chart(ctxEstado, {
+        type: 'doughnut',
+        data: {
+            labels: {{ labels_estado|safe }},
+            datasets: [{
+                data: {{ data_estado|safe }},
+                backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            cutout: '70%',
+            plugins: { legend: { position: 'bottom', labels: { font: { size: 10, weight: 'bold' } } } }
+        }
+    });
+</script>
+{% endblock %}

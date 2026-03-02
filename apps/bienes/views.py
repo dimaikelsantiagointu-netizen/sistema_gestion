@@ -2,13 +2,18 @@ from django.views.generic import *
 from django.urls import reverse_lazy
 from .models import *
 from .forms import *
-from django.db.models import Q
+from django.db.models import Q, Count, Sum
 from django.shortcuts import render, get_object_or_404, redirect
 import csv
 import openpyxl
 from django.db import transaction
 from django.contrib import messages
 import uuid
+from django.http import HttpResponse, FileResponse, JsonResponse
+import os
+from .utils import *
+from django.conf import settings
+
 
 #==========================
 # Vistas de empleados
@@ -59,7 +64,7 @@ class BienCreateView(CreateView):
     model = BienNacional
     form_class = BienForm
     template_name = 'bienes/bienes/crear.html'
-    success_url = reverse_lazy('bienes:biene_list')
+    success_url = reverse_lazy('bienes:bien_list')
 
 class BienUpdateView(UpdateView):
     model = BienNacional
@@ -104,25 +109,38 @@ def consulta_publica(request, uuid):
 
     return render(request, "bienes/consulta_publica.html", context)
 
+
+class BienDetailView(DetailView):
+    model = BienNacional
+    template_name = 'bienes/bienes/detalle.html'
+    context_object_name = 'bien'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['historial'] = MovimientoBien.objects.filter(bien=self.object).order_by('-fecha')
+        return context
+    
+
+
 # ==========================
-# vista para generar PDF
+# vista para generar PDF qr
 # ==========================
-from django.http import FileResponse
-from .utils import generar_etiqueta_pdf
-import os
-from django.conf import settings
 
 
 def generar_etiqueta(request, pk):
     bien = get_object_or_404(BienNacional, pk=pk)
+    pdf_buffer = generar_etiqueta_pdf(bien)
+    
+    response = FileResponse(
+        pdf_buffer, 
+        as_attachment=True, 
+        filename=f"etiqueta_{bien.nro_identificacion}.pdf"
+    )
+    
+    return response
 
-    ruta_relativa = generar_etiqueta_pdf(bien)
-    ruta_completa = os.path.join(settings.MEDIA_ROOT, ruta_relativa)
-
-    return FileResponse(open(ruta_completa, 'rb'), as_attachment=True)
-
-
-
+def descargar_etiqueta(request, pk):
+    return generar_etiqueta(request, pk)
 
 
 # ==========================
@@ -212,6 +230,10 @@ def carga_masiva_bienes(request):
     return render(request, "bienes/carga_masiva.html", {"form": form})
 
 
+# ==========================
+# Dashboard
+# ==========================
+
 class BienesDashboardView(TemplateView):
     template_name = 'bienes/dashboard.html'
 
@@ -220,19 +242,158 @@ class BienesDashboardView(TemplateView):
         # Estadísticas rápidas para las tarjetas
         context['total_bienes'] = BienNacional.objects.count()
         context['total_empleados'] = Empleado.objects.count()
-        # Contamos cuántos bienes están en buen estado (ejemplo)
         context['bienes_operativos'] = BienNacional.objects.filter(estado_bien='Buen Estado').count()
         return context
     
 
 
+
+    
+
+# ==========================
+# estadisticas
+# ==========================
+
+
+
+class EstadisticasView(TemplateView):
+    template_name = 'bienes/estadisticas.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # 1. KPIs Generales
+        context['total_bienes'] = BienNacional.objects.count()
+        context['inversion_total'] = BienNacional.objects.aggregate(Sum('monto'))['monto__sum'] or 0
+        
+        # 2. Datos por Unidad de Trabajo
+        unidades_data = BienNacional.objects.values('unidad_trabajo__nombre').annotate(total=Count('id'))
+        context['labels_unidades'] = [item['unidad_trabajo__nombre'] for item in unidades_data]
+        context['data_unidades'] = [item['total'] for item in unidades_data]
+
+        # 3. CORRECCIÓN AQUÍ: Usamos 'estado_bien' en lugar de 'condicion'
+        estado_data = BienNacional.objects.values('estado_bien').annotate(total=Count('id'))
+        
+        # Mapeamos los resultados para que se vean bien en el gráfico
+        context['labels_estado'] = [item['estado_bien'] for item in estado_data]
+        context['data_estado'] = [item['total'] for item in estado_data]
+
+        return context
+    
+    
+    
+ # ==========================
+# Vistas de detalle e historial
+# ==========================   
 class BienDetailView(DetailView):
+    model = BienNacional
+    template_name = 'bienes/bienes/detalle.html'
+    context_object_name = 'bien'
+
+class BienHistorialView(DetailView):
     model = BienNacional
     template_name = 'bienes/bienes/detalle_historial.html'
     context_object_name = 'bien'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Obtenemos los movimientos ordenados del más reciente al más antiguo
-        context['historial'] = MovimientoBien.objects.filter(bien=self.object).order_of_recent()
+        # CORRECCIÓN: Usamos 'fecha' en lugar de 'fecha_movimiento'
+        context['historial'] = self.object.movimientobien_set.all().order_by('-fecha')
         return context
+    
+
+    
+ # ==========================
+# vconsulta pública detallada
+# ==========================   
+class BienConsultaPublicaView(DetailView):
+    model = BienNacional
+    template_name = 'bienes/bienes/consulta_publica.html'
+    context_object_name = 'bien'
+    
+    
+
+ # ==========================
+# crear nueva unidad de trabajo 
+# ==========================   
+class UnidadTrabajoCreateView(CreateView):
+    model = UnidadTrabajo
+    fields = ['nombre', 'parroquia', 'ciudad', 'direccion']
+    template_name = 'bienes/bienes/unidad_form.html'
+    success_url = reverse_lazy('bienes:bien_list') 
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulo'] = "Registrar Unidad de Trabajo"
+        return context
+
+# Filtrado de parroquias para el formulario de unidad de trabajo (AJAX)
+def load_parroquias(request):
+    ciudad_id = request.GET.get('ciudad_id')
+    
+    if not ciudad_id:
+        return JsonResponse([], safe=False)
+
+    try:
+        ciudad = Ciudad.objects.get(id=ciudad_id)
+        
+        parroquias = Parroquia.objects.filter(
+            municipio__estado=ciudad.estado
+        ).values('id', 'nombre').order_by('nombre')
+        
+        return JsonResponse(list(parroquias), safe=False)
+        
+    except Ciudad.DoesNotExist:
+        return JsonResponse([], safe=False)
+
+
+
+ # ==========================
+# crear nueva ubicaciones geográficas
+# ==========================   
+class GestionGeograficaView(TemplateView):
+    template_name = 'bienes/bienes/geografia_gestion.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Optimizamos para evitar consultas lentas
+        context['regiones'] = Region.objects.all().order_by('nombre')
+        context['estados'] = Estado.objects.select_related('region').all().order_by('nombre')
+        context['municipios'] = Municipio.objects.select_related('estado').all().order_by('nombre')
+        context['ciudades'] = Ciudad.objects.select_related('estado').all().order_by('nombre')
+        context['parroquias'] = Parroquia.objects.select_related('municipio__estado').all().order_by('nombre')
+        return context
+
+# --- Mixin para simplificar las vistas de creación ---
+class GeoCreateMixin:
+    success_url = reverse_lazy('bienes:geografia_gestion')
+    
+    def form_valid(self, form):
+        messages.success(self.request, f"{self.model.__name__} guardado correctamente.")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Error al guardar. Verifique los datos.")
+        return redirect('bienes:geografia_gestion')
+
+# --- Vistas Finales ---
+
+class RegionCreateView(GeoCreateMixin, CreateView):
+    model = Region
+    fields = ['nombre']
+
+class EstadoCreateView(GeoCreateMixin, CreateView):
+    model = Estado
+    fields = ['nombre', 'region']
+
+class MunicipioCreateView(GeoCreateMixin, CreateView):
+    model = Municipio
+    fields = ['nombre', 'estado']
+
+class CiudadCreateView(GeoCreateMixin, CreateView):
+    model = Ciudad
+    fields = ['nombre', 'estado']
+
+class ParroquiaCreateView(GeoCreateMixin, CreateView):
+    model = Parroquia
+    fields = ['nombre', 'municipio']

@@ -1,52 +1,66 @@
 import os
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib import colors
-from reportlab.lib.units import mm
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase import pdfmetrics
+from io import BytesIO
 from django.conf import settings
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
 
+def generar_etiqueta_pdf(bien_o_queryset):
 
-def generar_etiqueta_pdf(bien):
+    buffer = BytesIO()
+    ancho_pagina = 5 * cm
+    alto_pagina = 2.5 * cm
+    
+    c = canvas.Canvas(buffer, pagesize=(ancho_pagina, alto_pagina))
 
-    carpeta = os.path.join(settings.MEDIA_ROOT, "etiquetas")
-    os.makedirs(carpeta, exist_ok=True)
+    # Convertimos a lista si es un solo objeto para usar el mismo bucle
+    if hasattr(bien_o_queryset, 'nro_identificacion'):
+        bienes = [bien_o_queryset]
+    else:
+        bienes = bien_o_queryset
 
-    nombre_archivo = f"etiqueta_{bien.uuid}.pdf"
-    ruta_archivo = os.path.join(carpeta, nombre_archivo)
+    # Rutas de logos (Ajusta los nombres de archivo según los tengas en tu carpeta static)
+    ruta_logo1 = os.path.join(settings.BASE_DIR, 'static/images/logo_institucion.png')
+    ruta_logo2 = os.path.join(settings.BASE_DIR, 'static/images/logo_gobierno.png')
 
-    doc = SimpleDocTemplate(
-        ruta_archivo,
-        pagesize=A4
-    )
+    for bien in bienes:
+        # --- 1. ENCABEZADO (Logos) ---
+        y_logos = alto_pagina - 0.93 * cm 
+        if os.path.exists(ruta_logo1):
+            c.drawImage(ruta_logo1, 0.1 * cm, y_logos, width=1.6 * cm, height=0.8 * cm, preserveAspectRatio=True)
+        if os.path.exists(ruta_logo2):
+            c.drawImage(ruta_logo2, 1.8 * cm, y_logos, width=3.0 * cm, height=0.8 * cm, preserveAspectRatio=True)
 
-    elementos = []
+        # --- 2. CUERPO: CÓDIGO QR ---
+        if bien.qr_imagen:
+            try:
+                # Usamos la ruta física del QR generado por el modelo
+                c.drawImage(bien.qr_imagen.path, 0.0 * cm, 0.0 * cm, width=1.65 * cm, height=1.65 * cm)
+            except Exception:
+                pass
 
-    estilo = ParagraphStyle(
-        name='NormalStyle',
-        fontSize=12,
-        textColor=colors.black
-    )
+        # --- 3. CUERPO: DATOS ---
+        x_texto = 1.85 * cm
+        y_texto_base = 1.3 * cm
 
-    elementos.append(Paragraph(f"<b>BIEN NACIONAL</b>", estilo))
-    elementos.append(Spacer(1, 10))
+        c.setFont("Helvetica-Bold", 5)
+        c.drawString(x_texto, y_texto_base, "DESCRIPCIÓN:")
+        c.setFont("Helvetica", 5)
+        desc = (bien.descripcion[:22] + '..') if len(bien.descripcion) > 22 else bien.descripcion
+        c.drawString(x_texto, y_texto_base - 0.20 * cm, desc.upper())
 
-    elementos.append(Paragraph(f"Descripción: {bien.descripcion}", estilo))
-    elementos.append(Paragraph(f"Nro Identificación: {bien.nro_identificacion}", estilo))
-    elementos.append(Paragraph(f"Marca: {bien.marca}", estilo))
-    elementos.append(Paragraph(f"Modelo: {bien.modelo}", estilo))
-    elementos.append(Paragraph(f"Serial: {bien.serial}", estilo))
-    elementos.append(Paragraph(f"Unidad: {bien.unidad_trabajo.nombre}", estilo))
+        c.setFont("Helvetica-Bold", 5)
+        c.drawString(x_texto, y_texto_base - 0.45 * cm, "CÓDIGO:")
+        c.setFont("Helvetica", 6)
+        c.drawString(x_texto, y_texto_base - 0.65 * cm, str(bien.nro_identificacion))
 
-    elementos.append(Spacer(1, 20))
+        c.setFont("Helvetica-Bold", 5)
+        c.drawString(x_texto, y_texto_base - 0.90 * cm, "UBICACIÓN:")
+        c.setFont("Helvetica", 4.5)
+        ubica = (bien.unidad_trabajo.nombre[:25] + '..') if len(bien.unidad_trabajo.nombre) > 25 else bien.unidad_trabajo.nombre
+        c.drawString(x_texto, y_texto_base - 1.10 * cm, ubica.upper())
 
-    # Agregar imagen QR
-    if bien.qr_imagen:
-        ruta_qr = os.path.join(settings.MEDIA_ROOT, bien.qr_imagen.name)
-        elementos.append(Image(ruta_qr, width=50*mm, height=50*mm))
+        c.showPage()
 
-    doc.build(elementos)
-
-    return f"etiquetas/{nombre_archivo}"
+    c.save()
+    buffer.seek(0)
+    return buffer

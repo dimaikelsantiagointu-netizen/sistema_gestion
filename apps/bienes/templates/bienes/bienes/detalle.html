@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <nav class="flex mb-2" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    <li><a href="{% url 'bienes:bien_list' %}" class="hover:text-intu-blue">Inventario</a></li>
+                    <li><i class="fas fa-chevron-right text-[8px]"></i></li>
+                    <li class="text-intu-blue">Detalle del Activo</li>
+                </ol>
+            </nav>
+            <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">{{ bien.nro_identificacion }}</h1>
+            <p class="text-gray-500 font-bold text-sm">{{ bien.descripcion }}</p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <a href="{% url 'bienes:bien_update' bien.pk %}" class="bg-white border border-gray-200 text-gray-600 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition shadow-sm">
+                <i class="fas fa-edit mr-2"></i> Editar
+            </a>
+            <button onclick="window.print()" class="bg-intu-blue text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-opacity-90 transition shadow-lg">
+                <i class="fas fa-print mr-2"></i> Imprimir Etiqueta
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="lg:col-span-2 space-y-8">
+            <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                <h3 class="text-xs font-black uppercase tracking-[0.2em] text-gray-400 mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-blue-50 text-intu-blue rounded-lg flex items-center justify-center mr-3"><i class="fas fa-info-circle"></i></span>
+                    Especificaciones del Activo
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-8">
+                    <div>
+                        <p class="text-[10px] text-gray-400 font-black uppercase mb-1">Marca / Modelo</p>
+                        <p class="font-bold text-gray-700">{{ bien.marca }} / {{ bien.modelo }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-gray-400 font-black uppercase mb-1">Serial de Fábrica</p>
+                        <p class="font-mono font-bold text-gray-700">{{ bien.serial }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-gray-400 font-black uppercase mb-1">Color</p>
+                        <p class="font-bold text-gray-700">{{ bien.color }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-gray-400 font-black uppercase mb-1">Valor Contable</p>
+                        <p class="font-black text-emerald-600 text-lg">{{ bien.monto }} <span class="text-xs">Bs</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm">
+                <div class="p-8 border-b border-gray-50">
+                    <h3 class="text-xs font-black uppercase tracking-[0.2em] text-gray-400 flex items-center">
+                        <span class="w-8 h-8 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center mr-3"><i class="fas fa-history"></i></span>
+                        Historial de Movimientos (Trazabilidad)
+                    </h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha</th>
+                                <th class="px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Entrega</th>
+                                <th class="px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Recibe</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50 text-sm">
+                            {% for mov in historial %}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-8 py-4 font-bold text-gray-500 text-xs">{{ mov.fecha|date:"d/m/Y H:i" }}</td>
+                                <td class="px-8 py-4 text-gray-400">{{ mov.empleado_anterior }}</td>
+                                <td class="px-8 py-4 font-black text-intu-blue">{{ mov.empleado_nuevo }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="px-8 py-12 text-center text-gray-400 italic text-xs">No se han registrado movimientos de este activo.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <div class="bg-intu-blue rounded-3xl p-8 text-white shadow-xl text-center relative overflow-hidden">
+                <div class="relative z-10">
+                    <p class="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-6">Código QR de Consulta</p>
+                    {% if bien.qr_imagen %}
+                        <img src="{{ bien.qr_imagen.url }}" class="w-48 h-48 mx-auto rounded-2xl bg-white p-2 shadow-inner mb-6" alt="QR Code">
+                    {% endif %}
+                    <p class="text-[10px] font-bold opacity-80 leading-relaxed">Este código permite la verificación pública del estado y ubicación del bien.</p>
+                </div>
+                <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-white opacity-5 rounded-full"></div>
+            </div>
+
+            <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-6">Custodio Actual</p>
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center font-black">
+                        {{ bien.empleado_uso.nombre|first }}{{ bien.empleado_uso.apellido|first }}
+                    </div>
+                    <div>
+                        <p class="font-black text-intu-blue">{{ bien.empleado_uso.nombre }} {{ bien.empleado_uso.apellido }}</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{{ bien.empleado_uso.cargo }}</p>
+                    </div>
+                </div>
+                <div class="mt-6 pt-6 border-t border-gray-50 space-y-3">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-400 font-bold uppercase tracking-tighter">Unidad:</span>
+                        <span class="text-gray-700 font-black">{{ bien.unidad_trabajo.nombre }}</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-400 font-bold uppercase tracking-tighter">Ciudad:</span>
+                        <span class="text-gray-700 font-black">{{ bien.unidad_trabajo.ciudad }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

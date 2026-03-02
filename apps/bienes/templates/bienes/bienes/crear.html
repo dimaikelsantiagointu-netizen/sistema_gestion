@@ -38,11 +38,11 @@
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-1">
+                    <div>
                         <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Nro. Identificación</label>
                         {{ form.nro_identificacion }}
                     </div>
-                    <div class="lg:col-span-1">
+                    <div>
                         <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Subcuenta</label>
                         {{ form.subcuenta }}
                     </div>
@@ -86,7 +86,7 @@
                     <div class="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-xs">
                         <i class="fas fa-map-marker-alt"></i>
                     </div>
-                    <h2 class="font-black text-intu-blue uppercase tracking-tight text-sm">Asignación de Responsable</h2>
+                    <h2 class="font-black text-intu-blue uppercase tracking-tight text-sm">Ubicación y Responsable de Uso</h2>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -108,14 +108,42 @@
                     </div>
                 </div>
             </div>
+
+            <div class="mb-6 pt-10 border-t border-gray-50">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="w-8 h-8 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center text-xs">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <h2 class="font-black text-intu-blue uppercase tracking-tight text-sm">Auditoría y Control Patrimonial</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Responsable Patrimonial</label>
+                        {{ form.responsable_patrimonial }}
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Jefe de Inventariado</label>
+                        {{ form.jefe_inventariado }}
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Registrado por</label>
+                        {{ form.registro_persona }}
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Observaciones Especiales</label>
+                        {{ form.observaciones }}
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="bg-gray-50 p-8 flex items-center justify-end space-x-4">
+        <div class="bg-gray-50 p-8 flex items-center justify-end space-x-4 border-t border-gray-100">
             <a href="{% url 'bienes:bien_list' %}" class="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
                 Cancelar
             </a>
             <button type="submit" class="bg-intu-blue text-white px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-opacity-90 transition shadow-xl">
-                <i class="fas fa-save mr-2"></i> Guardar Registro
+                <i class="fas fa-save mr-2"></i> Finalizar Registro
             </button>
         </div>
     </form>
