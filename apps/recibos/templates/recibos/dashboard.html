@@ -192,7 +192,7 @@
                         <tr class="hover:bg-gray-50/50 transition duration-150 {% if recibo.anulado %}bg-red-50/30 opacity-70{% endif %}">
                             <td class="px-6 py-4">
                                 <a href="{% url 'recibos:modificar_recibo' recibo.pk %}" class="text-xs font-black {% if not recibo.anulado %}text-intu-blue hover:text-intu-red{% else %}text-gray-400{% endif %}">
-                                    {{ recibo.numero_recibo|stringformat:"04d" }}
+                                    {{ recibo.numero_recibo|stringformat:"09d" }}
                                 </a>
                             </td>
                             <td class="px-6 py-4">

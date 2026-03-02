@@ -86,7 +86,7 @@ def generar_zip_recibos(request):
                 pdf_response = generar_pdf_recibo_unitario(recibo)
                 pdf_buffer_value = pdf_response.content
 
-                num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
+                num_recibo_zfill = str(recibo.numero_recibo).zfill(9) if recibo.numero_recibo else '0000'
                 filename = f"Recibo_N_{num_recibo_zfill}_{recibo.rif_cedula_identidad}.pdf"
 
                 zipf.writestr(filename, pdf_buffer_value)
@@ -134,7 +134,7 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequired
             recibo_id = request.POST.get('recibo_id')
             if recibo_id:
                 recibo = get_object_or_404(Recibo, pk=recibo_id)
-                num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
+                num_recibo_zfill = str(recibo.numero_recibo).zfill(9) if recibo.numero_recibo else '0000'
 
                 if not recibo.anulado:
                     recibo.anulado = True
@@ -259,10 +259,8 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequired
 # VISTAS DE REPORTE (Excel y PDF Masivo)
 
 def generar_reporte_view(request):
-
-    
     # 1. Preparación del Queryset base
-    recibos_queryset = Recibo.objects.filter(anulado=False).order_by('-fecha', '-numero_recibo')
+    recibos_queryset = Recibo.objects.filter(anulado=False).order_by('-fecha_creacion', '-numero_recibo')
 
     filters = Q()
     filtros_aplicados = {}
@@ -277,14 +275,14 @@ def generar_reporte_view(request):
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')
 
-    # Manejo de período
+    # Manejo de período basado en la creación del sistema
     try:
         if fecha_inicio_str:
-            filters &= Q(fecha__gte=fecha_inicio_str)
+            filters &= Q(fecha_creacion__date__gte=fecha_inicio_str)
             periodo_str = f"Desde: {fecha_inicio_str}"
 
         if fecha_fin_str:
-            filters &= Q(fecha__lte=fecha_fin_str)
+            filters &= Q(fecha_creacion__date__lte=fecha_fin_str)
             if periodo_str == 'Todas las fechas':
                 periodo_str = f"Hasta: {fecha_fin_str}"
             else:
@@ -372,7 +370,7 @@ def generar_reporte_view(request):
 def modificar_recibo(request, pk):
     recibo = get_object_or_404(Recibo, pk=pk)
 
-    num_recibo_zfill = str(recibo.numero_recibo).zfill(4) if recibo.numero_recibo else '0000'
+    num_recibo_zfill = str(recibo.numero_recibo).zfill(9) if recibo.numero_recibo else '0000'
     
     current_timezone = pytz.timezone(settings.TIME_ZONE) if hasattr(settings, 'TIME_ZONE') else timezone.get_current_timezone()
 

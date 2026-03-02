@@ -49,7 +49,8 @@ class CustomUserChangeForm(UserChangeForm):
         queryset=Permission.objects.filter(
             codename__in=[
                 "ver_gestor_recibos", "ver_gestor_clientes", "ver_gestor_pagos",
-                "ver_gestor_contratos", "ver_gestor_sellos", "ver_gestor_documental"
+                "ver_gestor_contratos", "ver_gestor_sellos", "ver_gestor_documental",
+                "ver_gestor_bienes"
             ]
         ),
         widget=forms.CheckboxSelectMultiple,

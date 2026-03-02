@@ -108,7 +108,7 @@ def importar_recibos_desde_excel(archivo_excel, usuario):
         try:
             df = pd.read_excel(
                 archivo_excel,
-                sheet_name='Hoja2',
+                sheet_name='Hoja2', #Cambiar en caso de modificar la hoja del excel
                 header=3,
                 dtype={'fecha': str, RIF_COL: str, 'numero_transferencia': str} 
             )
@@ -343,7 +343,7 @@ def draw_centered_text_right_unit(canvas_obj, y_pos, text, x_start, width, font_
     canvas_obj.setFont(font, font_size)
     text_width = canvas_obj.stringWidth(text, font, font_size)
     x = x_start + (width - text_width) / 2
-    canvas_obj.drawString(x, y_pos, text.upper())
+    canvas_obj.drawString(x, y_pos, text)
 
 # ⚙️ MÓDULOS DE DIBUJO PARA PDF UNITARIO (Para una función generar_pdf_recibo_unitario más limpia)
 
@@ -376,12 +376,9 @@ def _draw_recibo_header(c, width, height):
     return current_y
 
 def _draw_recibo_body_data(c, recibo_obj, y_start, X1_TITLE, X1_DATA, X2_TITLE, X2_DATA):
-    """
-    Dibuja los datos del recibo permitiendo que el texto largo salte de línea
-    si supera el ancho asignado, evitando solapamientos.
-    """
+
     # 1. Preparación de datos
-    num_recibo = str(recibo_obj.numero_recibo).zfill(4) if recibo_obj.numero_recibo else 'N/A'
+    num_recibo = str(recibo_obj.numero_recibo).zfill(9) if recibo_obj.numero_recibo else 'N/A'
     monto_formateado = format_currency(recibo_obj.total_monto_bs)
     fecha_str = recibo_obj.fecha.strftime("%d/%m/%Y")
     num_transf = recibo_obj.numero_transferencia if recibo_obj.numero_transferencia else 'N/A'
@@ -398,7 +395,6 @@ def _draw_recibo_body_data(c, recibo_obj, y_start, X1_TITLE, X1_DATA, X2_TITLE, 
     )
     
     # 3. Definición de anchos de columna (para evitar que choquen)
-    # Calculamos cuánto espacio tiene el dato antes de llegar a la siguiente columna
     ancho_col1 = X2_TITLE - X1_DATA - 10 
     ancho_col2 = 550 - X2_DATA # Hasta el margen derecho
 
@@ -411,8 +407,8 @@ def _draw_recibo_body_data(c, recibo_obj, y_start, X1_TITLE, X1_DATA, X2_TITLE, 
         p = Paragraph(str(texto), style_dato)
         # wrap() calcula el espacio. drawOn() lo dibuja.
         w, h = p.wrap(ancho_max, 100) 
-        p.drawOn(canvas, x_dato, y - h + 7) # Ajuste fino de altura
-        return h # Retornamos la altura que ocupó el texto
+        p.drawOn(canvas, x_dato, y - h + 7) 
+        return h 
 
     y_line = y_start
 
@@ -433,7 +429,6 @@ def _draw_recibo_body_data(c, recibo_obj, y_start, X1_TITLE, X1_DATA, X2_TITLE, 
     y_line -= max(h1, h2, 15) + 5
 
     # --- FILA 4: Dirección / Fecha ---
-    # La dirección suele ser el campo que más se solapa
     h1 = dibujar_campo_con_salto(c, "Dirección:", recibo_obj.direccion_inmueble, X1_TITLE, X1_DATA, y_line, ancho_col1)
     h2 = dibujar_campo_con_salto(c, "Fecha:", fecha_str, X2_TITLE, X2_DATA, y_line, ancho_col2)
     y_line -= max(h1, h2, 15) + 5
@@ -441,12 +436,11 @@ def _draw_recibo_body_data(c, recibo_obj, y_start, X1_TITLE, X1_DATA, X2_TITLE, 
     # --- FILA 5: Concepto (Ancho completo) ---
     h_concepto = dibujar_campo_con_salto(c, "Concepto:", recibo_obj.concepto, X1_TITLE, X1_DATA, y_line, 550 - X1_DATA)
     
-    return y_line - h_concepto - 10
+    return y_line - h_concepto - 20
 
 def _draw_categorias_section(c, recibo_obj, y_start, X1_TITLE):
     """
     Dibuja la sección de categorías detalladas.
-    Usa Paragraph para que las descripciones largas no se solapen ni se salgan del margen.
     """
     # 1. Preparación de estilos
     styles = getSampleStyleSheet()
@@ -456,7 +450,8 @@ def _draw_categorias_section(c, recibo_obj, y_start, X1_TITLE):
     )
     style_detalle_cat = ParagraphStyle(
         'CatDetalle', parent=styles['Normal'], fontName='Helvetica',
-        fontSize=7, leading=8, alignment=TA_LEFT, leftIndent=10 # Sangría para el detalle
+        fontSize=7, leading=9, 
+        alignment=TA_LEFT, leftIndent=10 
     )
 
     categorias = {
@@ -484,37 +479,48 @@ def _draw_categorias_section(c, recibo_obj, y_start, X1_TITLE):
             'categoria10': ("ARRENDAMIENTOS DE TERRENOS", "Número de unidades establecidas en el contrato, ancladas a la moneda de mayor valor estipulada por el BCV"),
         }
         
-        ancho_disponible = 450 # Dejamos espacio a la derecha para la "X"
+        ancho_disponible = 450 
 
         for key, (title, detail) in CATEGORY_DESCRIPTIONS.items():
             if categorias.get(key, False):
+                
+                # --- PROCESAMIENTO DE SALTO DE LÍNEA ---
+                title_mod = title.replace(":", ":<br/>")
+                detail_mod = detail.replace(":", ":")
+
                 # --- Dibujar Título de Categoría ---
-                p_title = Paragraph(title, style_titulo_cat)
+                p_title = Paragraph(title_mod, style_titulo_cat)
                 w_t, h_t = p_title.wrap(ancho_disponible, 100)
                 
-                # Verificar si el texto cabe en la página actual (Salto de página preventivo)
+                # Control de fin de página
                 if current_y - h_t < 100:
                     c.showPage()
-                    current_y = 750 # Reiniciar en la parte superior de la nueva hoja
+                    current_y = 750 
 
                 p_title.drawOn(c, X1_TITLE, current_y - h_t)
                 
-                # Dibujar la "X" indicadora a la derecha del título
+                # Dibujar la "X" indicadora
                 c.setFont("Helvetica-Bold", 10)
-                c.drawString(520, current_y - 5, "X")
+                # Ajustamos la X para que siempre quede alineada a la primera línea del título
+                c.drawString(520, current_y - 8, "X")
                 
                 current_y -= (h_t + 2)
 
                 # --- Dibujar Detalle (Sub-texto) ---
-                p_detail = Paragraph(detail, style_detalle_cat)
+                p_detail = Paragraph(detail_mod, style_detalle_cat)
                 w_d, h_d = p_detail.wrap(ancho_disponible - 10, 100)
                 
+                # Verificación de espacio para el detalle
+                if current_y - h_d < 50:
+                    c.showPage()
+                    current_y = 750
+
                 p_detail.drawOn(c, X1_TITLE, current_y - h_d)
                 
                 # Espacio para la siguiente categoría
                 current_y -= (h_d + 10)
 
-    return current_y - 30
+    return current_y - 70
 
 def _draw_signatures_section(c, recibo_obj, y_start, width):
     """Dibuja la sección de firmas con corrección de coordenadas para nombres multilínea."""
@@ -532,9 +538,9 @@ def _draw_signatures_section(c, recibo_obj, y_start, width):
     # --- FIRMA CLIENTE (IZQUIERDA) ---
     # 1. Título "Firma del Cliente"
     y_sig = current_y - 12
-    draw_centered_text_right_unit(c, y_sig, "Firma del Cliente", left_line_x, line_width, font_size=9)
+    draw_centered_text_right_unit(c, y_sig, "Firma", left_line_x, line_width, font_size=8)
     
-    # 2. Configuración del Nombre con salto de línea
+    # 2. Configuración del Nombre con salto de línea (Regla: El nombre completo debe aparecer)
     styles = getSampleStyleSheet()
     nombre_style = ParagraphStyle(
         'NombreStyle',
@@ -555,16 +561,19 @@ def _draw_signatures_section(c, recibo_obj, y_start, width):
     draw_centered_text_right_unit(c, y_rif, f"C.I./RIF: {recibo_obj.rif_cedula_identidad}", left_line_x, line_width, font_size=8)
 
     # --- FIRMA INSTITUCIÓN (DERECHA) ---
+    # 1. Recibido por (Solo mayúscula la primera letra)
     y_sig_inst = current_y - 12
-    draw_centered_text_right_unit(c, y_sig_inst, "Recibido por:", right_line_x, line_width, font_size=9)
+    draw_centered_text_right_unit(c, y_sig_inst, "Recibido por:", right_line_x, line_width, font_size=8)
     
+    # 2. Nombre del Gerente (Negritas, 9pt)
     y_sig_inst -= 14
     draw_centered_text_right_unit(c, y_sig_inst, "PRESLEY ORTEGA", right_line_x, line_width, is_bold=True, font_size=9)
     
+    # 3. Cargo (Mismo tamaño que Presley Ortega pero sin negritas)
     y_sig_inst -= 12
-    draw_centered_text_right_unit(c, y_sig_inst, "GERENTE DE ADMINISTRACIÓN Y SERVICIOS", right_line_x, line_width, font_size=7)
+    draw_centered_text_right_unit(c, y_sig_inst, "GERENTE DE ADMINISTRACIÓN Y SERVICIOS", right_line_x, line_width, is_bold=False, font_size=9)
     
-    # Texto Legal Gaceta
+    # 4. Texto Legal Gaceta (Mantiene tamaño pequeño 7pt)
     y_sig_inst -= 14
     textos_legales = [
         "Designado según Gaceta Oficial N° 43.062,",
@@ -576,6 +585,8 @@ def _draw_signatures_section(c, recibo_obj, y_start, width):
     for linea in textos_legales:
         draw_centered_text_right_unit(c, y_sig_inst, linea, right_line_x, line_width, font_size=7)
         y_sig_inst -= 9
+
+    return current_y # Retornamos la base de la sección
 
 # FUNCIÓN PRINCIPAL DE PDF UNITARIO
 def generar_pdf_recibo_unitario(recibo_obj):
@@ -613,7 +624,7 @@ def generar_pdf_recibo_unitario(recibo_obj):
     c.save()
     buffer.seek(0)
     
-    num_recibo = str(recibo_obj.numero_recibo).zfill(4) if recibo_obj.numero_recibo else 'N_A'
+    num_recibo = str(recibo_obj.numero_recibo).zfill(9) if recibo_obj.numero_recibo else 'N_A'
     filename = f"Recibo_N_{num_recibo}_{recibo_obj.rif_cedula_identidad}.pdf"
     
     response = HttpResponse(
@@ -626,7 +637,6 @@ def generar_pdf_recibo_unitario(recibo_obj):
 # FUNCIÓN PRINCIPAL DE PDF REPORTE MASIVO
 
 def draw_report_logo_and_page_number(canvas, doc):
-    """Callback para dibujar el encabezado y pie de página en reportes masivos."""
     canvas.saveState()
     width, height = doc.pagesize
 
@@ -663,7 +673,9 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
         if not texto:
             return Paragraph('', estilo)
         texto = str(texto).strip()
-        if len(texto) > max_chars:
+        
+        # Si max_chars es None, no truncamos (para Cédula y Monto)
+        if max_chars and len(texto) > max_chars:
             texto = texto[:max_chars] + "..."
         return Paragraph(texto, estilo)
 
@@ -692,12 +704,24 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
         leading=12 
     ))
 
+    # Estilo base para celdas
     styles.add(ParagraphStyle(
         name='CustomCellStyle',
         fontSize=8,
         fontName='Helvetica',
-        leading=9,
-        alignment=TA_LEFT
+        leading=10,
+        alignment=TA_LEFT,
+        wordWrap='LTR'
+    ))
+
+    # Estilo específico para montos (Alineado a la derecha para la tabla)
+    styles.add(ParagraphStyle(
+        name='AmountCellStyle',
+        fontSize=8,
+        fontName='Helvetica',
+        leading=10,
+        alignment=TA_RIGHT,
+        wordWrap='LTR'
     ))
 
     styles.add(ParagraphStyle(name='ResumenTitleLeft', alignment=TA_LEFT, fontSize=11, fontName='Helvetica-Bold', spaceBefore=5, spaceAfter=5))
@@ -709,7 +733,7 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     Story.append(Paragraph("REPORTE DE RECIBOS DE PAGO", styles['CenteredTitle']))
     Story.append(Spacer(1, 10))
 
-    # --- FILTROS EN UNA SOLA LÍNEA (SOLO AL INICIO) ---
+    # --- FILTROS ---
     periodo_str = filtros_aplicados.get('periodo', 'Todos los períodos')
     estado_str = filtros_aplicados.get('estado', 'Todos los estados')
     categorias_str = filtros_aplicados.get('categorias', 'Todas las categorías')
@@ -736,6 +760,13 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
 
     for recibo in queryset:
         nombre_p = formatear_celda(recibo.nombre, 60, styles['CustomCellStyle'])
+        
+        # CORRECCIÓN: Sin truncado para Cédula
+        cedula_p = formatear_celda(recibo.rif_cedula_identidad, None, styles['CustomCellStyle']) 
+        
+        # CORRECCIÓN: Monto como Paragraph para evitar solapamiento con la fecha
+        monto_p = formatear_celda(format_currency(recibo.total_monto_bs), None, styles['AmountCellStyle'])
+        
         transf_p = formatear_celda(recibo.numero_transferencia, 40, styles['CustomCellStyle'])
         concepto_p = formatear_celda(recibo.concepto, 70, styles['CustomCellStyle'])
         estado_p = formatear_celda(recibo.estado, 15, styles['CustomCellStyle'])
@@ -743,8 +774,8 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
         table_data.append([
             "{:04d}".format(recibo.numero_recibo) if recibo.numero_recibo else '', 
             nombre_p,
-            recibo.rif_cedula_identidad,
-            format_currency(recibo.total_monto_bs),
+            cedula_p, 
+            monto_p, 
             recibo.fecha.strftime('%d/%m/%Y'),
             estado_p,
             transf_p,
@@ -757,7 +788,7 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
         ('BACKGROUND', (0, 0), (-1, 0), CUSTOM_BLUE_DARK_TABLE),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (3, 1), (3, -1), 'RIGHT'),
+        # Quitamos el ALIGN manual de la columna 3 porque el Paragraph ya maneja el TA_RIGHT
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
@@ -770,7 +801,7 @@ def generar_pdf_reporte(queryset, filtros_aplicados):
     Story.append(table)
     Story.append(Spacer(1, 20))
 
-    # --- RESUMEN DEL REPORTE (MANTENIDO IGUAL POR LÍNEAS) ---
+    # --- RESUMEN DEL REPORTE ---
     Story.append(Paragraph("RESUMEN DEL REPORTE:", styles['ResumenTitleLeft']))
     Story.append(Paragraph(f"<b>Total de Recibos:</b> {total_registros}", styles['FilterTextLeft']))
     Story.append(Paragraph(f"<b>Monto Total Bs:</b> {format_currency(total_monto_bs)}", styles['FilterTextLeft']))

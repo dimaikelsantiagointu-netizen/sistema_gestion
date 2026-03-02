@@ -35,6 +35,7 @@ class Usuario(AbstractUser):
             ("ver_gestor_contratos", "Acceso al Gestor de Contratos"),
             ("ver_gestor_sellos", "Acceso al Gestor de Sellos"),
             ("ver_gestor_documental", "Acceso a la Gestión Documental"),
+            ("ver_gestor_bienes", "Acceso al Gestor de Bienes"),
         ]
 
     def __str__(self):

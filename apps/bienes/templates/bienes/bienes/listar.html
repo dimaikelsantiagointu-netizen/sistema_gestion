@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4">
+    <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Gestión de Patrimonio</span>
+            <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Inventario de Bienes</h1>
+            <div class="h-1.5 w-16 bg-intu-red mt-2 rounded-full"></div>
+        </div>
+        
+        <div class="flex flex-wrap gap-3">
+            <a href="{% url 'bienes:geografia_gestion' %}" class="bg-gray-100 text-gray-500 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition flex items-center group">
+                <i class="fas fa-map-marked-alt mr-2 group-hover:text-intu-red transition-colors"></i> Geografía
+            </a>
+
+            <a href="{% url 'bienes:unidad_create' %}" class="bg-white text-gray-600 border border-gray-100 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition shadow-sm flex items-center group">
+                <i class="fas fa-building mr-2 text-gray-400 group-hover:text-intu-blue transition-colors"></i> Unidades
+            </a>
+
+            <a href="{% url 'bienes:bien_create' %}" class="bg-intu-blue text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-opacity-90 transition shadow-lg flex items-center group">
+                <i class="fas fa-plus mr-2 group-hover:rotate-90 transition-transform"></i> Registrar Nuevo Bien
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/50 border-b border-gray-100">
+                        <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Identificación</th>
+                        <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Descripción del Bien</th>
+                        <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado</th>
+                        <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    {% for bien in bienes %}
+                    <tr class="hover:bg-blue-50/30 transition-colors group">
+                        <td class="px-6 py-4">
+                            <span class="bg-blue-50 text-intu-blue text-xs font-black px-3 py-1.5 rounded-lg border border-blue-100">
+                                #{{ bien.nro_identificacion }}
+                            </span>
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-bold text-gray-800 uppercase truncate max-w-xs">
+                                    {{ bien.descripcion }}
+                                </span>
+                                <span class="text-[10px] text-gray-400 font-medium">
+                                    SERIAL: {{ bien.serial|default:"N/A" }} — {{ bien.unidad_trabajo.nombre }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <td class="px-6 py-4">
+                            {% if bien.estado_bien == 'Buen Estado' %}
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md bg-emerald-100 text-emerald-600 uppercase">Excelente</span>
+                            {% elif bien.estado_bien == 'Regular' %}
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md bg-amber-100 text-amber-600 uppercase">Regular</span>
+                            {% else %}
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md bg-red-100 text-red-600 uppercase">{{ bien.estado_bien }}</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="{% url 'bienes:bien_detail' bien.pk %}" class="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:bg-blue-600 hover:text-white transition-all shadow-sm hover:shadow-md" title="Ver Ficha Técnica">
+                                    <i class="fas fa-eye text-xs"></i>
+                                </a>
+                                <a href="{% url 'bienes:bien_historial' bien.pk %}" class="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:bg-purple-600 hover:text-white transition-all shadow-sm hover:shadow-md" title="Historial de Asignaciones">
+                                    <i class="fas fa-history text-xs"></i>
+                                </a>
+                                <a href="{% url 'bienes:generar_etiqueta' bien.pk %}" class="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:bg-intu-red hover:text-white transition-all shadow-sm hover:shadow-md" title="Imprimir Etiqueta QR">
+                                    <i class="fas fa-qrcode text-xs"></i>
+                                </a>
+                                <a href="{% url 'bienes:bien_update' bien.pk %}" class="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:bg-gray-800 hover:text-white transition-all shadow-sm hover:shadow-md" title="Editar">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-20 text-center">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-folder-open text-gray-200 text-5xl mb-4"></i>
+                                <p class="text-gray-400 font-bold uppercase text-[10px] tracking-widest">No hay bienes registrados en el inventario</p>
+                                <a href="{% url 'bienes:bien_create' %}" class="text-intu-blue text-xs font-black mt-2 underline">Comenzar registro</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

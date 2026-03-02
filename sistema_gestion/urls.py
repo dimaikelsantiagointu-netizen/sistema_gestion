@@ -23,6 +23,9 @@ urlpatterns = [
 
     # 5.1 Gestión de Contratos 
     path('contratos/', include('apps.contratos.urls', namespace='contratos')),
+    
+    path('bienes/', include('apps.bienes.urls', namespace='bienes')),
+
 
 ] 
 

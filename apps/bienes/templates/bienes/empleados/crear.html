@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">
+                {% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Responsable
+            </h1>
+            <div class="h-1 w-16 bg-intu-red mt-2"></div>
+        </div>
+        <a href="{% url 'bienes:empleado_list' %}" class="text-gray-400 hover:text-intu-blue transition-colors flex items-center text-[10px] font-black uppercase tracking-widest">
+            <i class="fas fa-arrow-left mr-2"></i> Volver al Directorio
+        </a>
+    </div>
+
+    <form method="post" class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        {% csrf_token %}
+{% if form.errors %}
+<div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 mx-8 mt-4">
+    <p class="text-red-700 font-black uppercase text-xs tracking-widest">Error al guardar:</p>
+    <ul class="text-red-600 text-xs font-medium list-disc list-inside">
+        {% for field, errors in form.errors.items %}
+            <li><strong>{{ field }}:</strong> {{ errors|striptags }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+        
+        <div class="p-8 lg:p-10">
+            <div class="mb-10">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="w-8 h-8 bg-blue-50 text-intu-blue rounded-lg flex items-center justify-center text-xs">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <h2 class="font-black text-intu-blue uppercase tracking-tight text-sm">Información Personal</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Cédula de Identidad</label>
+                        {{ form.cedula }}
+                        {% if form.cedula.errors %}<p class="text-red-500 text-[10px] mt-1 font-bold uppercase">{{ form.cedula.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Nombres</label>
+                        {{ form.nombre }}
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Apellidos</label>
+                        {{ form.apellido }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6 pt-10 border-t border-gray-50">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-xs">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                    <h2 class="font-black text-intu-blue uppercase tracking-tight text-sm">Cargo y Ubicación</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Cargo</label>
+                        {{ form.cargo }}
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Unidad de Trabajo</label>
+                        {{ form.unidad_trabajo }}
+                    </div>
+                </div>
+
+                <div class="mt-8 p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-black text-intu-blue uppercase tracking-tight">Estatus del Empleado</p>
+                        <p class="text-[10px] text-gray-400 font-medium uppercase">Determina si puede tener bienes asignados</p>
+                    </div>
+                    <div class="flex items-center">
+                        {{ form.estatus }}
+                        <span class="ml-3 text-xs font-bold text-gray-500 uppercase">Activo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-50/50 p-8 flex items-center justify-end space-x-4 border-t border-gray-50">
+            <a href="{% url 'bienes:empleado_list' %}" class="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
+                Descartar
+            </a>
+            <button type="submit" class="bg-intu-blue text-white px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-opacity-90 transition shadow-xl">
+                <i class="fas fa-save mr-2"></i> Finalizar Registro
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
