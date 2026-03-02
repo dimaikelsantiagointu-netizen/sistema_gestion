@@ -397,3 +397,86 @@ class CiudadCreateView(GeoCreateMixin, CreateView):
 class ParroquiaCreateView(GeoCreateMixin, CreateView):
     model = Parroquia
     fields = ['nombre', 'municipio']
+    
+    
+
+# Filtrado de estados, municipios y detalles para los formularios (AJAX)
+
+
+
+# --- CARGA DE SELECTORES (CASCADA) ---
+
+def ajax_load_estados(request):
+    region_id = request.GET.get('region_id')
+    if not region_id:
+        return JsonResponse([], safe=False)
+    estados = Estado.objects.filter(region_id=region_id).values('id', 'nombre').order_by('nombre')
+    return JsonResponse(list(estados), safe=False)
+
+def ajax_load_municipios(request):
+    estado_id = request.GET.get('estado_id')
+    if not estado_id:
+        return JsonResponse([], safe=False)
+    municipios = Municipio.objects.filter(estado_id=estado_id).values('id', 'nombre').order_by('nombre')
+    return JsonResponse(list(municipios), safe=False)
+
+def ajax_load_ciudades(request):
+    estado_id = request.GET.get('estado_id')
+    if not estado_id:
+        return JsonResponse([], safe=False)
+    ciudades = Ciudad.objects.filter(estado_id=estado_id).values('id', 'nombre').order_by('nombre')
+    return JsonResponse(list(ciudades), safe=False)
+
+def ajax_load_parroquias(request):
+    municipio_id = request.GET.get('municipio_id')
+    if not municipio_id:
+        return JsonResponse([], safe=False)
+    parroquias = Parroquia.objects.filter(municipio_id=municipio_id).values('id', 'nombre').order_by('nombre')
+    return JsonResponse(list(parroquias), safe=False)
+
+# --- RENDERIZADO DE TARJETAS EN EL EXPLORADOR ---
+
+def ajax_load_detalles_finales(request):
+    nivel = request.GET.get('nivel')
+    id_ref = request.GET.get('id')
+    resultados = []
+
+    if not id_ref or id_ref == "":
+        return JsonResponse([], safe=False)
+
+    try:
+        if nivel == 'region':
+            # Al elegir Región -> Mostramos sus Estados
+            objs = Estado.objects.filter(region_id=id_ref).select_related('region').order_by('nombre')
+            for o in objs:
+                resultados.append({'nombre': o.nombre, 'tipo': 'Estado', 'superior': o.region.nombre})
+                
+        elif nivel == 'estado':
+            # Al elegir Estado -> Mostramos Municipios y Ciudades
+            munis = Municipio.objects.filter(estado_id=id_ref).select_related('estado').order_by('nombre')
+            ciudades = Ciudad.objects.filter(estado_id=id_ref).select_related('estado').order_by('nombre')
+            for m in munis:
+                resultados.append({'nombre': m.nombre, 'tipo': 'Municipio', 'superior': m.estado.nombre})
+            for c in ciudades:
+                resultados.append({'nombre': c.nombre, 'tipo': 'Ciudad', 'superior': c.estado.nombre})
+
+        elif nivel == 'municipio':
+            # Al elegir Municipio -> Mostramos sus Parroquias
+            parroquias = Parroquia.objects.filter(municipio_id=id_ref).select_related('municipio').order_by('nombre')
+            for p in parroquias:
+                resultados.append({'nombre': p.nombre, 'tipo': 'Parroquia', 'superior': p.municipio.nombre})
+
+        elif nivel == 'ciudad':
+            # NUEVO: Al elegir una Ciudad específica -> Mostramos la tarjeta de esa ciudad
+            c = Ciudad.objects.select_related('estado').get(id=id_ref)
+            resultados.append({'nombre': c.nombre, 'tipo': 'Ciudad', 'superior': c.estado.nombre})
+
+        elif nivel == 'parroquia':
+            # NUEVO: Al elegir una Parroquia específica -> Mostramos la tarjeta de esa parroquia
+            p = Parroquia.objects.select_related('municipio').get(id=id_ref)
+            resultados.append({'nombre': p.nombre, 'tipo': 'Parroquia', 'superior': p.municipio.nombre})
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse(resultados, safe=False)
