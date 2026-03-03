@@ -13,12 +13,18 @@ from django.http import HttpResponse, FileResponse, JsonResponse
 import os
 from .utils import *
 from django.conf import settings
+import logging
+from django.contrib.auth.mixins import LoginRequiredMixin
+import logging
+from django.contrib.auth.decorators import login_required
+logger = logging.getLogger(__name__)
 
 
 #==========================
 # Vistas de empleados
 # ==========================
-class EmpleadoListView(ListView):
+
+class EmpleadoListView(LoginRequiredMixin,ListView):
     model = Empleado
     template_name = 'bienes/empleados/listar.html'
     context_object_name = 'empleados'
@@ -35,24 +41,24 @@ class EmpleadoListView(ListView):
         return Empleado.objects.all().order_by('apellido')
 
 
-class EmpleadoCreateView(CreateView):
+class EmpleadoCreateView(LoginRequiredMixin,CreateView):
     model = Empleado
     form_class = EmpleadoForm
     template_name = 'bienes/empleados/crear.html'
-    # CORRECCIÓN AQUÍ: Añadir 'bienes:'
     success_url = reverse_lazy('bienes:empleado_list') 
 
-class EmpleadoUpdateView(UpdateView):
+
+class EmpleadoUpdateView(LoginRequiredMixin,UpdateView):
     model = Empleado
     form_class = EmpleadoForm
     template_name = 'bienes/empleados/crear.html'
-    # CORRECCIÓN AQUÍ: Añadir 'bienes:'
     success_url = reverse_lazy('bienes:empleado_list')
 
 #=========================
 # VISTAS DE BIENES
 # ==========================
-class BienListView(ListView):
+
+class BienListView(LoginRequiredMixin,ListView):
     model = BienNacional
     template_name = 'bienes/bienes/listar.html'
     context_object_name = 'bienes'
@@ -60,13 +66,14 @@ class BienListView(ListView):
     ordering = ['-fecha_registro']
 
 
-class BienCreateView(CreateView):
+class BienCreateView(LoginRequiredMixin,CreateView):
     model = BienNacional
     form_class = BienForm
     template_name = 'bienes/bienes/crear.html'
     success_url = reverse_lazy('bienes:bien_list')
 
-class BienUpdateView(UpdateView):
+
+class BienUpdateView(LoginRequiredMixin,UpdateView):
     model = BienNacional
     form_class = BienForm
     template_name = 'bienes/bienes/crear.html'
@@ -94,6 +101,12 @@ class BienUpdateView(UpdateView):
 # ==========================
 
 
+class BienConsultaPublicaView(LoginRequiredMixin,DetailView):
+    model = BienNacional
+    template_name = 'bienes/bienes/consulta_publica.html'
+    context_object_name = 'bien'
+
+
 def consulta_publica(request, uuid):
     bien = get_object_or_404(BienNacional, uuid=uuid)
 
@@ -110,7 +123,7 @@ def consulta_publica(request, uuid):
     return render(request, "bienes/consulta_publica.html", context)
 
 
-class BienDetailView(DetailView):
+class BienDetailView(LoginRequiredMixin,DetailView):
     model = BienNacional
     template_name = 'bienes/bienes/detalle.html'
     context_object_name = 'bien'
@@ -126,7 +139,7 @@ class BienDetailView(DetailView):
 # vista para generar PDF qr
 # ==========================
 
-
+@login_required
 def generar_etiqueta(request, pk):
     bien = get_object_or_404(BienNacional, pk=pk)
     pdf_buffer = generar_etiqueta_pdf(bien)
@@ -146,6 +159,7 @@ def descargar_etiqueta(request, pk):
 # ==========================
 # carga masiva de bienes MODIFICAR PARA EL FORMATO ACTUAL
 # ==========================
+@login_required
 def carga_masiva_bienes(request):
 
     if request.method == "POST":
@@ -234,7 +248,7 @@ def carga_masiva_bienes(request):
 # Dashboard
 # ==========================
 
-class BienesDashboardView(TemplateView):
+class BienesDashboardView(LoginRequiredMixin,TemplateView):
     template_name = 'bienes/dashboard.html'
 
     def get_context_data(self, **kwargs):
@@ -246,17 +260,13 @@ class BienesDashboardView(TemplateView):
         return context
     
 
-
-
-    
-
 # ==========================
 # estadisticas
 # ==========================
 
 
 
-class EstadisticasView(TemplateView):
+class EstadisticasView(LoginRequiredMixin,TemplateView):
     template_name = 'bienes/estadisticas.html'
 
     def get_context_data(self, **kwargs):
@@ -285,38 +295,42 @@ class EstadisticasView(TemplateView):
  # ==========================
 # Vistas de detalle e historial
 # ==========================   
-class BienDetailView(DetailView):
+
+class BienDetailView(LoginRequiredMixin,DetailView):
     model = BienNacional
     template_name = 'bienes/bienes/detalle.html'
     context_object_name = 'bien'
 
-class BienHistorialView(DetailView):
+class BienHistorialView(LoginRequiredMixin,DetailView):
     model = BienNacional
     template_name = 'bienes/bienes/detalle_historial.html'
     context_object_name = 'bien'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # CORRECCIÓN: Usamos 'fecha' en lugar de 'fecha_movimiento'
-        context['historial'] = self.object.movimientobien_set.all().order_by('-fecha')
+        movimientos = list(self.object.movimientos.all()) 
+        cambios = list(self.object.historial_cambios.all())
+        
+        historial_total = sorted(
+            movimientos + cambios,
+            key=lambda x: getattr(x, 'fecha', getattr(x, 'fecha_movimiento', None)),
+            reverse=True
+        )
+        
+        context['historial_unificado'] = historial_total
         return context
     
 
     
- # ==========================
-# vconsulta pública detallada
-# ==========================   
-class BienConsultaPublicaView(DetailView):
-    model = BienNacional
-    template_name = 'bienes/bienes/consulta_publica.html'
-    context_object_name = 'bien'
+
     
     
 
  # ==========================
 # crear nueva unidad de trabajo 
 # ==========================   
-class UnidadTrabajoCreateView(CreateView):
+
+class UnidadTrabajoCreateView(LoginRequiredMixin,CreateView):
     model = UnidadTrabajo
     fields = ['nombre', 'parroquia', 'ciudad', 'direccion']
     template_name = 'bienes/bienes/unidad_form.html'
@@ -351,7 +365,8 @@ def load_parroquias(request):
  # ==========================
 # crear nueva ubicaciones geográficas
 # ==========================   
-class GestionGeograficaView(TemplateView):
+
+class GestionGeograficaView(LoginRequiredMixin,TemplateView):
     template_name = 'bienes/bienes/geografia_gestion.html'
 
     def get_context_data(self, **kwargs):

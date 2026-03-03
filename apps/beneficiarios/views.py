@@ -9,7 +9,6 @@ from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-# Importa tus modelos (Asegúrate que Contrato exista si lo vas a usar)
 from .models import Beneficiario, DocumentoExpediente, Visita
 from django.core.paginator import Paginator
 logger = logging.getLogger(__name__)

@@ -13,7 +13,9 @@
             </div>
             <div>
                 <span class="text-[10px] font-black text-intu-red uppercase tracking-[0.2em] block mb-1">Trazabilidad de Activo</span>
-                <h1 class="text-3xl md:text-4xl font-black text-intu-blue uppercase tracking-tighter leading-none">{{ bien.descripcion }}</h1>
+                <h1 class="text-3xl md:text-4xl font-black text-intu-blue uppercase tracking-tighter leading-none break-words">
+                    {{ bien.descripcion }}
+                </h1>
                 <div class="flex items-center gap-3 mt-2">
                     <span class="text-[11px] bg-gray-100 text-gray-600 px-2 py-1 rounded-md font-bold">ID: #{{ bien.nro_identificacion }}</span>
                     <span class="text-[11px] bg-gray-100 text-gray-600 px-2 py-1 rounded-md font-bold">SERIAL: {{ bien.serial|default:"S/N" }}</span>
@@ -41,25 +43,32 @@
                         {{ bien.empleado_uso.nombre|slice:":1" }}
                     </div>
                     <div>
-                        <p class="font-black text-intu-blue text-sm uppercase leading-tight">{{ bien.empleado_uso.get_full_name|default:bien.empleado_uso }}</p>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-tighter">{{ bien.empleado_uso.cargo|default:"Asignado" }}</p>
+                        <p class="font-black text-intu-blue text-sm uppercase leading-tight break-words">
+                            {{ bien.empleado_uso.nombre }} {{ bien.empleado_uso.apellido }}
+                        </p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-tighter">
+                            {{ bien.empleado_uso.cargo|default:"Asignado" }}
+                        </p>
                     </div>
                 </div>
 
                 <div class="space-y-5">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Condición:</span>
-                        <span class="text-[10px] font-black px-3 py-1 rounded-full {% if bien.estado_bien == 'BUENO' %}bg-emerald-100 text-emerald-600{% else %}bg-amber-100 text-amber-600{% endif %} uppercase">
+                        <span class="text-[10px] font-black px-3 py-1 rounded-full 
+                            {% if bien.estado_bien == 'Buen Estado' %}bg-emerald-100 text-emerald-600
+                            {% elif bien.estado_bien == 'Malo' %}bg-red-100 text-red-600
+                            {% else %}bg-amber-100 text-amber-600{% endif %} uppercase">
                             {{ bien.estado_bien }}
                         </span>
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ubicación:</span>
-                        <span class="text-[11px] font-bold text-gray-700 uppercase">{{ bien.unidad_trabajo.nombre|default:bien.unidad_trabajo }}</span>
+                        <span class="text-[11px] font-bold text-gray-700 uppercase text-right">{{ bien.unidad_trabajo.nombre }}</span>
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Valor Contable:</span>
-                        <span class="text-lg font-black text-intu-blue">Bs.{{ bien.monto }}</span>
+                        <span class="text-lg font-black text-intu-blue">Bs. {{ bien.monto }}</span>
                     </div>
                 </div>
             </div>
@@ -69,62 +78,78 @@
             <div class="bg-white rounded-[2.5rem] p-8 md:p-12 border border-gray-100 shadow-sm">
                 <div class="flex items-center justify-between mb-12">
                     <h3 class="font-black text-intu-blue uppercase text-sm tracking-widest flex items-center">
-                        <i class="fas fa-stream mr-3 text-intu-red"></i> Historial de Cambios
+                        <i class="fas fa-stream mr-3 text-intu-red"></i> Historial Unificado
                     </h3>
                     <span class="text-[10px] font-black text-gray-400 uppercase bg-gray-50 px-3 py-1 rounded-lg">
-                        {{ historial.count }} Eventos
+                        {{ historial_unificado|length }} Eventos
                     </span>
                 </div>
 
                 <div class="relative">
                     <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-gray-100 via-gray-100 to-transparent"></div>
 
-                    {% for mov in historial %}
+                    {% for evento in historial_unificado %}
                     <div class="relative pl-12 mb-12 last:mb-0 group">
-                        <div class="absolute left-2.5 top-0 w-3.5 h-3.5 rounded-full bg-white border-4 border-intu-red group-hover:scale-125 transition-transform"></div>
+                        <div class="absolute left-2.5 top-0 w-3.5 h-3.5 rounded-full bg-white border-4 
+                            {% if evento.empleado_nuevo %}border-intu-red{% else %}border-intu-blue{% endif %} 
+                            group-hover:scale-125 transition-transform z-10"></div>
                         
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
-                            {# CORRECCIÓN: mov.fecha en lugar de mov.fecha_movimiento #}
-                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.1em]">{{ mov.fecha|date:"d M Y" }} — {{ mov.fecha|date:"h:i A" }}</span>
+                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.1em]">
+                                {{ evento.fecha|default:evento.fecha_movimiento|date:"d M Y" }} — {{ evento.fecha|default:evento.fecha_movimiento|date:"h:i A" }}
+                            </span>
                             <span class="px-4 py-1.5 bg-white text-gray-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-gray-100 shadow-sm">
-                                Operador: {{ mov.usuario_sistema.username|default:"Admin" }}
+                                {% if evento.empleado_nuevo %}MOVIMIENTO DE PERSONAL{% else %}CAMBIO DE ESTADO{% endif %}
                             </span>
                         </div>
 
                         <div class="bg-gray-50/50 rounded-3xl p-6 border border-transparent group-hover:border-blue-100 group-hover:bg-white group-hover:shadow-xl transition-all duration-300">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
-                                <div class="hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                                    <i class="fas fa-long-arrow-alt-right text-gray-200 text-xl"></i>
-                                </div>
-
-                                <div class="space-y-1">
-                                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Entregó</p>
-                                    {# CORRECCIÓN: responsable_anterior -> empleado_anterior #}
-                                    <p class="text-sm font-bold text-gray-500 uppercase">{{ mov.empleado_anterior.get_full_name|default:"REGISTRO INICIAL" }}</p>
-                                </div>
-                                <div class="space-y-1 md:text-right">
-                                    <p class="text-[9px] font-black text-intu-blue uppercase tracking-widest">Recibió</p>
-                                    {# CORRECCIÓN: responsable_nuevo -> empleado_nuevo #}
-                                    <p class="text-sm font-black text-intu-blue uppercase">{{ mov.empleado_nuevo.get_full_name|default:mov.empleado_nuevo }}</p>
-                                </div>
-                            </div>
                             
-                            {% if mov.motivo %}
-                            <div class="mt-5 pt-5 border-t border-gray-100/60">
-                                <div class="flex items-start gap-3">
-                                    <i class="fas fa-quote-left text-gray-200 text-xs mt-1"></i>
-                                    <p class="text-xs text-gray-500 font-medium leading-relaxed italic">
-                                        {{ mov.motivo }}
-                                    </p>
+                            {% if evento.empleado_nuevo %}
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+                                    <div class="hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                                        <i class="fas fa-long-arrow-alt-right text-gray-200 text-xl"></i>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Entregó</p>
+                                        <p class="text-sm font-bold text-gray-500 uppercase">{{ evento.empleado_anterior|default:"Inventario Inicial" }}</p>
+                                    </div>
+                                    <div class="space-y-1 md:text-right">
+                                        <p class="text-[9px] font-black text-intu-blue uppercase tracking-widest">Recibió</p>
+                                        <p class="text-sm font-black text-intu-blue uppercase">{{ evento.empleado_nuevo }}</p>
+                                    </div>
                                 </div>
-                            </div>
+                                <p class="mt-4 text-[10px] text-gray-400 font-bold uppercase tracking-tight italic">
+                                    Registrado por: {{ evento.usuario_sistema }}
+                                </p>
+
+                            {% else %}
+                                <div class="flex flex-col md:flex-row justify-between gap-4">
+                                    <div class="space-y-1">
+                                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Descripción del cambio</p>
+                                        <p class="text-sm font-bold text-gray-700 uppercase leading-tight">{{ evento.descripcion }}</p>
+                                    </div>
+                                    <div class="md:text-right space-y-2">
+                                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Transición de Estado</p>
+                                        <div class="flex items-center md:justify-end gap-2">
+                                            <span class="text-[9px] font-bold text-gray-400">{{ evento.estado_anterior|default:"-" }}</span>
+                                            <i class="fas fa-caret-right text-gray-300"></i>
+                                            <span class="text-[10px] font-black px-3 py-1 bg-intu-blue/10 text-intu-blue rounded-lg uppercase">
+                                                {{ evento.estado_nuevo }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="mt-4 text-[10px] text-gray-400 font-bold uppercase tracking-tight italic">
+                                    Operador: {{ evento.usuario.username|default:"Sistema" }}
+                                </p>
                             {% endif %}
                         </div>
                     </div>
                     {% empty %}
                     <div class="text-center py-20 bg-gray-50/50 rounded-[2rem] border border-dashed border-gray-200">
                         <i class="fas fa-history text-gray-200 text-4xl mb-4"></i>
-                        <p class="text-xs text-gray-400 font-black uppercase tracking-widest">No existen movimientos registrados</p>
+                        <p class="text-xs text-gray-400 font-black uppercase tracking-widest">No existen movimientos registrados para este activo</p>
                     </div>
                     {% endfor %}
                 </div>

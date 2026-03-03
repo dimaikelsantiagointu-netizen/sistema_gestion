@@ -4,6 +4,7 @@ import qrcode
 from io import BytesIO
 from django.core.files import File
 from django.conf import settings
+from django.contrib.auth.models import User
 
 # ==========================
 # UBICACIÓN GEOGRÁFICA
@@ -129,7 +130,6 @@ class BienNacional(models.Model):
     qr_imagen = models.ImageField(upload_to='qr/', blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        # Primero guardamos para asegurar que el objeto tiene UUID si es nuevo
         is_new = self._state.adding
         super().save(*args, **kwargs)
         
@@ -142,7 +142,6 @@ class BienNacional(models.Model):
             # RF-05: El QR apunta a la URL pública de consulta usando el UUID
             url_consulta = f"{dominio}/bienes/consulta/{self.uuid}/"
             
-            # Configuración estética del QR
             qr = qrcode.QRCode(
                 version=1,
                 error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -157,25 +156,43 @@ class BienNacional(models.Model):
             img.save(buffer, format='PNG')
             
             file_name = f'qr_{self.nro_identificacion}.png'
-            # save=False para evitar el bucle infinito de save()
             self.qr_imagen.save(file_name, File(buffer), save=False)
             
-            # Guardamos solo el campo de la imagen
             super().save(update_fields=['qr_imagen'])
 
     def __str__(self):
         return f"{self.nro_identificacion} - {self.descripcion[:30]}"
 
 # ==========================
-# HISTORIAL
+# HISTORIAL Y MOVIMIENTOS
 # ==========================
 
 class MovimientoBien(models.Model):
-    bien = models.ForeignKey(BienNacional, on_delete=models.CASCADE)
-    empleado_anterior = models.ForeignKey(Empleado, related_name='anterior', on_delete=models.PROTECT)
-    empleado_nuevo = models.ForeignKey(Empleado, related_name='nuevo', on_delete=models.PROTECT)
+    bien = models.ForeignKey(BienNacional, on_delete=models.CASCADE, related_name='movimientos')
+    empleado_anterior = models.ForeignKey(Empleado, related_name='movimientos_anteriores', on_delete=models.PROTECT)
+    empleado_nuevo = models.ForeignKey(Empleado, related_name='movimientos_nuevos', on_delete=models.PROTECT)
     fecha = models.DateTimeField(auto_now_add=True)
     usuario_sistema = models.CharField(max_length=100)
 
     def __str__(self):
-        return f"Movimiento {self.bien}"
+        return f"Movimiento {self.bien.nro_identificacion}"
+
+class BienHistorial(models.Model):
+    bien = models.ForeignKey(BienNacional, on_delete=models.CASCADE, related_name='historial_cambios')
+    
+    fecha_movimiento = models.DateTimeField(auto_now_add=True)
+    descripcion = models.TextField() 
+    
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        blank=True
+    )
+    
+    estado_anterior = models.CharField(max_length=100, null=True, blank=True)
+    estado_nuevo = models.CharField(max_length=100, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-fecha_movimiento']
+        verbose_name_plural = "Historial de Bienes"
