@@ -58,12 +58,63 @@ class EmpleadoUpdateView(LoginRequiredMixin,UpdateView):
 # VISTAS DE BIENES
 # ==========================
 
-class BienListView(LoginRequiredMixin,ListView):
+class BienListView(LoginRequiredMixin, ListView):
     model = BienNacional
     template_name = 'bienes/bienes/listar.html'
     context_object_name = 'bienes'
     paginate_by = 10
     ordering = ['-fecha_registro']
+
+    def get_queryset(self):
+        # 1. Capturamos los valores
+        query = self.request.GET.get('q', '').strip()
+        unidad = self.request.GET.get('unidad', '').strip()
+        estado = self.request.GET.get('estado', '').strip()
+        empleado_id = self.request.GET.get('empleado', '').strip()
+
+        # 2. IMPORTANTE: Si todos los campos están vacíos, no mostrar nada (Vista en frío)
+        if not any([query, unidad, estado, empleado_id]):
+            return BienNacional.objects.none()
+
+        # 3. Empezamos con el QuerySet base
+        queryset = BienNacional.objects.all().select_related('unidad_trabajo', 'empleado_uso')
+
+        # 4. Filtro por Empleado (LA CORRECCIÓN)
+        if empleado_id and empleado_id != 'None':
+            try:
+                # Forzamos a que sea un entero para evitar errores de coincidencia
+                eid = int(empleado_id)
+                queryset = queryset.filter(empleado_uso_id=eid)
+            except ValueError:
+                pass # Si no es un número válido, ignoramos el filtro
+
+        # 5. Resto de filtros
+        if query:
+            queryset = queryset.filter(
+                Q(nro_identificacion__icontains=query) |
+                Q(descripcion__icontains=query) |
+                Q(serial__icontains=query)
+            )
+            
+        if unidad:
+            queryset = queryset.filter(unidad_trabajo_id=unidad)
+            
+        if estado:
+            queryset = queryset.filter(estado_bien=estado)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Datos para los menús desplegables
+        context['unidades'] = UnidadTrabajo.objects.all().order_by('nombre')
+        context['empleados'] = Empleado.objects.all().order_by('nombre') 
+        
+        filtros = ['q', 'unidad', 'estado', 'empleado']
+        context['busqueda_realizada'] = any(self.request.GET.get(f, '').strip() for f in filtros)
+        
+        return context
 
 
 class BienCreateView(LoginRequiredMixin,CreateView):
@@ -311,9 +362,16 @@ class BienHistorialView(LoginRequiredMixin, DetailView):
         movimientos = list(self.object.movimientos.all()) 
         cambios = list(self.object.historial_cambios.all())
         
+        # Normalizamos la fecha para el template
+        for m in movimientos:
+            m.fecha_display = m.fecha
+            
+        for c in cambios:
+            c.fecha_display = c.fecha_movimiento
+        
         historial_total = sorted(
             movimientos + cambios,
-            key=lambda x: getattr(x, 'fecha', getattr(x, 'fecha_movimiento', None)),
+            key=lambda x: x.fecha_display, 
             reverse=True
         )
         
@@ -446,11 +504,13 @@ def ajax_load_ciudades(request):
     return JsonResponse(list(ciudades), safe=False)
 
 def ajax_load_parroquias(request):
-    municipio_id = request.GET.get('municipio_id')
-    if not municipio_id:
-        return JsonResponse([], safe=False)
-    parroquias = Parroquia.objects.filter(municipio_id=municipio_id).values('id', 'nombre').order_by('nombre')
-    return JsonResponse(list(parroquias), safe=False)
+    estado_id = request.GET.get('estado_id')
+    parroquias = Parroquia.objects.filter(municipio__estado_id=estado_id).order_by('nombre')
+    data = [
+        {'id': p.id, 'nombre': p.nombre} 
+        for p in parroquias
+    ]
+    return JsonResponse(data, safe=False)
 
 # --- RENDERIZADO DE TARJETAS EN EL EXPLORADOR ---
 

@@ -96,9 +96,9 @@
                         
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                             <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                <i class="far fa-calendar-alt mr-1"></i> {{ evento.fecha|default:evento.fecha_movimiento|date:"d M Y" }} 
+                                <i class="far fa-calendar-alt mr-1"></i> {{ evento.fecha_display|date:"d M Y" }} 
                                 <span class="mx-1 text-gray-200">|</span> 
-                                <i class="far fa-clock mr-1"></i> {{ evento.fecha|default:evento.fecha_movimiento|date:"h:i A" }}
+                                <i class="far fa-clock mr-1"></i> {{ evento.fecha_display|date:"h:i A" }}
                             </span>
                             <span class="px-4 py-1.5 bg-gray-50 text-gray-500 rounded-xl text-[9px] font-black uppercase tracking-widest border border-gray-100">
                                 {% if evento.empleado_nuevo %}Reasignación de Personal{% else %}Actualización de Estado{% endif %}
@@ -106,7 +106,6 @@
                         </div>
 
                         <div class="bg-gray-50/50 rounded-[2rem] p-6 border border-transparent group-hover:border-blue-100 group-hover:bg-white group-hover:shadow-2xl group-hover:shadow-blue-900/5 transition-all duration-500">
-                            
                             {% if evento.empleado_nuevo %}
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 relative items-center">
                                     <div class="hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -128,7 +127,6 @@
                                         Acción: {{ evento.usuario_sistema }}
                                     </p>
                                 </div>
-
                             {% else %}
                                 <div class="flex flex-col md:flex-row justify-between gap-6">
                                     <div class="space-y-1 flex-1">
@@ -162,7 +160,6 @@
                             <i class="fas fa-history text-gray-200 text-3xl"></i>
                         </div>
                         <p class="text-[11px] text-gray-400 font-black uppercase tracking-widest">No hay registros de trazabilidad para este bien</p>
-                        <p class="text-[10px] text-gray-300 font-medium mt-2">Los cambios se reflejarán automáticamente al editar el activo.</p>
                     </div>
                     {% endfor %}
                 </div>

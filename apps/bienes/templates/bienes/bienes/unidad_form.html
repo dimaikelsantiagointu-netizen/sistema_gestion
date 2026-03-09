@@ -66,23 +66,33 @@
         const estadoId = $(this).val();
         const $parroquiaSelect = $("#id_parroquia");
 
+        $parroquiaSelect.prop('disabled', true).html('<option value="">Cargando parroquias...</option>');
+
         if (!estadoId) {
-            $parroquiaSelect.html('<option value="">Seleccione un estado primero</option>').prop('disabled', true);
+            $parroquiaSelect.html('<option value="">Seleccione un estado primero</option>');
             return;
         }
 
         $.ajax({
             url: url,
-            data: { 'estado_id': estadoId }, // Enviamos estado_id ahora
+            data: { 'estado_id': estadoId },
+            dataType: 'json', 
             success: function (data) {
                 let options = '<option value="">Seleccione una parroquia</option>';
-                data.forEach(function (parroquia) {
-                    options += `<option value="${parroquia.id}">${parroquia.nombre}</option>`;
-                });
-                $parroquiaSelect.html(options).prop('disabled', false);
+                
+                if (data.length === 0) {
+                    options = '<option value="">No hay parroquias disponibles</option>';
+                } else {
+                    data.forEach(function (parroquia) {
+                        options += `<option value="${parroquia.id}">${parroquia.nombre}</option>`;
+                    });
+                }
+                
+                $parroquiaSelect.html(options);
+                if (data.length > 0) $parroquiaSelect.prop('disabled', false);
             },
             error: function() {
-                $parroquiaSelect.html('<option value="">Error al cargar parroquias</option>');
+                $parroquiaSelect.html('<option value="">Error en el servidor</option>');
             }
         });
     });
