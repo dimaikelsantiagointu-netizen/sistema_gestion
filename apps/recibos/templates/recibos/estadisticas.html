@@ -42,9 +42,9 @@
         <div class="group flex-grow md:flex-grow-0">
             <label class="block text-[9px] font-black text-slate-500 uppercase mb-1 ml-1 tracking-tighter">Estado</label>
             <select name="estado" class="block w-full md:w-44 bg-slate-50 border-slate-200 rounded-lg text-[11px] p-2 focus:ring-2 focus:ring-intu-blue/10 transition-all outline-none border font-bold text-slate-700">
-                <option value="Todos">🌎 Todos los Estados</option>
+                <option value="Todos"> Todos los Estados</option>
                 {% for est in estados_db %}
-                    <option value="{{ est }}" {% if filtros.estado == est %}selected{% endif %}>📍 {{ est|upper }}</option>
+                    <option value="{{ est }}" {% if filtros.estado == est %}selected{% endif %}> {{ est|upper }}</option>
                 {% endfor %}
             </select>
         </div>
