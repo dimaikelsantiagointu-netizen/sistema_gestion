@@ -301,7 +301,7 @@ class BienDetailView(LoginRequiredMixin,DetailView):
     template_name = 'bienes/bienes/detalle.html'
     context_object_name = 'bien'
 
-class BienHistorialView(LoginRequiredMixin,DetailView):
+class BienHistorialView(LoginRequiredMixin, DetailView):
     model = BienNacional
     template_name = 'bienes/bienes/detalle_historial.html'
     context_object_name = 'bien'
@@ -330,34 +330,37 @@ class BienHistorialView(LoginRequiredMixin,DetailView):
 # crear nueva unidad de trabajo 
 # ==========================   
 
-class UnidadTrabajoCreateView(LoginRequiredMixin,CreateView):
+class UnidadTrabajoCreateView(LoginRequiredMixin, CreateView):
     model = UnidadTrabajo
-    fields = ['nombre', 'parroquia', 'ciudad', 'direccion']
+    # Quitamos 'ciudad' de los fields si ya no la vas a solicitar
+    fields = ['nombre', 'parroquia', 'direccion'] 
     template_name = 'bienes/bienes/unidad_form.html'
     success_url = reverse_lazy('bienes:bien_list') 
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['titulo'] = "Registrar Unidad de Trabajo"
+        # Enviamos los estados para que el primer select se llene
+        context['estados_list'] = Estado.objects.all().order_by('nombre')
         return context
 
-# Filtrado de parroquias para el formulario de unidad de trabajo (AJAX)
+# Filtrado de parroquias por ESTADO (AJAX)
 def load_parroquias(request):
-    ciudad_id = request.GET.get('ciudad_id')
+    estado_id = request.GET.get('estado_id') # Cambiamos ciudad_id por estado_id
     
-    if not ciudad_id:
+    if not estado_id:
         return JsonResponse([], safe=False)
 
     try:
-        ciudad = Ciudad.objects.get(id=ciudad_id)
-        
+        # Filtramos parroquias cuyo municipio pertenezca al estado seleccionado
         parroquias = Parroquia.objects.filter(
-            municipio__estado=ciudad.estado
+            municipio__estado_id=estado_id
         ).values('id', 'nombre').order_by('nombre')
         
         return JsonResponse(list(parroquias), safe=False)
         
-    except Ciudad.DoesNotExist:
+    except Exception as e:
+        # Registramos el error si fuera necesario y devolvemos lista vacía
         return JsonResponse([], safe=False)
 
 

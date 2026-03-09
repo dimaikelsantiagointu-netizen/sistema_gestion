@@ -2,11 +2,26 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto">
-    <div class="mb-10">
-        <h1 class="text-3xl sm:text-4xl font-black text-intu-blue uppercase tracking-tighter">Carga Masiva de Activos</h1>
-        <div class="h-1 w-20 bg-intu-red mt-4"></div>
-        <p class="mt-4 text-gray-500 font-medium">Importa cientos de registros en segundos utilizando archivos Excel o CSV.</p>
+   <div class="flex items-start gap-6 mb-10">
+    <a href="{% url 'bienes:dashboard' %}" 
+       class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 hover:text-intu-blue shadow-lg shadow-gray-100 hover:shadow-xl transition-all group shrink-0">
+        <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
+    </a>
+
+    <div class="flex-1">
+        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">
+            Importación de Inventario
+        </span>
+        <h1 class="text-3xl sm:text-4xl font-black text-intu-blue uppercase tracking-tighter leading-none break-words">
+            Carga Masiva de Activos
+        </h1>
+        <div class="h-1.5 w-20 bg-intu-red mt-3 rounded-full"></div>
+        
+        <p class="mt-4 text-gray-500 font-medium text-sm sm:text-base max-w-xl">
+            Importa cientos de registros en segundos utilizando archivos <span class="text-green-600 font-bold">Excel</span> o <span class="text-blue-600 font-bold">CSV</span>.
+        </p>
     </div>
+</div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         

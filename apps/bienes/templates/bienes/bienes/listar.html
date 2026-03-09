@@ -3,10 +3,21 @@
 {% block content %}
 <div class="max-w-7xl mx-auto px-4">
     <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Gestión de Patrimonio</span>
-            <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Inventario de Bienes</h1>
-            <div class="h-1.5 w-16 bg-intu-red mt-2 rounded-full"></div>
+        <div class="flex items-start gap-6 mb-8">
+            <a href="{% url 'bienes:dashboard' %}" 
+            class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 hover:text-intu-blue shadow-lg shadow-gray-100 hover:shadow-xl transition-all group shrink-0">
+                <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
+            </a>
+
+            <div class="flex-1">
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">
+                    Gestión de Patrimonio
+                </span>
+                <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter leading-none break-words">
+                    Inventario de Bienes
+                </h1>
+                <div class="h-1.5 w-16 bg-intu-red mt-3 rounded-full"></div>
+            </div>
         </div>
         
         <div class="flex flex-wrap gap-3">

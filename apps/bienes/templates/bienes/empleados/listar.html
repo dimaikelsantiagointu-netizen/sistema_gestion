@@ -2,10 +2,22 @@
 
 {% block content %}
 <div class="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-    <div>
-        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Gestión de Personal</h1>
-        <div class="h-1 w-16 bg-intu-red mt-2"></div>
+    <div class="flex items-start gap-6 mb-8">
+    <a href="{% url 'bienes:dashboard' %}" 
+       class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 hover:text-intu-blue shadow-lg shadow-gray-100 hover:shadow-xl transition-all group shrink-0">
+        <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
+    </a>
+
+    <div class="flex-1">
+        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">
+            Recursos Humanos
+        </span>
+        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter leading-none break-words">
+            Gestión de Personal
+        </h1>
+        <div class="h-1.5 w-16 bg-intu-red mt-3 rounded-full"></div>
     </div>
+</div>
 
     <div class="flex flex-col sm:flex-row gap-4 items-center">
         <form method="get" class="relative w-full sm:w-80">
