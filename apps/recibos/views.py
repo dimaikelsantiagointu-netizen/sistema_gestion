@@ -446,17 +446,16 @@ def es_administrador(user):
 @login_required
 @user_passes_test(es_administrador, login_url='recibos:dashboard')
 def estadisticas_view(request):
-    # 1. Obtener parámetros de filtrado
+    # 1. Parámetros y Zona Horaria
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
     estado_filtro = request.GET.get('estado')
     
-    # Definimos la zona horaria de Venezuela para evitar el error de las 10 PM
     tz_vzl = pytz.timezone('America/Caracas')
     ahora_local = timezone.localtime(timezone.now(), tz_vzl)
     hoy = ahora_local.date()
 
-    # 2. Queryset Base (Integridad: No anulados)
+    # 2. Queryset Base
     queryset = Recibo.objects.filter(anulado=False)
 
     # 3. Aplicar Filtros Dinámicos
@@ -467,24 +466,26 @@ def estadisticas_view(request):
     if estado_filtro and estado_filtro != 'Todos':
         queryset = queryset.filter(estado__iexact=estado_filtro)
 
-    # 4. Cálculos para Tarjetas Principales
+    # 4. Cálculos Rápidos
     total_recibos = queryset.count()
-    # Para recibos_hoy, también forzamos la fecha local de Venezuela
-    recibos_hoy = Recibo.objects.filter(fecha_creacion__date=hoy, anulado=False).count()
     monto_total = queryset.aggregate(Sum('total_monto_bs'))['total_monto_bs__sum'] or 0
+    
+    # IMPORTANTE: Datos para la nueva sección de "Hoy"
+    recibos_hoy_total = Recibo.objects.filter(fecha_creacion__date=hoy, anulado=False).count()
+    datos_estados_hoy = Recibo.objects.filter(
+        fecha_creacion__date=hoy, 
+        anulado=False
+    ).values('estado').annotate(total=Count('id')).order_by('-total')
 
-    # 5. Lógica de Historial (SOLUCIÓN AL ERROR DE FECHA)
-    # Usamos TruncDay con tzinfo para que a las 10pm siga siendo el mismo día en la gráfica
+    # 5. Historial (Gráfica de barras diaria)
     datos_historial = queryset.annotate(
         dia_solo=TruncDay('fecha_creacion', tzinfo=tz_vzl)
     ).values('dia_solo').annotate(total=Count('id')).order_by('dia_solo')
 
     max_dia = max([d['total'] for d in datos_historial]) if datos_historial else 0
-    
     historial_dias = []
     for item in datos_historial:
         if item['dia_solo']:
-            # Convertimos el objeto datetime truncado a date simple
             porcentaje = (item['total'] / max_dia * 100) if max_dia > 0 else 0
             historial_dias.append({
                 'fecha': item['dia_solo'].date(),
@@ -492,7 +493,7 @@ def estadisticas_view(request):
                 'porcentaje': porcentaje
             })
 
-    # 6. Lógica de Categorías
+    # 6. Categorías
     categorias_config = [
         ('categoria1', 'Título Tierra Urbana'), ('categoria2', 'Título + Vivienda'),
         ('categoria3', 'Municipal'), ('categoria4', 'Tierra Privada'),
@@ -500,50 +501,35 @@ def estadisticas_view(request):
         ('categoria7', 'Excedentes INAVI'), ('categoria8', 'Estudio Técnico'),
         ('categoria9', 'Locales Comerciales'), ('categoria10', 'Arrendamiento Terrenos'),
     ]
-    
     estadisticas_categorias = []
     for campo, nombre_real in categorias_config:
         count = queryset.filter(**{campo: True}).count()
         if count > 0:
             porcentaje_cat = (count / total_recibos * 100) if total_recibos > 0 else 0
-            estadisticas_categorias.append({
-                'nombre': nombre_real, 
-                'total': count,
-                'porcentaje': porcentaje_cat
-            })
+            estadisticas_categorias.append({'nombre': nombre_real, 'total': count, 'porcentaje': porcentaje_cat})
 
-    # 7. Distribución Regional
-    top_estados = queryset.values('estado').annotate(
-        total=Count('id')
-    ).order_by('-total')[:10]
-
-    estados_disponibles = Recibo.objects.exclude(
-        estado__isnull=True
-    ).exclude(estado='').values_list('estado', flat=True).distinct().order_by('estado')
-
-    # 8. Rendimiento de Usuarios
+    # 7. Ranking de Usuarios
     ranking_raw = queryset.values('usuario').annotate(total=Count('id')).order_by('-total')
-    
     ranking_usuarios = []
     for item in ranking_raw:
         if item['usuario']:
             try:
-                # Usamos el modelo User detectado (Usuario)
                 user_obj = User.objects.get(pk=item['usuario'])
-                ranking_usuarios.append({
-                    'usuario': user_obj,
-                    'total': item['total']
-                })
+                ranking_usuarios.append({'usuario': user_obj, 'total': item['total']})
             except User.DoesNotExist:
                 continue
 
-    # 9. Contexto Unificado
+    # 8. Filtro para el select de estados
+    estados_disponibles = Recibo.objects.exclude(estado__isnull=True).exclude(estado='').values_list('estado', flat=True).distinct().order_by('estado')
+
+    # 9. CONTEXTO Y RETORNO (Asegúrate de que esta línea esté presente)
     context = {
         'total_recibos': total_recibos,
-        'recibos_hoy': recibos_hoy,
+        'recibos_hoy': recibos_hoy_total,
+        'recibos_hoy_total': recibos_hoy_total,
         'monto_total': monto_total,
         'categorias': estadisticas_categorias,
-        'top_estados': top_estados,
+        'datos_estados_hoy': datos_estados_hoy,
         'estados_db': estados_disponibles,
         'historial_dias': historial_dias,
         'ranking_usuarios': ranking_usuarios,
@@ -554,6 +540,7 @@ def estadisticas_view(request):
         }
     }
     
+    # ESTE RETURN ES OBLIGATORIO
     return render(request, 'recibos/estadisticas.html', context)
 
 def rendimiento_usuarios(request):
