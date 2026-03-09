@@ -470,14 +470,14 @@ def estadisticas_view(request):
     total_recibos = queryset.count()
     monto_total = queryset.aggregate(Sum('total_monto_bs'))['total_monto_bs__sum'] or 0
     
-    # IMPORTANTE: Datos para la nueva sección de "Hoy"
+    # IMPORTANTE: Datos para la sección de "Hoy" (Siempre fijos)
     recibos_hoy_total = Recibo.objects.filter(fecha_creacion__date=hoy, anulado=False).count()
     datos_estados_hoy = Recibo.objects.filter(
         fecha_creacion__date=hoy, 
         anulado=False
     ).values('estado').annotate(total=Count('id')).order_by('-total')
 
-    # 5. Historial (Gráfica de barras diaria)
+    # 5. Historial Diario
     datos_historial = queryset.annotate(
         dia_solo=TruncDay('fecha_creacion', tzinfo=tz_vzl)
     ).values('dia_solo').annotate(total=Count('id')).order_by('dia_solo')
@@ -508,7 +508,12 @@ def estadisticas_view(request):
             porcentaje_cat = (count / total_recibos * 100) if total_recibos > 0 else 0
             estadisticas_categorias.append({'nombre': nombre_real, 'total': count, 'porcentaje': porcentaje_cat})
 
-    # 7. Ranking de Usuarios
+    # 7. Distribución Regional (ESTA ES LA GRÁFICA GLOBAL QUE SE TE PERDIÓ)
+    top_estados = queryset.values('estado').annotate(
+        total=Count('id')
+    ).order_by('-total')[:10]
+
+    # 8. Ranking de Usuarios
     ranking_raw = queryset.values('usuario').annotate(total=Count('id')).order_by('-total')
     ranking_usuarios = []
     for item in ranking_raw:
@@ -519,17 +524,18 @@ def estadisticas_view(request):
             except User.DoesNotExist:
                 continue
 
-    # 8. Filtro para el select de estados
+    # 9. Filtro para el select de estados
     estados_disponibles = Recibo.objects.exclude(estado__isnull=True).exclude(estado='').values_list('estado', flat=True).distinct().order_by('estado')
 
-    # 9. CONTEXTO Y RETORNO (Asegúrate de que esta línea esté presente)
+    # 10. CONTEXTO ACTUALIZADO
     context = {
         'total_recibos': total_recibos,
         'recibos_hoy': recibos_hoy_total,
         'recibos_hoy_total': recibos_hoy_total,
         'monto_total': monto_total,
         'categorias': estadisticas_categorias,
-        'datos_estados_hoy': datos_estados_hoy,
+        'top_estados': top_estados,         # <--- REINCORPORADO AQUÍ (Global)
+        'datos_estados_hoy': datos_estados_hoy, # <--- SECCIÓN NUEVA (Hoy)
         'estados_db': estados_disponibles,
         'historial_dias': historial_dias,
         'ranking_usuarios': ranking_usuarios,
@@ -540,7 +546,6 @@ def estadisticas_view(request):
         }
     }
     
-    # ESTE RETURN ES OBLIGATORIO
     return render(request, 'recibos/estadisticas.html', context)
 
 def rendimiento_usuarios(request):
