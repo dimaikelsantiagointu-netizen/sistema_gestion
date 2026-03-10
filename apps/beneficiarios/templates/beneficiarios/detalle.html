@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Detalle Beneficiario | {{ beneficiario.nombre_completo }}{% endblock %}
+{% block title %}Detalle Ciudadano | {{ beneficiario.nombre_completo }}{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto animate-fade-in">
@@ -9,7 +9,7 @@
             <nav class="flex mb-2" aria-label="Breadcrumb">
                 <ol class="inline-flex items-center space-x-1 md:space-x-3 text-[10px] font-black uppercase tracking-widest">
                     <li class="inline-flex items-center">
-                        <a href="{% url 'beneficiarios:lista' %}" class="text-gray-400 hover:text-intu-red transition">Beneficiarios</a>
+                        <a href="{% url 'beneficiarios:lista' %}" class="text-gray-400 hover:text-intu-red transition">Ciudadanos</a>
                     </li>
                     <li>
                         <div class="flex items-center">
@@ -43,7 +43,7 @@
                 
                 <div class="pt-14 pb-8 px-8 text-center">
                     <h2 class="text-lg font-black text-intu-dark leading-tight mb-1 uppercase tracking-tight">{{ beneficiario.nombre_completo }}</h2>
-                    <p class="text-[10px] font-bold text-intu-red uppercase tracking-widest mb-6">Beneficiario Registrado</p>
+                    <p class="text-[10px] font-bold text-intu-red uppercase tracking-widest mb-6">Ciudadano Registrado</p>
                     
                     <div class="grid grid-cols-2 gap-4 py-4 border-y border-gray-50 mb-6">
                         <div class="text-center">
