@@ -23,12 +23,12 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Ciudad</label>
-                    <select name="ciudad" id="id_ciudad" required 
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Estado</label>
+                    <select name="estado" id="id_estado" required 
                             class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-gray-700 focus:ring-2 focus:ring-blue-500 transition-all">
-                        <option value="">Seleccione una ciudad</option>
-                        {% for ciudad in form.fields.ciudad.queryset %}
-                            <option value="{{ ciudad.id }}">{{ ciudad.nombre }}</option>
+                        <option value="">Seleccione un estado</option>
+                        {% for estado in estados_list %}
+                            <option value="{{ estado.id }}">{{ estado.nombre }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -37,7 +37,7 @@
                     <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Parroquia</label>
                     <select name="parroquia" id="id_parroquia" required disabled
                             class="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-gray-700 focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50">
-                        <option value="">Seleccione una ciudad primero</option>
+                        <option value="">Seleccione un estado primero</option>
                     </select>
                 </div>
             </div>
@@ -61,29 +61,38 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    $("#id_ciudad").change(function () {
+    $("#id_estado").change(function () {
         const url = $("#unidadForm").attr("data-parroquias-url");
-        const ciudadId = $(this).val();
+        const estadoId = $(this).val();
         const $parroquiaSelect = $("#id_parroquia");
 
-        if (!ciudadId) {
-            $parroquiaSelect.html('<option value="">Seleccione una ciudad primero</option>').prop('disabled', true);
+        $parroquiaSelect.prop('disabled', true).html('<option value="">Cargando parroquias...</option>');
+
+        if (!estadoId) {
+            $parroquiaSelect.html('<option value="">Seleccione un estado primero</option>');
             return;
         }
 
         $.ajax({
             url: url,
-            data: { 'ciudad_id': ciudadId },
+            data: { 'estado_id': estadoId },
+            dataType: 'json', 
             success: function (data) {
                 let options = '<option value="">Seleccione una parroquia</option>';
-                // Recorremos el JSON recibido para crear los elementos
-                data.forEach(function (parroquia) {
-                    options += `<option value="${parroquia.id}">${parroquia.nombre}</option>`;
-                });
-                $parroquiaSelect.html(options).prop('disabled', false);
+                
+                if (data.length === 0) {
+                    options = '<option value="">No hay parroquias disponibles</option>';
+                } else {
+                    data.forEach(function (parroquia) {
+                        options += `<option value="${parroquia.id}">${parroquia.nombre}</option>`;
+                    });
+                }
+                
+                $parroquiaSelect.html(options);
+                if (data.length > 0) $parroquiaSelect.prop('disabled', false);
             },
             error: function() {
-                $parroquiaSelect.html('<option value="">Error al cargar parroquias</option>');
+                $parroquiaSelect.html('<option value="">Error en el servidor</option>');
             }
         });
     });

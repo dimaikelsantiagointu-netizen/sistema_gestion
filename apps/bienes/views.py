@@ -13,12 +13,18 @@ from django.http import HttpResponse, FileResponse, JsonResponse
 import os
 from .utils import *
 from django.conf import settings
+import logging
+from django.contrib.auth.mixins import LoginRequiredMixin
+import logging
+from django.contrib.auth.decorators import login_required
+logger = logging.getLogger(__name__)
 
 
 #==========================
 # Vistas de empleados
 # ==========================
-class EmpleadoListView(ListView):
+
+class EmpleadoListView(LoginRequiredMixin,ListView):
     model = Empleado
     template_name = 'bienes/empleados/listar.html'
     context_object_name = 'empleados'
@@ -35,38 +41,90 @@ class EmpleadoListView(ListView):
         return Empleado.objects.all().order_by('apellido')
 
 
-class EmpleadoCreateView(CreateView):
+class EmpleadoCreateView(LoginRequiredMixin,CreateView):
     model = Empleado
     form_class = EmpleadoForm
     template_name = 'bienes/empleados/crear.html'
-    # CORRECCIÓN AQUÍ: Añadir 'bienes:'
     success_url = reverse_lazy('bienes:empleado_list') 
 
-class EmpleadoUpdateView(UpdateView):
+
+class EmpleadoUpdateView(LoginRequiredMixin,UpdateView):
     model = Empleado
     form_class = EmpleadoForm
     template_name = 'bienes/empleados/crear.html'
-    # CORRECCIÓN AQUÍ: Añadir 'bienes:'
     success_url = reverse_lazy('bienes:empleado_list')
 
 #=========================
 # VISTAS DE BIENES
 # ==========================
-class BienListView(ListView):
+
+class BienListView(LoginRequiredMixin, ListView):
     model = BienNacional
     template_name = 'bienes/bienes/listar.html'
     context_object_name = 'bienes'
     paginate_by = 10
     ordering = ['-fecha_registro']
 
+    def get_queryset(self):
+        # 1. Capturamos los valores
+        query = self.request.GET.get('q', '').strip()
+        unidad = self.request.GET.get('unidad', '').strip()
+        estado = self.request.GET.get('estado', '').strip()
+        empleado_id = self.request.GET.get('empleado', '').strip()
 
-class BienCreateView(CreateView):
+        # 2. IMPORTANTE: Si todos los campos están vacíos, no mostrar nada (Vista en frío)
+        if not any([query, unidad, estado, empleado_id]):
+            return BienNacional.objects.none()
+
+        # 3. Empezamos con el QuerySet base
+        queryset = BienNacional.objects.all().select_related('unidad_trabajo', 'empleado_uso')
+
+        # 4. Filtro por Empleado (LA CORRECCIÓN)
+        if empleado_id and empleado_id != 'None':
+            try:
+                # Forzamos a que sea un entero para evitar errores de coincidencia
+                eid = int(empleado_id)
+                queryset = queryset.filter(empleado_uso_id=eid)
+            except ValueError:
+                pass # Si no es un número válido, ignoramos el filtro
+
+        # 5. Resto de filtros
+        if query:
+            queryset = queryset.filter(
+                Q(nro_identificacion__icontains=query) |
+                Q(descripcion__icontains=query) |
+                Q(serial__icontains=query)
+            )
+            
+        if unidad:
+            queryset = queryset.filter(unidad_trabajo_id=unidad)
+            
+        if estado:
+            queryset = queryset.filter(estado_bien=estado)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Datos para los menús desplegables
+        context['unidades'] = UnidadTrabajo.objects.all().order_by('nombre')
+        context['empleados'] = Empleado.objects.all().order_by('nombre') 
+        
+        filtros = ['q', 'unidad', 'estado', 'empleado']
+        context['busqueda_realizada'] = any(self.request.GET.get(f, '').strip() for f in filtros)
+        
+        return context
+
+
+class BienCreateView(LoginRequiredMixin,CreateView):
     model = BienNacional
     form_class = BienForm
     template_name = 'bienes/bienes/crear.html'
     success_url = reverse_lazy('bienes:bien_list')
 
-class BienUpdateView(UpdateView):
+
+class BienUpdateView(LoginRequiredMixin,UpdateView):
     model = BienNacional
     form_class = BienForm
     template_name = 'bienes/bienes/crear.html'
@@ -94,6 +152,12 @@ class BienUpdateView(UpdateView):
 # ==========================
 
 
+class BienConsultaPublicaView(LoginRequiredMixin,DetailView):
+    model = BienNacional
+    template_name = 'bienes/bienes/consulta_publica.html'
+    context_object_name = 'bien'
+
+
 def consulta_publica(request, uuid):
     bien = get_object_or_404(BienNacional, uuid=uuid)
 
@@ -110,7 +174,7 @@ def consulta_publica(request, uuid):
     return render(request, "bienes/consulta_publica.html", context)
 
 
-class BienDetailView(DetailView):
+class BienDetailView(LoginRequiredMixin,DetailView):
     model = BienNacional
     template_name = 'bienes/bienes/detalle.html'
     context_object_name = 'bien'
@@ -126,7 +190,7 @@ class BienDetailView(DetailView):
 # vista para generar PDF qr
 # ==========================
 
-
+@login_required
 def generar_etiqueta(request, pk):
     bien = get_object_or_404(BienNacional, pk=pk)
     pdf_buffer = generar_etiqueta_pdf(bien)
@@ -146,6 +210,7 @@ def descargar_etiqueta(request, pk):
 # ==========================
 # carga masiva de bienes MODIFICAR PARA EL FORMATO ACTUAL
 # ==========================
+@login_required
 def carga_masiva_bienes(request):
 
     if request.method == "POST":
@@ -234,7 +299,7 @@ def carga_masiva_bienes(request):
 # Dashboard
 # ==========================
 
-class BienesDashboardView(TemplateView):
+class BienesDashboardView(LoginRequiredMixin,TemplateView):
     template_name = 'bienes/dashboard.html'
 
     def get_context_data(self, **kwargs):
@@ -246,17 +311,13 @@ class BienesDashboardView(TemplateView):
         return context
     
 
-
-
-    
-
 # ==========================
 # estadisticas
 # ==========================
 
 
 
-class EstadisticasView(TemplateView):
+class EstadisticasView(LoginRequiredMixin,TemplateView):
     template_name = 'bienes/estadisticas.html'
 
     def get_context_data(self, **kwargs):
@@ -285,65 +346,79 @@ class EstadisticasView(TemplateView):
  # ==========================
 # Vistas de detalle e historial
 # ==========================   
-class BienDetailView(DetailView):
+
+class BienDetailView(LoginRequiredMixin,DetailView):
     model = BienNacional
     template_name = 'bienes/bienes/detalle.html'
     context_object_name = 'bien'
 
-class BienHistorialView(DetailView):
+class BienHistorialView(LoginRequiredMixin, DetailView):
     model = BienNacional
     template_name = 'bienes/bienes/detalle_historial.html'
     context_object_name = 'bien'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # CORRECCIÓN: Usamos 'fecha' en lugar de 'fecha_movimiento'
-        context['historial'] = self.object.movimientobien_set.all().order_by('-fecha')
+        movimientos = list(self.object.movimientos.all()) 
+        cambios = list(self.object.historial_cambios.all())
+        
+        # Normalizamos la fecha para el template
+        for m in movimientos:
+            m.fecha_display = m.fecha
+            
+        for c in cambios:
+            c.fecha_display = c.fecha_movimiento
+        
+        historial_total = sorted(
+            movimientos + cambios,
+            key=lambda x: x.fecha_display, 
+            reverse=True
+        )
+        
+        context['historial_unificado'] = historial_total
         return context
     
 
     
- # ==========================
-# vconsulta pública detallada
-# ==========================   
-class BienConsultaPublicaView(DetailView):
-    model = BienNacional
-    template_name = 'bienes/bienes/consulta_publica.html'
-    context_object_name = 'bien'
+
     
     
 
  # ==========================
 # crear nueva unidad de trabajo 
 # ==========================   
-class UnidadTrabajoCreateView(CreateView):
+
+class UnidadTrabajoCreateView(LoginRequiredMixin, CreateView):
     model = UnidadTrabajo
-    fields = ['nombre', 'parroquia', 'ciudad', 'direccion']
+    # Quitamos 'ciudad' de los fields si ya no la vas a solicitar
+    fields = ['nombre', 'parroquia', 'direccion'] 
     template_name = 'bienes/bienes/unidad_form.html'
     success_url = reverse_lazy('bienes:bien_list') 
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['titulo'] = "Registrar Unidad de Trabajo"
+        # Enviamos los estados para que el primer select se llene
+        context['estados_list'] = Estado.objects.all().order_by('nombre')
         return context
 
-# Filtrado de parroquias para el formulario de unidad de trabajo (AJAX)
+# Filtrado de parroquias por ESTADO (AJAX)
 def load_parroquias(request):
-    ciudad_id = request.GET.get('ciudad_id')
+    estado_id = request.GET.get('estado_id') # Cambiamos ciudad_id por estado_id
     
-    if not ciudad_id:
+    if not estado_id:
         return JsonResponse([], safe=False)
 
     try:
-        ciudad = Ciudad.objects.get(id=ciudad_id)
-        
+        # Filtramos parroquias cuyo municipio pertenezca al estado seleccionado
         parroquias = Parroquia.objects.filter(
-            municipio__estado=ciudad.estado
+            municipio__estado_id=estado_id
         ).values('id', 'nombre').order_by('nombre')
         
         return JsonResponse(list(parroquias), safe=False)
         
-    except Ciudad.DoesNotExist:
+    except Exception as e:
+        # Registramos el error si fuera necesario y devolvemos lista vacía
         return JsonResponse([], safe=False)
 
 
@@ -351,7 +426,8 @@ def load_parroquias(request):
  # ==========================
 # crear nueva ubicaciones geográficas
 # ==========================   
-class GestionGeograficaView(TemplateView):
+
+class GestionGeograficaView(LoginRequiredMixin,TemplateView):
     template_name = 'bienes/bienes/geografia_gestion.html'
 
     def get_context_data(self, **kwargs):
@@ -428,11 +504,13 @@ def ajax_load_ciudades(request):
     return JsonResponse(list(ciudades), safe=False)
 
 def ajax_load_parroquias(request):
-    municipio_id = request.GET.get('municipio_id')
-    if not municipio_id:
-        return JsonResponse([], safe=False)
-    parroquias = Parroquia.objects.filter(municipio_id=municipio_id).values('id', 'nombre').order_by('nombre')
-    return JsonResponse(list(parroquias), safe=False)
+    estado_id = request.GET.get('estado_id')
+    parroquias = Parroquia.objects.filter(municipio__estado_id=estado_id).order_by('nombre')
+    data = [
+        {'id': p.id, 'nombre': p.nombre} 
+        for p in parroquias
+    ]
+    return JsonResponse(data, safe=False)
 
 # --- RENDERIZADO DE TARJETAS EN EL EXPLORADOR ---
 
