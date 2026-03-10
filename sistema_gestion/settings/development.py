@@ -5,7 +5,7 @@ from .base import *
 load_dotenv() 
 
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1','10.0.30.83']
 
 # Configuración de email para desarrollo
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
