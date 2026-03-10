@@ -170,42 +170,52 @@ if (downloadPks) {
         }
     });
 
-    // 6. LÓGICA DEL MODAL UNIVERSAL
-    window.showModal = function(message, confirmText, color, formTarget, reciboId = null) {
-        if (!modal) return;
-        modalMessage.innerHTML = message;
-        confirmButton.textContent = confirmText;
-        confirmButton.dataset.targetForm = formTarget;
-        confirmButton.className = `px-6 py-2 text-white text-[10px] font-black uppercase rounded-xl transition ${color === 'red' ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-500 hover:bg-gray-600'}`;
-
-        if (reciboId) anularReciboIdInput.value = reciboId;
-
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            modal.style.opacity = '1';
-            modalContent.classList.remove('scale-95', 'opacity-0');
-        }, 10);
+// 6. LÓGICA DEL MODAL UNIVERSAL
+window.showModal = function(message, confirmText, color, formTarget, reciboId = null) {
+    if (!modal) return;
+    
+    modalMessage.innerHTML = message;
+    confirmButton.textContent = confirmText;
+    confirmButton.dataset.targetForm = formTarget;
+    
+    if (anularReciboIdInput) {
+        anularReciboIdInput.value = reciboId ? reciboId : "";
     }
 
-    window.hideModal = function() { 
-        modal.style.opacity = '0';
-        modalContent.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => modal.classList.add('hidden'), 300);
-    }
+    confirmButton.className = `px-6 py-2 text-white text-[10px] font-black uppercase rounded-xl transition ${
+        color === 'red' ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200' : 'bg-gray-500 hover:bg-gray-600'
+    }`;
 
-    confirmButton.addEventListener('click', function() {
-        const target = this.dataset.targetForm;
-        if (target === 'clear-logs-form') {
-            localStorage.removeItem(LOG_STORAGE_KEY);
-            logDisplay.innerHTML = '<p class="text-gray-400 italic">Logs limpiados correctamente.</p>';
-        } else if (target === 'anular-form' || target === 'modificar-recibo-form') {
-            appendLog('Enviando solicitud de anulación...', 'warning', true);
-            if (formActionInput) formActionInput.value = 'anular';
-            const form = document.getElementById(target) || document.querySelector('form');
-            form.submit();
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.style.opacity = '1';
+        modalContent.classList.remove('scale-95', 'opacity-0');
+    }, 10);
+}
+
+confirmButton.addEventListener('click', function() {
+    const targetId = this.dataset.targetForm;
+    
+    if (targetId === 'clear-logs-form') {
+        localStorage.removeItem(LOG_STORAGE_KEY);
+        if (logDisplay) logDisplay.innerHTML = '<p class="text-gray-400 italic text-[10px]">Logs limpiados correctamente.</p>';
+    } else {
+        const targetForm = document.getElementById(targetId);
+        
+        if (targetForm) {
+            appendLog(`Ejecutando acción: ${targetId}...`, 'action', true);
+            
+            const actionInput = targetForm.querySelector('input[name="action"]');
+            if (actionInput) actionInput.value = 'anular';
+            
+            targetForm.submit();
+        } else {
+            console.error(`Error crítico: No se encontró el formulario #${targetId}`);
+            appendLog('Error: Formulario de destino no encontrado.', 'error', true);
         }
-        hideModal();
-    });
+    }
+    hideModal();
+});
 
     // 7. EVENTOS DE BOTONES DE TABLA
     document.querySelectorAll('.anular-recibo-btn').forEach(btn => {
