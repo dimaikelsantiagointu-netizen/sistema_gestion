@@ -129,15 +129,21 @@
     </aside>
 
     <div class="flex-grow flex flex-col min-w-0 h-screen overflow-y-auto bg-[#f8fafc]">
-        <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-10 sticky top-0 z-10">
-            <h2 class="text-intu-blue font-black uppercase tracking-tight text-sm">Sistema Integral de Seguimiento INTU</h2>
-            <div class="flex items-center gap-2">
-                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{% now "d/m/Y" %}</span>
-                <div class="w-8 h-8 bg-intu-blue rounded-lg flex items-center justify-center text-white">
-                    <i class="fas fa-cubes text-xs"></i>
-                </div>
-            </div>
-        </header>
+<header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-10 sticky top-0 z-10">
+    <h2 class="text-intu-blue font-black uppercase tracking-tight text-sm">Sistema Integral de Seguimiento INTU</h2>
+    <div class="flex items-center gap-4">
+        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-r border-gray-100 pr-4">
+            {% now "d/m/Y" %}
+        </span>
+        
+        <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">
+            <i class="fas fa-clock text-intu-blue text-[10px]"></i>
+            <span id="digital-clock" class="text-xs font-black text-intu-blue tabular-nums tracking-wider">
+                00:00:00
+            </span>
+        </div>
+    </div>
+</header>
 
         <main class="p-10 flex-grow">
             {% block content %}{% endblock %}
@@ -192,6 +198,23 @@
         });
 
         resetInactivityTimer();
+
+        function updateClock() {
+    const clockElement = document.getElementById('digital-clock');
+    if (!clockElement) return;
+
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+}
+
+// Actualizar cada segundo
+setInterval(updateClock, 1000);
+// Ejecutar inmediatamente al cargar
+updateClock();
     </script>
 </body>
 </html>

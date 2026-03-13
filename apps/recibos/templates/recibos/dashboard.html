@@ -14,11 +14,18 @@
 </style>
 
 <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+   <div class="flex items-start gap-6">
+    <a href="{% url 'home' %}" 
+       class="h-14 w-14 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
+        <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
+    </a>
+
     <div>
         <span class="text-[10px] font-black text-intu-red uppercase tracking-[0.3em]">Módulo Operativo</span>
         <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Gestión de Recibos</h1>
         <p class="text-gray-500 font-medium italic text-sm">Generación, seguimiento y auditoría de pagos institucionales.</p>
     </div>
+</div>
     
     <div class="flex gap-2">
         <a href="{% url 'recibos:recibos_anulados' %}" class="px-4 py-2 text-[10px] font-black bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition uppercase tracking-wider flex items-center">

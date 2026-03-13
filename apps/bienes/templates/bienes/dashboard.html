@@ -2,11 +2,18 @@
 
 {% block content %}
 <div class="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div class="flex items-start gap-6">
+    <a href="{% url 'home' %}" 
+       class="h-14 w-14 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
+        <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
+    </a>
+
     <div>
         <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Módulo de Patrimonio</span>
         <h1 class="text-3xl sm:text-4xl font-black text-intu-blue uppercase tracking-tighter">Panel de Bienes</h1>
         <div class="h-1 w-20 bg-intu-red mt-4"></div>
     </div>
+</div>
     
     {# BOTÓN DE ESTADÍSTICAS: Conectado a la nueva vista #}
     <a href="{% url 'bienes:estadisticas' %}" class="inline-flex items-center bg-intu-blue text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-opacity-90 transition shadow-lg group">
