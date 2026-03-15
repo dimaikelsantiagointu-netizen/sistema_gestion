@@ -24,7 +24,13 @@ urlpatterns = [
     # 5.1 Gestión de Contratos 
     path('contratos/', include('apps.contratos.urls', namespace='contratos')),
     
-    path('bienes/', include('apps.bienes.urls', namespace='bienes')),
+    
+    #gestor de bienes temportalmente deshabilitado
+    #path('bienes/', include('apps.bienes.urls', namespace='bienes')),
+    
+    # 6. Configuración de Infraestructura Geográfica
+    path('configuracion-territorio/', include('apps.territorio.urls')),
+
 
 
 ] 
