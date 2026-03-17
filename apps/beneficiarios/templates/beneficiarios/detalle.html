@@ -14,16 +14,15 @@
                     <li>
                         <div class="flex items-center">
                             <i class="fas fa-chevron-right text-gray-300 mx-2"></i>
-                            <span class="text-intu-blue">Expediente</span>
+                            <span class="text-intu-blue">Historial de Atención</span>
                         </div>
                     </li>
                 </ol>
             </nav>
-            <h1 class="text-2xl font-black text-intu-dark tracking-tight uppercase">Historial de Atención</h1>
+            <h1 class="text-2xl font-black text-intu-dark tracking-tight uppercase">Expediente de Ciudadano</h1>
         </div>
         
         <div class="flex gap-3">
-          
             <a href="{% url 'beneficiarios:registrar_visita' %}" class="flex items-center gap-2 bg-intu-red text-white px-5 py-2.5 rounded-xl text-[11px] font-black hover:bg-red-700 transition shadow-lg shadow-red-900/20 uppercase tracking-wider">
                 <i class="fas fa-plus"></i> Nueva Visita
             </a>
@@ -31,6 +30,7 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {# --- COLUMNA LATERAL: INFORMACIÓN DEL BENEFICIARIO --- #}
         <div class="lg:col-span-4 space-y-6">
             <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                 <div class="h-24 bg-intu-blue relative">
@@ -41,63 +41,89 @@
                     </div>
                 </div>
                 
-                <div class="pt-14 pb-8 px-8 text-center">
-                    <h2 class="text-lg font-black text-intu-dark leading-tight mb-1 uppercase tracking-tight">{{ beneficiario.nombre_completo }}</h2>
-                    <p class="text-[10px] font-bold text-intu-red uppercase tracking-widest mb-6">Ciudadano Registrado</p>
+                <div class="pt-14 pb-8 px-8">
+                    <div class="text-center mb-6">
+                        <h2 class="text-lg font-black text-intu-dark leading-tight mb-1 uppercase tracking-tight whitespace-normal">{{ beneficiario.nombre_completo }}</h2>
+                        <p class="text-[10px] font-bold text-intu-red uppercase tracking-widest">ID: {{ beneficiario.documento_identidad }}</p>
+                    </div>
                     
-                    <div class="grid grid-cols-2 gap-4 py-4 border-y border-gray-50 mb-6">
-                        <div class="text-center">
+                    <div class="grid grid-cols-2 gap-4 py-4 border-y border-gray-50 mb-6 text-center">
+                        <div>
                             <span class="block text-xl font-black text-intu-blue">{{ visitas.count }}</span>
-                            <span class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Visitas Totales</span>
+                            <span class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Atenciones</span>
                         </div>
-                        <div class="text-center border-l border-gray-50">
-                            <span class="block text-xl font-black text-intu-blue">{% if visitas.first %}Activo{% else %}Nuevo{% endif %}</span>
+                        <div class="border-l border-gray-50">
+                            <span class="block text-xs font-black text-emerald-500 uppercase mt-1.5">Activo</span>
                             <span class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Estatus</span>
                         </div>
                     </div>
 
-                    <div class="space-y-4 text-left">
+                    <div class="space-y-5">
+                        {# Bloque: Contacto #}
                         <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-id-card text-xs text-gray-400"></i>
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 text-intu-blue">
+                                <i class="fas fa-address-book text-xs"></i>
                             </div>
                             <div>
-                                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Documento</p>
-                                <p class="text-xs font-bold text-intu-dark">{{ beneficiario.tipo_documento }}: {{ beneficiario.documento_identidad }}</p>
+                                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Contacto</p>
+                                <p class="text-xs font-bold text-intu-dark">{{ beneficiario.telefono|default:"Sin teléfono" }}</p>
+                                <p class="text-[10px] font-medium text-slate-400 lowercase">{{ beneficiario.email|default:"" }}</p>
                             </div>
                         </div>
+
+                        {# Bloque: Datos Sociales #}
                         <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-phone text-xs text-gray-400"></i>
+                            <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 text-amber-500">
+                                <i class="fas fa-user-tag text-xs"></i>
                             </div>
                             <div>
-                                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Teléfono</p>
-                                <p class="text-xs font-bold text-intu-dark">{{ beneficiario.telefono }}</p>
+                                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Perfil Social</p>
+                                <p class="text-xs font-bold text-intu-dark uppercase">{{ beneficiario.get_genero_display }}</p>
+                                {% if beneficiario.discapacidad %}
+                                <span class="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-600 text-[8px] font-black rounded uppercase">Discapacidad</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {# Bloque: Ubicación Territorial #}
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0 text-intu-red">
+                                <i class="fas fa-map-marker-alt text-xs"></i>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Ubicación</p>
+                                <p class="text-xs font-bold text-intu-dark uppercase">{{ beneficiario.estado.nombre }}</p>
+                                <p class="text-[10px] font-medium text-slate-500 uppercase">{{ beneficiario.municipio.nombre }} / {{ beneficiario.parroquia.nombre }}</p>
+                                <p class="text-[9px] text-slate-400 mt-1 italic leading-tight">{{ beneficiario.direccion_especifica|truncatechars:100 }}</p>
                             </div>
                         </div>
                     </div>
 
-                    <a href="{% url 'beneficiarios:editar' beneficiario.id %}" class="mt-8 w-full block py-3 rounded-xl border-2 border-dashed border-gray-100 text-[10px] font-black text-gray-400 hover:border-intu-blue hover:text-intu-blue transition uppercase">
-                        Editar Información
+                    <a href="{% url 'beneficiarios:editar' beneficiario.id %}" class="mt-8 w-full block py-3 rounded-xl border-2 border-dashed border-gray-100 text-[10px] font-black text-gray-400 hover:border-intu-blue hover:text-intu-blue transition text-center uppercase">
+                        <i class="fas fa-pen-to-square mr-2"></i> Actualizar Expediente
                     </a>
                 </div>
             </div>
         </div>
 
+        {# --- COLUMNA PRINCIPAL: HISTORIAL --- #}
         <div class="lg:col-span-8">
             <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="p-6 border-b border-gray-50 flex items-center justify-between">
+                <div class="p-6 border-b border-gray-50 flex items-center justify-between bg-slate-50/50">
                     <h3 class="text-xs font-black text-intu-dark uppercase tracking-[0.2em]">Registro de Actividad</h3>
-                    <span class="bg-gray-100 text-gray-500 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Tiempo Real</span>
+                    <div class="flex items-center gap-2">
+                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                         <span class="text-gray-500 text-[9px] font-black uppercase tracking-widest">Actualizado</span>
+                    </div>
                 </div>
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
                         <thead>
-                            <tr class="bg-gray-50/50">
+                            <tr class="bg-white">
                                 <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha y Motivo</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Observaciones</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Registrado por</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Observaciones de la Visita</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Analista</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-50">
@@ -118,7 +144,7 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-5">
-                                    <p class="text-xs text-gray-600 leading-relaxed max-w-sm">
+                                    <p class="text-[11px] text-gray-600 leading-relaxed max-w-sm whitespace-normal">
                                         {{ visita.descripcion }}
                                     </p>
                                 </td>
@@ -136,7 +162,7 @@
                                 <td colspan="3" class="px-6 py-20 text-center">
                                     <div class="flex flex-col items-center opacity-20">
                                         <i class="fas fa-folder-open text-5xl mb-4"></i>
-                                        <p class="text-xs font-black uppercase tracking-[0.3em]">No hay registros disponibles</p>
+                                        <p class="text-xs font-black uppercase tracking-[0.3em]">Sin movimientos registrados</p>
                                     </div>
                                 </td>
                             </tr>

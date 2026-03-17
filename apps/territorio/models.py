@@ -45,13 +45,17 @@ class Parroquia(models.Model):
         return self.nombre
 
 class Comuna(models.Model):
-    nombre = models.CharField(max_length=200)
-    codigo_comuna = models.CharField(max_length=50, blank=True, null=True, help_text="Código de registro de la comuna")
+    nombre = models.CharField(max_length=200, verbose_name="Nombre de la Comuna")
     parroquia = models.ForeignKey(Parroquia, on_delete=models.CASCADE, related_name='comunas')
 
     class Meta:
         verbose_name = "Comuna"
         verbose_name_plural = "Comunas"
+        ordering = ['nombre'] 
 
     def __str__(self):
         return self.nombre
+
+    def save(self, *args, **kwargs):
+        self.nombre = self.nombre.upper().strip()
+        super(Comuna, self).save(*args, **kwargs)

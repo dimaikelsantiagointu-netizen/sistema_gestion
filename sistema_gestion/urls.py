@@ -31,7 +31,7 @@ urlpatterns = [
     # 6. Configuración de Infraestructura Geográfica
     path('configuracion-territorio/', include('apps.territorio.urls')),
 
-
+    
 
 ] 
 

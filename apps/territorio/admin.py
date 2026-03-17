@@ -35,11 +35,13 @@ class ParroquiaAdmin(admin.ModelAdmin):
 
 @admin.register(Comuna)
 class ComunaAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre', 'codigo_comuna', 'parroquia', 'get_municipio')
+    list_select_related = ('parroquia__municipio',)
+    list_display = ('id', 'nombre', 'parroquia', 'get_municipio')
     list_filter = ('parroquia__municipio__estado', 'parroquia__municipio')
-    search_fields = ('nombre', 'codigo_comuna')
+    search_fields = ('nombre',) 
     ordering = ('parroquia', 'nombre')
 
-    @admin.display(description='Municipio')
+    @admin.display(description='Municipio', ordering='parroquia__municipio')
     def get_municipio(self, obj):
         return obj.parroquia.municipio.nombre
+

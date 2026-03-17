@@ -5,24 +5,24 @@
     
     {# --- ENCABEZADO --- #}
     <div class="mb-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-      <div class="flex items-start gap-6">
-    <a href="{% url 'home' %}" 
-       class="h-14 w-14 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
-        <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
-    </a>
+        <div class="flex items-start gap-6">
+            <a href="{% url 'home' %}" 
+               class="h-14 w-14 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
+                <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
+            </a>
 
-    <div>
-        <div class="flex items-center gap-2 mb-1">
-            <span class="w-2 h-2 rounded-full bg-intu-red animate-pulse"></span>
-            <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">SISI-INTU</span>
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="w-2 h-2 rounded-full bg-intu-red animate-pulse"></span>
+                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">SISI-INTU</span>
+                </div>
+                <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Censo de Ciudadanos</h1>
+            </div>
         </div>
-        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Ciudadanos</h1>
-    </div>
-</div>
         
         <div class="flex flex-wrap gap-3">
             <a href="{% url 'beneficiarios:exportar_excel' %}" class="px-5 py-3 text-[10px] font-black bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all active:scale-95 uppercase tracking-wider flex items-center shadow-lg shadow-emerald-200">
-                <i class="fas fa-file-excel mr-2 text-sm"></i> Reporte
+                <i class="fas fa-file-excel mr-2 text-sm"></i> Reporte General
             </a>
             <a href="{% url 'beneficiarios:registrar_visita' %}" class="px-5 py-3 text-[10px] font-black bg-intu-blue text-white rounded-2xl hover:bg-blue-800 transition-all active:scale-95 uppercase tracking-wider flex items-center shadow-lg shadow-blue-200">
                 <i class="fas fa-walking mr-2 text-sm"></i> Registrar Visita
@@ -37,7 +37,7 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div class="bg-white p-6 rounded-[2rem] border border-blue-100 shadow-sm flex items-center justify-between">
             <div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Población</p>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Población Total</p>
                 <p class="text-3xl font-black text-intu-blue">{{ total_beneficiarios }}</p>
             </div>
             <div class="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-2xl">
@@ -55,123 +55,168 @@
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-[2rem] border border-emerald-100 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Digitalizados</p>
-                <p class="text-3xl font-black text-emerald-500">{{ beneficiarios_con_docs|default:"0" }}</p>
+        <a href="{% url 'beneficiarios:estadisticas' %}" class="block">
+            <div class="bg-white p-6 rounded-[2rem] border border-emerald-100 shadow-sm flex items-center justify-between group cursor-pointer hover:border-emerald-300 transition-all">
+                <div>
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Estadísticas</p>
+                    <p class="text-xs font-bold text-emerald-600 uppercase">Ver Reporte Analítico</p>
+                </div>
+                <div class="w-14 h-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-emerald-100 group-hover:scale-110 transition-transform">
+                    <i class="fas fa-chart-line"></i>
+                </div>
             </div>
-            <div class="w-14 h-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-emerald-100">
-                <i class="fas fa-file-shield"></i>
-            </div>
-        </div>
+        </a>
     </div>
 
-    {# --- BARRA DE BÚSQUEDA (AHORA DEBAJO DE LAS CARDS) --- #}
-    <div class="mb-8">
-        <form method="GET" action="{% url 'beneficiarios:lista' %}" class="relative max-w-2xl">
-            <input type="text" name="q" value="{{ query|default:'' }}" 
-                   placeholder="Buscar por nombre o número de cédula..." 
-                   class="w-full pl-14 pr-6 py-4 bg-white border-2 border-slate-100 rounded-[1.5rem] text-sm font-bold text-slate-700 placeholder:text-slate-300 focus:border-intu-blue focus:ring-4 focus:ring-blue-50 transition-all shadow-sm">
-            <div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 text-lg">
-                <i class="fas fa-magnifying-glass"></i>
+    {# --- BÚSQUEDA Y FILTROS AVANZADOS --- #}
+    <div class="mb-8 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
+        <form method="GET" action="{% url 'beneficiarios:lista' %}" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                {# Buscador Principal #}
+                <div class="md:col-span-6 relative">
+                    <input type="text" name="q" value="{{ query|default:'' }}" 
+                           placeholder="Nombre o Cédula..." 
+                           class="w-full pl-12 pr-4 py-4 bg-slate-50 border-transparent rounded-2xl text-sm font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-intu-blue transition-all">
+                    <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                </div>
+
+                {# Estado #}
+                <div class="md:col-span-3">
+                    <select name="estado" class="w-full py-4 bg-slate-50 border-transparent rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 focus:bg-white focus:ring-4 focus:ring-blue-50">
+                        <option value="">-- ESTADO --</option>
+                        {% for e in estados %}
+                        <option value="{{ e.id }}" {% if request.GET.estado == e.id|stringformat:"i" %}selected{% endif %}>{{ e.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {# Botón de Acción #}
+                <div class="md:col-span-3">
+                    <button type="submit" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-intu-blue transition-all shadow-lg shadow-slate-200">
+                        <i class="fas fa-filter mr-2"></i> Filtrar Censo
+                    </button>
+                </div>
             </div>
-            {% if query %}
-                <a href="{% url 'beneficiarios:lista' %}" class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-intu-red uppercase bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors">
-                    Limpiar
+
+            {# Filtros Secundarios #}
+            <div class="flex flex-wrap gap-4 pt-4 border-t border-slate-50">
+                <div class="flex items-center gap-3">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Género:</span>
+                    <select name="genero" class="bg-slate-50 border-none rounded-xl text-[10px] font-bold uppercase py-2 px-4 focus:ring-2 focus:ring-blue-100">
+                        <option value="">Todos</option>
+                        <option value="M" {% if request.GET.genero == 'M' %}selected{% endif %}>Masculino</option>
+                        <option value="F" {% if request.GET.genero == 'F' %}selected{% endif %}>Femenino</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Condición:</span>
+                    <select name="discapacidad" class="bg-slate-50 border-none rounded-xl text-[10px] font-bold uppercase py-2 px-4 focus:ring-2 focus:ring-blue-100">
+                        <option value="">Cualquiera</option>
+                        <option value="1" {% if request.GET.discapacidad == '1' %}selected{% endif %}>Con Discapacidad</option>
+                        <option value="0" {% if request.GET.discapacidad == '0' %}selected{% endif %}>Sin Discapacidad</option>
+                    </select>
+                </div>
+
+                {% if ha_filtrado %}
+                <a href="{% url 'beneficiarios:lista' %}" class="ml-auto text-[9px] font-black text-intu-red uppercase tracking-widest hover:underline flex items-center">
+                    <i class="fas fa-times-circle mr-1"></i> Limpiar Búsqueda
                 </a>
-            {% endif %}
+                {% endif %}
+            </div>
         </form>
     </div>
 
-    {# --- TABLA COMPLETA --- #}
+    {# --- TABLA DE DATOS --- #}
     <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-slate-900 border-b border-slate-800">
                         <th class="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ciudadano / ID</th>
-                        <th class="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto / Correo</th>
-                        <th class="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ubicación</th>
-                        <th class="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Docs</th>
+                        <th class="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Datos Sociales</th>
+                        <th class="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ubicación Política</th>
                         <th class="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Historial</th>
                         <th class="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Gestión</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
-                    {% for b in beneficiarios %}
-                    <tr class="hover:bg-slate-50 transition-all duration-200 group">
-                        {# (El contenido de la fila se mantiene igual...) #}
-                        <td class="px-6 py-5">
-                            <div class="flex items-center">
-                                <span class="w-9 h-9 flex items-center justify-center bg-intu-blue text-white text-[11px] font-black rounded-xl mr-3 shadow-md group-hover:scale-110 transition-transform">
-                                    {{ b.tipo_documento|slice:":1" }}
-                                </span>
-                                <div>
-                                    <div class="text-[13px] font-black text-slate-900 uppercase tracking-tight group-hover:text-intu-blue transition-colors">{{ b.nombre_completo }}</div>
-                                    <div class="text-[10px] font-bold text-slate-400">{{ b.documento_identidad }}</div>
+                    {% if ha_filtrado %}
+                        {% for b in beneficiarios %}
+                        <tr class="hover:bg-slate-50 transition-all duration-200 group">
+                            <td class="px-6 py-5">
+                                <div class="flex items-center">
+                                    <span class="w-9 h-9 flex items-center justify-center bg-intu-blue text-white text-[11px] font-black rounded-xl mr-3 shadow-md">
+                                        {{ b.tipo_documento|slice:":1" }}
+                                    </span>
+                                    <div>
+                                        <div class="text-[12px] font-black text-slate-900 uppercase tracking-tight group-hover:text-intu-blue transition-colors whitespace-normal leading-tight">
+                                            {{ b.nombre_completo }}
+                                        </div>
+                                        <div class="text-[10px] font-bold text-slate-400 mt-0.5">{{ b.documento_identidad }}</div>
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-5">
-                            <div class="text-[12px] font-bold text-slate-700 uppercase"><i class="fas fa-phone text-emerald-500 mr-1"></i> {{ b.telefono|default:"---" }}</div>
-                            <div class="text-[10px] font-medium text-blue-500 lowercase mt-1 italic"><i class="fas fa-envelope text-blue-300 mr-1"></i> {{ b.email|default:"sin correo" }}</div>
-                        </td>
-                        <td class="px-6 py-5">
-                            <div class="max-w-[200px] text-[10px] text-slate-500 font-semibold leading-tight">
-                                <i class="fas fa-map-marker-alt text-intu-red/50 mr-1"></i> {{ b.direccion|default:"No registrada"|truncatechars:60 }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-5 text-center">
-                            <a href="{% url 'beneficiarios:expediente' b.id %}" class="inline-flex items-center px-4 py-2.5 rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white text-[10px] font-black uppercase transition-all shadow-sm border border-blue-100">
-                                <i class="fas fa-folder-open mr-2 text-sm"></i> {{ b.documentos.count }}
-                            </a>
-                        </td>
-                        <td class="px-6 py-5 text-center">
-                            <a href="{% url 'beneficiarios:detalle' b.id %}" class="inline-flex items-center px-4 py-2.5 rounded-2xl bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white text-[10px] font-black uppercase transition-all shadow-sm border border-indigo-100">
-                                <i class="fas fa-clock-rotate-left mr-2 text-sm"></i> {{ b.visitas.count }}
-                            </a>
-                        </td>
-                        <td class="px-6 py-5 text-right">
-                            <div class="flex justify-end gap-2">
-                                <a href="{% url 'beneficiarios:editar' b.id %}" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-amber-500 hover:text-white transition-all"><i class="fas fa-user-pen text-xs"></i></a>
-                                <a href="{% url 'beneficiarios:eliminar' b.id %}" onclick="return confirm('¿Seguro que desea eliminar?')" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-red-600 hover:text-white transition-all"><i class="fas fa-trash-can text-xs"></i></a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="py-24 text-center">
-                            <h3 class="text-sm font-black text-gray-300 uppercase tracking-widest">Sin resultados</h3>
-                        </td>
-                    </tr>
-                    {% endfor %}
+                            </td>
+                            <td class="px-6 py-5 text-center">
+                                <div class="flex flex-col gap-1 items-center">
+                                    <span class="text-[9px] font-black px-2 py-1 rounded-md {% if b.genero == 'F' %}bg-amber-50 text-amber-600{% else %}bg-blue-50 text-blue-600{% endif %} uppercase">
+                                        {{ b.get_genero_display|default:"S/G" }}
+                                    </span>
+                                    {% if b.discapacidad %}
+                                    <span class="text-[8px] font-black bg-purple-50 text-purple-600 px-2 py-0.5 rounded uppercase">Discapacidad</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-5">
+                                <div class="text-[10px] font-bold text-slate-700 uppercase leading-none">
+                                    {{ b.estado.nombre|default:"S/E" }} <span class="text-slate-300 font-light px-1">|</span> {{ b.municipio.nombre|default:"S/M" }}
+                                </div>
+                                <div class="text-[9px] font-medium text-slate-400 uppercase mt-1">
+                                    P. {{ b.parroquia.nombre|default:"---" }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-5 text-center">
+                                <a href="{% url 'beneficiarios:detalle' b.id %}" class="inline-flex items-center px-4 py-2.5 rounded-2xl bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white text-[10px] font-black uppercase transition-all shadow-sm border border-indigo-100">
+                                    <i class="fas fa-clock-rotate-left mr-2 text-sm"></i> {{ b.visitas.count }}
+                                </a>
+                            </td>
+                            <td class="px-6 py-5 text-right">
+                                <div class="flex justify-end gap-2">
+                                    <a href="{% url 'beneficiarios:editar' b.id %}" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-amber-500 hover:text-white transition-all"><i class="fas fa-user-pen text-xs"></i></a>
+                                    <a href="{% url 'beneficiarios:eliminar' b.id %}" onclick="return confirm('¿Seguro?')" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-red-600 hover:text-white transition-all"><i class="fas fa-trash-can text-xs"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="py-24 text-center">
+                                <div class="flex flex-col items-center">
+                                    <i class="fas fa-search-minus text-4xl text-slate-200 mb-4"></i>
+                                    <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest">No se encontraron resultados</h3>
+                                    <p class="text-[10px] font-bold text-slate-300 mt-1 uppercase">Prueba con otros criterios de búsqueda</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        {# ESTADO INICIAL: CUANDO NO SE HA FILTRADO NADA #}
+                        <tr>
+                            <td colspan="5" class="py-32 text-center bg-slate-50/50">
+                                <div class="max-w-xs mx-auto">
+                                    <div class="w-20 h-20 bg-white rounded-[2rem] shadow-xl flex items-center justify-center mx-auto mb-6">
+                                        <i class="fas fa-filter text-3xl text-intu-blue"></i>
+                                    </div>
+                                    <h3 class="text-[12px] font-black text-slate-800 uppercase tracking-widest">Consulta de Expedientes</h3>
+                                    <p class="text-[10px] font-bold text-slate-400 mt-2 uppercase leading-relaxed">
+                                        Por favor, utiliza los filtros superiores para buscar un ciudadano y visualizar sus datos.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
-
-        {# --- PAGINACIÓN (NUEVO) --- #}
-        {% if beneficiarios.has_other_pages %}
-        <div class="px-6 py-6 bg-slate-50 border-t border-gray-100 flex items-center justify-between">
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Página {{ beneficiarios.number }} de {{ beneficiarios.paginator.num_pages }}
-            </span>
-            <div class="flex gap-2">
-                {% if beneficiarios.has_previous %}
-                    <a href="?page={{ beneficiarios.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" 
-                       class="px-4 py-2 bg-white border border-slate-200 text-[10px] font-black text-slate-600 rounded-xl hover:bg-intu-blue hover:text-white transition-all uppercase">
-                        Anterior
-                    </a>
-                {% endif %}
-
-                {% if beneficiarios.has_next %}
-                    <a href="?page={{ beneficiarios.next_page_number }}{% if query %}&q={{ query }}{% endif %}" 
-                       class="px-4 py-2 bg-white border border-slate-200 text-[10px] font-black text-slate-600 rounded-xl hover:bg-intu-blue hover:text-white transition-all uppercase">
-                        Siguiente
-                    </a>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}

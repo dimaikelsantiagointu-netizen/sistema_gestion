@@ -1,107 +1,274 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
+<div class="max-w-4xl mx-auto px-4 pb-12">
+    {# --- ENCABEZADO --- #}
     <div class="mb-10">
-        <a href="{% url 'beneficiarios:lista' %}" class="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-intu-blue transition">
-            <i class="fas fa-arrow-left mr-2"></i> Volver al listado
+        <a href="{% url 'beneficiarios:lista' %}" class="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-intu-blue transition group">
+            <i class="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i> Volver al listado
         </a>
-        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter mt-4">Nuevo Ciudadano</h1>
+        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter mt-4">
+            {% if beneficiario.id %}Editar{% else %}Nuevo{% endif %} <span class="text-gray-300">Ciudadano</span>
+        </h1>
     </div>
 
-    <form method="POST" class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 space-y-8">
+    <form method="POST" id="form-beneficiario" class="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 space-y-10">
         {% csrf_token %}
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {# --- Identificación --- #}
-            <div>
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tipo de Documento</label>
-                <select name="tipo_documento" id="tipo_doc_selector" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
-                    <option value="V" {% if beneficiario.tipo_documento == 'V' %}selected{% endif %}>Cédula (V)</option>
-                    <option value="J" {% if beneficiario.tipo_documento == 'J' %}selected{% endif %}>Jurídico (J)</option>
-                    <option value="E" {% if beneficiario.tipo_documento == 'E' %}selected{% endif %}>Extranjero (E)</option>
-                    <option value="G" {% if beneficiario.tipo_documento == 'G' %}selected{% endif %}>Gubernamental (G)</option>
-                </select>
+        {# --- SECCIÓN 1: IDENTIFICACIÓN --- #}
+        <div class="space-y-6">
+            <div class="flex items-center gap-3">
+                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-intu-blue text-white text-[10px] font-black">1</span>
+                <h2 class="text-[11px] font-black uppercase text-slate-800 tracking-widest">Información Básica</h2>
             </div>
-
-            <div>
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Número de Documento</label>
-                <div class="relative flex items-center mt-1">
-                    <span id="visual-prefix" class="absolute left-4 text-sm font-black text-intu-blue opacity-40 border-r pr-2 border-gray-200">
-                        {{ beneficiario.tipo_documento|default:'V' }}-
-                    </span>
-                    
-                    <input type="text" name="documento_identidad" id="doc_number_input" required 
-                           value="{{ beneficiario.documento_identidad|default:'' }}"
-                           placeholder="12345678"
-                           class="block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 pl-12 font-bold transition-all">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tipo de Documento</label>
+                    <select name="tipo_documento" id="tipo_doc_selector" class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-intu-blue/5 p-4 transition-all">
+                        {% for code, name in TIPO_DOC_CHOICES %}
+                            <option value="{{ code }}" {% if beneficiario.tipo_documento == code %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-                <p class="text-[9px] text-gray-400 mt-1 ml-2 italic text-uppercase font-bold">Solo ingrese los números</p>
-            </div>
 
-            {# --- Nombre --- #}
-            <div class="md:col-span-2">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Nombre Completo o Razón Social</label>
-                <input type="text" name="nombre_completo" required placeholder="EJ: JUAN PEREZ"
-                       value="{{ beneficiario.nombre_completo|default:'' }}"
-                       class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 uppercase font-bold">
-            </div>
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Número de Documento</label>
+                    <div class="relative flex items-center mt-2">
+                        <span id="visual-prefix" class="absolute left-4 text-sm font-black text-intu-blue opacity-40 border-r pr-2 border-gray-200">
+                            {{ beneficiario.tipo_documento|default:'V' }}-
+                        </span>
+                        <input type="text" name="documento_identidad" id="doc_number_input" required 
+                               value="{{ beneficiario.documento_identidad|default:'' }}"
+                               placeholder="12345678"
+                               class="block w-full bg-gray-50 border-none rounded-2xl text-sm focus:ring-4 focus:ring-intu-blue/5 pl-14 p-4 font-black transition-all">
+                    </div>
+                    {# Mensaje de error de duplicado #}
+                    <p id="doc-error-msg" class="hidden text-[9px] font-black text-red-500 uppercase mt-2 ml-2 tracking-tighter animate-pulse">
+                        <i class="fas fa-exclamation-triangle mr-1"></i> Este documento ya existe en el sistema
+                    </p>
+                </div>
 
-            {# --- Contacto --- #}
-            <div>
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Teléfono de contacto</label>
-                <input type="text" name="telefono" placeholder="0412-0000000"
-                       value="{{ beneficiario.telefono|default:'' }}"
-                       class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 font-bold">
-            </div>
-            <div>
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Correo Electrónico</label>
-                <input type="email" name="email" placeholder="ejemplo@correo.com"
-                       value="{{ beneficiario.email|default:'' }}"
-                       class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 font-bold">
-            </div>
+                <div class="md:col-span-2">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nombre Completo o Razón Social</label>
+                    <input type="text" name="nombre_completo" required placeholder="EJ: JUAN PEREZ"
+                           value="{{ beneficiario.nombre_completo|default:'' }}"
+                           class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm focus:ring-4 focus:ring-intu-blue/5 uppercase font-black p-4 transition-all whitespace-normal">
+                </div>
 
-            {# --- Dirección --- #}
-            <div class="md:col-span-2">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Dirección Fiscal / Domicilio</label>
-                <textarea name="direccion" rows="3" 
-                          class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 font-medium uppercase">{{ beneficiario.direccion|default:'' }}</textarea>
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Género</label>
+                    <div class="flex gap-3 mt-2">
+                        {% for code, name in GENERO_CHOICES %}
+                        <label class="flex-1 cursor-pointer group">
+                            <input type="radio" name="genero" value="{{ code }}" class="hidden peer" {% if beneficiario.genero == code %}checked{% endif %} required>
+                            <div class="text-center p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase text-gray-400 peer-checked:bg-intu-blue peer-checked:text-white transition-all border-2 border-transparent peer-checked:border-blue-100">
+                                {{ name }}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="flex flex-col justify-center px-2">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">¿Posee alguna discapacidad?</label>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="discapacidad" class="sr-only peer" {% if beneficiario.discapacidad %}checked{% endif %}>
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                        <span class="ml-3 text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Marque si aplica</span>
+                    </label>
+                </div>
             </div>
         </div>
 
-        <div class="pt-6 border-t border-gray-50">
-            <button type="submit" class="w-full py-4 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-intu-dark transition shadow-lg shadow-blue-100">
-                {{ boton }}
+        <hr class="border-gray-50">
+
+        {# --- SECCIÓN 2: UBICACIÓN TERRITORIAL --- #}
+        <div class="space-y-6">
+            <div class="flex items-center gap-3">
+                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-black">2</span>
+                <h2 class="text-[11px] font-black uppercase text-slate-800 tracking-widest">Localización</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Estado</label>
+                    <select name="estado" id="id_estado" required class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 p-4 transition-all">
+                        <option value="">Seleccione...</option>
+                        {% for e in estados %}
+                            <option value="{{ e.id }}" {% if beneficiario.estado_id == e.id %}selected{% endif %}>{{ e.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Municipio</label>
+                    <select name="municipio" id="id_municipio" required disabled class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 p-4 transition-all opacity-50">
+                        <option value="">Esperando Estado...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Parroquia</label>
+                    <select name="parroquia" id="id_parroquia" required disabled class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 p-4 transition-all opacity-50">
+                        <option value="">Esperando Municipio...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ciudad</label>
+                    <select name="ciudad" id="id_ciudad" required disabled class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 p-4 transition-all opacity-50">
+                        <option value="">Esperando Estado...</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Comuna (Opcional)</label>
+                    <select name="comuna" id="id_comuna" disabled class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 p-4 transition-all opacity-50">
+                        <option value="">Esperando Parroquia...</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-3">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Dirección Específica</label>
+                    <textarea name="direccion_especifica" rows="3" required placeholder="DETALLE DE CALLE, NRO DE CASA, PUNTO DE REFERENCIA..." 
+                              class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-medium p-4 focus:ring-4 focus:ring-emerald-500/5 uppercase whitespace-normal">{{ beneficiario.direccion_especifica|default:'' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <hr class="border-gray-50">
+
+        {# --- SECCIÓN 3: CONTACTO --- #}
+        <div class="space-y-6">
+            <div class="flex items-center gap-3">
+                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-black">3</span>
+                <h2 class="text-[11px] font-black uppercase text-slate-800 tracking-widest">Contacto Directo</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Teléfono</label>
+                    <input type="text" name="telefono" placeholder="0412-0000000" value="{{ beneficiario.telefono|default:'' }}"
+                           class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold p-4 focus:ring-4 focus:ring-amber-500/5 transition-all">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Correo Electrónico</label>
+                    <input type="email" name="email" placeholder="ejemplo@correo.com" value="{{ beneficiario.email|default:'' }}"
+                           class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold p-4 focus:ring-4 focus:ring-amber-500/5 transition-all">
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-6">
+            <button type="submit" id="btn-submit" class="w-full py-5 bg-intu-blue text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-intu-dark transition-all shadow-xl shadow-blue-200 active:scale-[0.98]">
+                {{ boton|default:'Guardar Ciudadano' }}
             </button>
         </div>
     </form>
 </div>
 
-{# --- LÓGICA DE PREFIJO DINÁMICO --- #}
 <script>
+    // --- ELEMENTOS ---
     const typeSelector = document.getElementById('tipo_doc_selector');
     const visualPrefix = document.getElementById('visual-prefix');
     const docInput = document.getElementById('doc_number_input');
+    const errorMsg = document.getElementById('doc-error-msg');
+    const submitBtn = document.getElementById('btn-submit');
+    
+    const fields = {
+        estado: document.getElementById('id_estado'),
+        municipio: document.getElementById('id_municipio'),
+        parroquia: document.getElementById('id_parroquia'),
+        ciudad: document.getElementById('id_ciudad'),
+        comuna: document.getElementById('id_comuna')
+    };
 
+    const API_TERRITORIO = '/configuracion-territorio/ajax';
+    const API_CHECK_DOC = '/beneficiarios/api/check-documento/';
+
+    // --- LÓGICA DE DOCUMENTO Y VALIDACIÓN EN TIEMPO REAL ---
     function updatePrefix() {
         const selectedValue = typeSelector.value;
         visualPrefix.innerText = selectedValue + '-';
-        
-        // Ajustar el espacio interior del input para que no pise el prefijo
-        const prefixWidth = visualPrefix.offsetWidth;
-        docInput.style.paddingLeft = (prefixWidth + 10) + 'px';
+        docInput.style.paddingLeft = (visualPrefix.offsetWidth + 10) + 'px';
     }
 
-    // Escuchar cambios en el select
-    typeSelector.addEventListener('change', updatePrefix);
+    let typingTimer;
+    docInput.addEventListener('input', function() {
+        this.value = this.value.replace(/[^0-9]/g, ''); // Solo números
+        
+        clearTimeout(typingTimer);
+        errorMsg.classList.add('hidden');
+        docInput.classList.remove('ring-2', 'ring-red-500', 'bg-red-50');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
 
-    // Ejecutar al cargar la página (útil para edición)
+        if (this.value.length > 5) { // Validar después de 6 dígitos
+            typingTimer = setTimeout(async () => {
+                try {
+                    const response = await fetch(`${API_CHECK_DOC}?doc_id=${docInput.value}`);
+                    const data = await response.json();
+                    if (data.exists) {
+                        errorMsg.classList.remove('hidden');
+                        docInput.classList.add('ring-2', 'ring-red-500', 'bg-red-50');
+                        submitBtn.disabled = true;
+                        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    }
+                } catch (e) { console.error("Error validando documento"); }
+            }, 500);
+        }
+    });
+
+    typeSelector.addEventListener('change', updatePrefix);
     window.addEventListener('DOMContentLoaded', updatePrefix);
 
-    // Opcional: Impedir que escriban letras si es cédula
-    docInput.addEventListener('input', function(e) {
-        this.value = this.value.replace(/[^0-9]/g, '');
+    // --- LÓGICA TERRITORIAL ---
+    function resetSelect(field, message) {
+        if (!field) return;
+        field.innerHTML = `<option value="">${message}</option>`;
+        field.disabled = true;
+        field.classList.add('opacity-50');
+    }
+
+    function enableSelect(field, label) {
+        if (!field) return;
+        field.innerHTML = `<option value="">Seleccione ${label}...</option>`;
+        field.disabled = false;
+        field.classList.remove('opacity-50');
+    }
+
+    async function cargarDatos(url, field, label) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error();
+            const data = await response.json();
+            enableSelect(field, label);
+            data.forEach(item => {
+                field.innerHTML += `<option value="${item.id}">${item.nombre}</option>`;
+            });
+        } catch (error) {
+            resetSelect(field, "Error al cargar");
+        }
+    }
+
+    fields.estado.addEventListener('change', function() {
+        const id = this.value;
+        resetSelect(fields.municipio, "Cargando...");
+        resetSelect(fields.ciudad, "Cargando...");
+        resetSelect(fields.parroquia, "Esperando Municipio...");
+        resetSelect(fields.comuna, "Esperando Parroquia...");
+        if (id) {
+            cargarDatos(`${API_TERRITORIO}/municipios/${id}/`, fields.municipio, "Municipio");
+            cargarDatos(`${API_TERRITORIO}/ciudades/${id}/`, fields.ciudad, "Ciudad");
+        }
+    });
+
+    fields.municipio.addEventListener('change', function() {
+        resetSelect(fields.parroquia, "Cargando...");
+        resetSelect(fields.comuna, "Esperando Parroquia...");
+        if (this.value) cargarDatos(`${API_TERRITORIO}/parroquias/${this.value}/`, fields.parroquia, "Parroquia");
+    });
+
+    fields.parroquia.addEventListener('change', function() {
+        resetSelect(fields.comuna, "Cargando...");
+        if (this.value) cargarDatos(`${API_TERRITORIO}/comunas/${this.value}/`, fields.comuna, "Comuna");
     });
 </script>
-
 {% endblock %}

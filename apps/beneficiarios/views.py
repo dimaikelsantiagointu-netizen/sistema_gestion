@@ -11,69 +11,130 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from .models import Beneficiario, DocumentoExpediente, Visita
 from django.core.paginator import Paginator
+from apps.territorio.models import Estado, Municipio, Parroquia
+from django.db import IntegrityError
+
 logger = logging.getLogger(__name__)
 
 # --- 1. GESTIÓN DE BENEFICIARIOS ---
 
 @login_required
 def lista_beneficiarios(request):
-    query = request.GET.get('q')
-    if query:
-        # Mejora: busca por nombre o documento
-        lista = Beneficiario.objects.filter(
-            Q(nombre_completo__icontains=query) | 
-            Q(documento_identidad__icontains=query)
-        ).distinct()
+    # 1. Obtener parámetros de búsqueda
+    query = request.GET.get('q', '').strip()
+    estado_id = request.GET.get('estado', '')
+    genero = request.GET.get('genero', '')
+    discapacidad = request.GET.get('discapacidad', '')
+
+    # 2. Lógica de "No mostrar nada si no hay filtro"
+    ha_filtrado = any([query, estado_id, genero, discapacidad])
+
+    # 3. FILTRADO LOCAL DE TIEMPO (Solución al error de visitas hoy)
+    # Obtenemos la fecha exacta del lugar donde estás (Venezuela/Local)
+    hoy_local = timezone.localtime(timezone.now()).date()
+
+    if ha_filtrado:
+        # Usamos select_related para traer los nombres de estados de una vez y no saturar
+        beneficiarios_list = Beneficiario.objects.select_related('estado', 'municipio', 'parroquia').all()
+        
+        if query:
+            beneficiarios_list = beneficiarios_list.filter(
+                Q(nombre_completo__icontains=query) | 
+                Q(documento_identidad__icontains=query)
+            )
+        
+        if estado_id:
+            beneficiarios_list = beneficiarios_list.filter(estado_id=estado_id)
+            
+        if genero:
+            beneficiarios_list = beneficiarios_list.filter(genero=genero)
+            
+        if discapacidad:
+            # Convertimos el string '1'/'0' a Booleano real
+            beneficiarios_list = beneficiarios_list.filter(discapacidad=(discapacidad == '1'))
+            
+        beneficiarios_list = beneficiarios_list.order_by('nombre_completo')
     else:
-        lista = Beneficiario.objects.all().order_by('-id')
+        beneficiarios_list = Beneficiario.objects.none()
 
-    # --- LÓGICA PARA LAS TARJETAS (ESTADÍSTICAS) ---
-    hoy = timezone.now().date()
-    
-    # 1. Visitas agendadas para hoy
-    visitas_hoy_count = Visita.objects.filter(fecha_registro__date=hoy).count()
-    
-    # 2. Beneficiarios que tienen al menos un documento (Digitalizados)
-    # Usamos annotate para contar documentos por beneficiario y filtrar los que tengan > 0
-    beneficiarios_con_docs = Beneficiario.objects.annotate(
-        num_docs=Count('documentos')
-    ).filter(num_docs__gt=0).count()
-
-    # Paginación
-    paginator = Paginator(lista, 10) 
-    page_number = request.GET.get('page')
-    beneficiarios_paginados = paginator.get_page(page_number)
+    # 4. CONTEOS PARA KPI
+    total_beneficiarios = Beneficiario.objects.count()
+    # Usamos hoy_local para asegurar que la visita aparezca apenas se registre
+    visitas_hoy_count = Visita.objects.filter(fecha_registro__date=hoy_local).count()
 
     context = {
-        'beneficiarios': beneficiarios_paginados,
+        'beneficiarios': beneficiarios_list,
         'query': query,
-        'total_beneficiarios': Beneficiario.objects.count(),
-        'visitas_hoy_count': visitas_hoy_count,        # <--- Agregado
-        'beneficiarios_con_docs': beneficiarios_con_docs, # <--- Agregado
+        'estados': Estado.objects.all().order_by('nombre'),
+        'total_beneficiarios': total_beneficiarios,
+        'visitas_hoy_count': visitas_hoy_count,
+        'ha_filtrado': ha_filtrado,
     }
     return render(request, 'beneficiarios/lista.html', context)
+
 
 @login_required
 def crear_beneficiario(request):
     if request.method == 'POST':
+        doc_id = request.POST.get('documento_identidad')
+        
+        # 1. VERIFICACIÓN DE UNICIDAD: Evita el IntegrityError
+        if Beneficiario.objects.filter(documento_identidad=doc_id).exists():
+            messages.error(request, f"Error: Ya existe un ciudadano registrado con el documento {doc_id}.")
+            # Retornamos el render con los datos actuales para que el usuario no pierda lo que escribió
+            context = {
+                'estados': Estado.objects.all().order_by('nombre'),
+                'TIPO_DOC_CHOICES': Beneficiario.TIPO_DOC_CHOICES,
+                'GENERO_CHOICES': Beneficiario.GENERO_CHOICES,
+                'boton': 'Registrar Ciudadano',
+                'datos_previos': request.POST # Para recuperar datos si tu template lo permite
+            }
+            return render(request, 'beneficiarios/formulario.html', context)
+
         try:
-            beneficiario = Beneficiario.objects.create(
+            # 2. PROCESO DE GUARDADO (Ya corregido con los _id)
+            beneficiario = Beneficiario(
                 tipo_documento=request.POST.get('tipo_documento'),
-                documento_identidad=request.POST.get('documento_identidad'),
+                documento_identidad=doc_id,
                 nombre_completo=request.POST.get('nombre_completo'),
+                genero=request.POST.get('genero'),
+                discapacidad=request.POST.get('discapacidad') == 'on',
                 telefono=request.POST.get('telefono'),
                 email=request.POST.get('email'),
-                direccion=request.POST.get('direccion')
+                direccion_especifica=request.POST.get('direccion_especifica'),
+                estado_id=request.POST.get('estado') or None,
+                municipio_id=request.POST.get('municipio') or None,
+                parroquia_id=request.POST.get('parroquia') or None,
+                ciudad_id=request.POST.get('ciudad') or None,
+                comuna_id=request.POST.get('comuna') or None,
             )
-            messages.success(request, f"Beneficiario {beneficiario.nombre_completo} registrado.")
+            beneficiario.save()
+            messages.success(request, f"Ciudadano {beneficiario.nombre_completo} registrado con éxito.")
             return redirect('beneficiarios:lista')
-        except Exception as e:
-            messages.error(request, f"Error al registrar: {e}")
-    
-    return render(request, 'beneficiarios/formulario.html', {
-        'titulo': 'Nuevo Beneficiario',
-        'boton': 'Registrar'
-    })
+
+        except IntegrityError:
+            # Una segunda capa de seguridad por si acaso
+            messages.error(request, "Error de integridad: El documento ya está en uso.")
+            return redirect('beneficiarios:crear')
+
+    # Para el GET
+    context = {
+        'estados': Estado.objects.all().order_by('nombre'),
+        'TIPO_DOC_CHOICES': Beneficiario.TIPO_DOC_CHOICES,
+        'GENERO_CHOICES': Beneficiario.GENERO_CHOICES,
+        'boton': 'Registrar Ciudadano',
+    }
+    return render(request, 'beneficiarios/formulario.html', context)
+
+#--FUNCIONES AUXILIARES PARA CARGA DINÁMICA DE MUNICIPIOS Y PARROQUIAS EN EL FORMULARIO ---
+def api_get_municipios(request, estado_id):
+    municipios = Municipio.objects.filter(estado_id=estado_id).values('id', 'nombre').order_by('nombre')
+    return JsonResponse(list(municipios), safe=False)
+
+def api_get_parroquias(request, municipio_id):
+    parroquias = Parroquia.objects.filter(municipio_id=municipio_id).values('id', 'nombre').order_by('nombre')
+    return JsonResponse(list(parroquias), safe=False)
+#-------------------------
 
 @login_required
 def editar_beneficiario(request, id):
@@ -109,7 +170,7 @@ def eliminar_beneficiario(request, id):
 # --- 2. EXPEDIENTE DIGITAL ---
 
 @login_required
-def expediente_beneficiario(request, id): # <--- CAMBIADO: debe ser 'id' para coincidir con urls.py
+def expediente_beneficiario(request, id):
     beneficiario = get_object_or_404(Beneficiario, id=id)
     
     if request.method == 'POST':
@@ -143,7 +204,7 @@ def expediente_beneficiario(request, id): # <--- CAMBIADO: debe ser 'id' para co
 @login_required
 def eliminar_documento(request, doc_id):
     documento = get_object_or_404(DocumentoExpediente, id=doc_id)
-    b_id = documento.beneficiario.id  # Guardamos el ID antes de borrar
+    b_id = documento.beneficiario.id  
     
     if documento.archivo:
         documento.archivo.delete(save=False)
@@ -151,7 +212,6 @@ def eliminar_documento(request, doc_id):
     documento.delete()
     messages.success(request, "Archivo eliminado correctamente.")
     
-    # LA CORRECCIÓN CRÍTICA: Cambiar 'beneficiario_id' por 'id'
     return redirect('beneficiarios:expediente', id=b_id)
 
 # --- 3. GESTIÓN DE VISITAS ---
@@ -162,9 +222,6 @@ def registrar_visita(request):
         b_id = request.POST.get('beneficiario_id')
         if b_id:
             beneficiario = get_object_or_404(Beneficiario, id=b_id)
-            
-            # 1. Limpieza de fecha: datetime-local envía 'YYYY-MM-DDTHH:MM'
-            # Django necesita convertir eso o usar timezone.now()
             fecha_post = request.POST.get('fecha_registro')
             
             Visita.objects.create(
@@ -177,14 +234,11 @@ def registrar_visita(request):
             
             messages.success(request, "Visita registrada correctamente.")
             
-            # 2. CORRECCIÓN DE RUTA: 
-            # Según tus errores anteriores, tu parámetro es 'id', no 'pk'.
             return redirect('beneficiarios:detalle', id=beneficiario.id)
     
-    # 3. Datos para el template
     return render(request, 'beneficiarios/form_visita.html', {
         'motivos': Visita.MOTIVO_CHOICES,
-        'current_time': timezone.now() # Necesario para el valor inicial del input de fecha
+        'current_time': timezone.now() 
     })
 
 @login_required
@@ -202,12 +256,10 @@ def buscar_beneficiario(request):
         return JsonResponse({'encontrado': False})
 
 @login_required
-def detalle_beneficiario(request, id): # Cambiado pk por id
-    beneficiario = get_object_or_404(Beneficiario, id=id) # Cambiado pk por id
-    # Traemos las visitas relacionadas
+def detalle_beneficiario(request, id): 
+    beneficiario = get_object_or_404(Beneficiario, id=id) 
     visitas = beneficiario.visitas.all().order_by('-fecha_registro')
     
-    # IMPORTANTE: Asegúrate de que este template sea diferente al de expediente.html
     return render(request, 'beneficiarios/detalle.html', {
         'beneficiario': beneficiario,
         'visitas': visitas,
@@ -232,17 +284,16 @@ def exportar_excel(request):
         ws_stats.append([]) 
         ws_stats.append(["INDICADOR", "VALOR ACTUAL"])
         
-        # Usamos counts simples para evitar errores de campos
+        # Consultas de conteo para los indicadores del resumen
         ws_stats.append(["Total Beneficiarios", Beneficiario.objects.count()])
         ws_stats.append(["Total de Visitas", Visita.objects.count()])
 
         # --- Hoja 2: Base de Beneficiarios ---
         ws_ben = wb.create_sheet(title="Base de Beneficiarios")
-        # Quitamos 'FECHA REGISTRO' de los headers porque el error dice que no existe
-        headers_ben = ['TIPO ID', 'DOCUMENTO', 'NOMBRE COMPLETO', 'TELÉFONO', 'EMAIL', 'DIRECCIÓN']
+        headers_ben = ['TIPO ID', 'DOCUMENTO', 'NOMBRE COMPLETO', 'TELÉFONO', 'EMAIL', 'DIRECCIÓN ESPECÍFICA']
         ws_ben.append(headers_ben)
         
-        # Eliminamos .order_by('-fecha_registro') que es lo que causaba el error
+        # Recuperación de la base de datos de ciudadanos
         beneficiarios = Beneficiario.objects.all() 
         
         for b in beneficiarios:
@@ -252,7 +303,8 @@ def exportar_excel(request):
                 b.nombre_completo.upper() if b.nombre_completo else "SIN NOMBRE",
                 b.telefono or "N/A",
                 b.email or "Sin correo",
-                b.direccion or "Sin dirección"
+                # Se utiliza direccion_especifica según el modelo de Beneficiario
+                b.direccion_especifica or "Sin dirección"
             ])
 
         # --- Hoja 3: Historial de Visitas ---
@@ -260,10 +312,10 @@ def exportar_excel(request):
         headers_vis = ['FECHA Y HORA', 'BENEFICIARIO', 'CÉDULA', 'MOTIVO', 'ATENDIDO POR']
         ws_visitas.append(headers_vis)
         
-        # En Visita parece que sí existe fecha_registro, pero por si acaso lo manejamos
+        # Optimización de consulta mediante select_related para evitar múltiples hits a la BD
         visitas = Visita.objects.select_related('beneficiario', 'registrado_por').all()
         for v in visitas:
-            # Verificamos si fecha_registro existe en el objeto v
+            # Formateo de fecha y hora para legibilidad en el archivo Excel
             f_fecha = v.fecha_registro.strftime("%d/%m/%Y %H:%M") if hasattr(v, 'fecha_registro') and v.fecha_registro else "N/A"
             
             ws_visitas.append([
@@ -274,24 +326,27 @@ def exportar_excel(request):
                 v.registrado_por.username if v.registrado_por else "Sistema"
             ])
 
-        # --- AUTO-AJUSTE DE COLUMNAS ---
+        # --- AUTO-AJUSTE DE COLUMNAS Y ESTILOS ---
         for sheet in wb.worksheets:
+            # Aplicación de estilos a la fila de encabezados
             for row in sheet.iter_rows(min_row=1, max_row=1):
                 for cell in row:
                     cell.fill = header_fill
                     cell.font = white_font
             
+            # Cálculo de ancho de columna basado en el contenido más largo
             for column_cells in sheet.columns:
                 length = max(len(str(cell.value)) for cell in column_cells)
                 sheet.column_dimensions[get_column_letter(column_cells[0].column)].width = length + 5
 
+        # Construcción de la respuesta HTTP con el tipo de contenido adecuado para archivos .xlsx
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = 'attachment; filename="Reporte_SIG_INTU.xlsx"'
         wb.save(response)
         return response
 
     except Exception as e:
-        # Esto te dirá exactamente en qué parte falla ahora si persiste el error
+        # Captura de excepciones generales para prevenir el cierre inesperado de la aplicación
         messages.error(request, f"Error técnico al generar Excel: {str(e)}")
         return redirect('beneficiarios:lista')
 
@@ -305,7 +360,7 @@ def buscar_beneficiario_api(request):
         beneficiarios = Beneficiario.objects.filter(
             Q(documento_identidad__icontains=query) | 
             Q(nombre_completo__icontains=query)
-        )[:5]  # Limitamos a 5 resultados para mayor velocidad
+        )[:5]  
         
         for b in beneficiarios:
             results.append({
@@ -316,3 +371,87 @@ def buscar_beneficiario_api(request):
             })
             
     return JsonResponse({'encontrado': len(results) > 0, 'results': results})
+
+def check_documento(request):
+    doc_id = request.GET.get('doc_id')
+    exists = Beneficiario.objects.filter(documento_identidad=doc_id).exists()
+    return JsonResponse({'exists': exists})
+
+
+
+def gestion_documental(request):
+    query = request.GET.get('q', '')
+    beneficiarios_list = Beneficiario.objects.all().order_by('nombre_completo')
+    
+    if query:
+        beneficiarios_list = beneficiarios_list.filter(
+            Q(nombre_completo__icontains=query) | 
+            Q(documento_identidad__icontains=query)
+        )
+    
+    context = {
+        'beneficiarios': beneficiarios_list,
+        'query': query,
+        'total_beneficiarios': beneficiarios_list.count(),
+    }
+    return render(request, 'beneficiarios/gestion_documental.html', context)
+
+def expediente_detalle(request, pk):
+    # Esta es la función que te falta
+    beneficiario = get_object_or_404(Beneficiario, pk=pk)
+    
+    # Aquí puedes agregar la lógica para traer sus documentos digitalizados
+    # documentos = beneficiario.documentos.all() 
+    
+    context = {
+        'beneficiario': beneficiario,
+        # 'documentos': documentos,
+    }
+    return render(request, 'beneficiarios/expediente_archivo.html', context)
+
+
+
+
+def beneficiarios_estadisticas(request):
+    # 1. Totales base
+    total_beneficiarios = Beneficiario.objects.count()
+    total_visitas = Visita.objects.count()
+
+    # 2. Densidad por Estado (Usando el nombre real del estado registrado)
+    visitas_por_estado = Beneficiario.objects.values('estado__nombre')\
+        .annotate(total=Count('id'))\
+        .order_by('-total')
+
+    # 3. Productividad del Personal (AHORA SÍ: Usando 'registrado_por' de Visita)
+    gestion_por_operador = Visita.objects.values(
+        'registrado_por__username', 
+        'registrado_por__first_name', 
+        'registrado_por__last_name'
+    ).annotate(total=Count('id')).order_by('-total')
+
+    # 4. Demografía por Género
+    genero_data = Beneficiario.objects.values('genero')\
+        .annotate(total=Count('id'))\
+        .order_by('-total')
+
+    # 5. Frecuencia por Motivo (De la tabla Visita)
+    visitas_por_tipo = Visita.objects.values('motivo')\
+        .annotate(total=Count('id')).order_by('-total')
+
+    # 6. Preparación de KPIs superiores
+    estado_top = visitas_por_estado.first() if visitas_por_estado else None
+    # Obtenemos el motivo más frecuente de la lista ya consultada
+    tipo_top = visitas_por_tipo.first() if visitas_por_tipo else None
+
+    context = {
+        'total_beneficiarios': total_beneficiarios,
+        'total_visitas': total_visitas,
+        'visitas_por_estado': visitas_por_estado,
+        'gestion_por_operador': gestion_por_operador,
+        'genero_data': genero_data,
+        'visitas_por_tipo': visitas_por_tipo,
+        'estado_top': estado_top,
+        'tipo_top': tipo_top,
+    }
+    
+    return render(request, 'beneficiarios/estadisticas_beneficiarios.html', context)
