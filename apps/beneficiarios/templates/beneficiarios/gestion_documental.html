@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión Documental | SISI-INTU{% endblock %}
+
+{% block content %}
+<div class="max-w-[1600px] mx-auto animate-fade-in pb-10 px-4 sm:px-6">
+    
+    {# --- ENCABEZADO (Sincronizado con Expediente) --- #}
+    <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div class="flex items-center gap-5">
+            <div class="w-16 h-16 bg-intu-blue text-white rounded-[1.5rem] flex items-center justify-center shadow-xl shadow-blue-100 ring-4 ring-white">
+                <i class="fas fa-archive text-2xl"></i>
+            </div>
+            <div>
+                <a href="{% url 'home' %}" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-intu-blue transition flex items-center mb-1">
+                    <i class="fas fa-arrow-left mr-2"></i> Volver al Inicio
+                </a>
+                <h1 class="text-3xl font-black text-slate-900 uppercase tracking-tighter">Archivo Central</h1>
+                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                    Gestión y Digitalización de <span class="text-intu-red">Expedientes Técnicos</span>
+                </p>
+            </div>
+        </div>
+
+        {# Estadísticas rápidas con el estilo de tu expediente #}
+        <div class="flex gap-4">
+            <div class="bg-white px-6 py-3 rounded-2xl border border-slate-100 shadow-sm text-center">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Registros</p>
+                <p class="text-xl font-black text-intu-blue">{{ total_beneficiarios }}</p>
+            </div>
+        </div>
+    </div>
+
+    {# --- BUSCADOR ESTILO "FILTRADO DE ARCHIVO" --- #}
+    <div class="mb-12">
+        <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 relative overflow-hidden">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-2 h-6 bg-intu-red rounded-full"></div>
+                <h3 class="text-[12px] font-black uppercase text-slate-800 tracking-widest">Buscador de Beneficiarios</h3>
+            </div>
+            
+            <form method="GET" action="" class="relative w-full">
+                <input type="text" name="q" value="{{ query|default:'' }}" 
+                       placeholder="Nombre completo o documento de identidad..." 
+                       class="w-full pl-16 pr-6 py-6 bg-slate-50 border-2 border-slate-50 rounded-[1.5rem] text-lg font-bold text-slate-700 placeholder:text-slate-300 focus:border-intu-blue focus:bg-white transition-all outline-none">
+                <div class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 text-2xl">
+                    <i class="fas fa-search"></i>
+                </div>
+                <button type="submit" class="absolute right-4 top-1/2 -translate-y-1/2 bg-slate-900 text-white px-8 py-3.5 rounded-xl text-[10px] font-black uppercase hover:bg-intu-blue transition-all shadow-xl shadow-blue-100">
+                    Localizar Expediente
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {# --- GRID DE EXPEDIENTES --- #}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% for b in beneficiarios %}
+        <div class="group bg-white rounded-[2rem] p-7 border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-slate-200 hover:scale-[1.02] transition-all flex flex-col relative overflow-hidden">
+            
+            {# Decoración sutil de fondo #}
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-slate-50 rounded-full group-hover:bg-blue-50 transition-colors"></div>
+
+            <div class="relative">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="w-12 h-12 bg-slate-100 text-slate-400 group-hover:bg-intu-blue group-hover:text-white rounded-2xl flex items-center justify-center text-sm font-black transition-all shadow-inner">
+                        {{ b.tipo_documento|slice:":1" }}
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[8px] font-black text-slate-300 uppercase tracking-widest leading-none">ID SISTEMA</p>
+                        <p class="text-[12px] font-black text-slate-400">#{{ b.id|stringformat:"05d" }}</p>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-[14px] font-black text-slate-800 uppercase leading-tight tracking-tight group-hover:text-intu-blue transition-colors h-10 overflow-hidden">
+                        {{ b.nombre_completo }}
+                    </h3>
+                    <div class="flex items-center gap-2 mt-3">
+                        <span class="text-[10px] font-black text-intu-red bg-red-50 px-2 py-0.5 rounded">C.I.</span>
+                        <span class="text-[11px] font-bold text-slate-500">{{ b.documento_identidad }}</span>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-50 flex items-center justify-between mt-auto">
+                    <div>
+                        <p class="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">Archivos</p>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-file-pdf text-slate-300 group-hover:text-red-500 transition-colors"></i>
+                            <span class="text-xs font-black text-slate-700">{{ b.documentos.count|default:"0" }}</span>
+                        </div>
+                    </div>
+                    
+                    <a href="{% url 'beneficiarios:expediente' b.id %}" 
+                       class="flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-xl text-[10px] font-black hover:bg-intu-blue transition-all shadow-lg shadow-blue-100 uppercase tracking-widest active:scale-95">
+                        Ver Expediente <i class="fas fa-chevron-right text-[8px]"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-32 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
+            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-folder-open text-slate-200 text-3xl"></i>
+            </div>
+            <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em]">Sin resultados para la búsqueda</h3>
+        </div>
+        {% endfor %}
+    </div>
+
+    {# --- PAGINACIÓN ESTILO SLATE --- #}
+    {% if beneficiarios.has_other_pages %}
+    <div class="mt-16 flex justify-center">
+        <nav class="flex gap-2 p-2 bg-white rounded-2xl shadow-sm border border-slate-100">
+            {% if beneficiarios.has_previous %}
+                <a href="?page={{ beneficiarios.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-intu-blue transition-all">
+                    <i class="fas fa-chevron-left text-xs"></i>
+                </a>
+            {% endif %}
+            
+            <div class="px-6 flex items-center">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Página {{ beneficiarios.number }}</span>
+            </div>
+
+            {% if beneficiarios.has_next %}
+                <a href="?page={{ beneficiarios.next_page_number }}{% if query %}&q={{ query }}{% endif %}" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-intu-blue transition-all">
+                    <i class="fas fa-chevron-right text-xs"></i>
+                </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -28,7 +28,8 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.beneficiarios',
     'apps.contratos',
-    'apps.bienes',
+    #'apps.bienes',
+    'apps.territorio',#app para gestion de estados, municipios, ciudades, parroquias y comunas
 ]
 
 MIDDLEWARE = [
@@ -112,3 +113,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # 5. DOMINIO PARA GENERACIÓN DE CÓDIGOS QR usanndo el modelo BienNacional
 SITE_DOMAIN = os.getenv('SITE_DOMAIN', 'http://127.0.0.1:8000')
 #Agregar SITE_DOMAIN al .env con el dominio real en producción, ej: 'https://www.tu-sitio.com'
+
+
+# --- CONFIGURACIÓN DE SESIÓN POR INACTIVIDAD ---
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE =  3000  # 50 minutos en segundos temporalmente para pruebas, ajustar a 300 para producción (5 minutos)
+SESSION_SAVE_EVERY_REQUEST = True

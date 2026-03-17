@@ -1,7 +1,8 @@
 from django.db import models
 import os
 from django.utils import timezone
-from django.conf import settings  # <--- CAMBIO 1: Importar settings
+from django.conf import settings 
+from apps.territorio.models import Estado, Municipio, Parroquia, Ciudad, Comuna
 
 class Beneficiario(models.Model):
     CEDULA = 'V'
@@ -16,17 +17,40 @@ class Beneficiario(models.Model):
         (GUBERNAMENTAL, 'Gubernamental (G)'),
     ]
 
+    GENERO_CHOICES = [
+        ('M', 'MASCULINO'),
+        ('F', 'FEMENINO'),
+    ]
+
+    # --- Identificación ---
     tipo_documento = models.CharField(max_length=1, choices=TIPO_DOC_CHOICES, default=CEDULA)
     documento_identidad = models.CharField(max_length=20, unique=True, verbose_name="Cédula o RIF")
     nombre_completo = models.CharField(max_length=255)
+    
+    # --- Perfil Social ---
+    genero = models.CharField(max_length=1, choices=GENERO_CHOICES, verbose_name="Género")
+    discapacidad = models.BooleanField(default=False, verbose_name="¿Posee alguna discapacidad?")
+    
+    # --- Contacto ---
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
-    direccion = models.TextField(blank=True, null=True)
     
-    def save(self, *args, **kwargs):
-        self.nombre_completo = self.nombre_completo.upper()
-        self.documento_identidad = self.documento_identidad.upper().strip()
-        super(Beneficiario, self).save(*args, **kwargs)
+    # --- Ubicación Territorial (Vinculado a App Territorio) ---
+    estado = models.ForeignKey(Estado, on_delete=models.PROTECT, related_name='beneficiarios')
+    municipio = models.ForeignKey(Municipio, on_delete=models.PROTECT, related_name='beneficiarios')
+    parroquia = models.ForeignKey(Parroquia, on_delete=models.PROTECT, related_name='beneficiarios')
+    ciudad = models.ForeignKey(Ciudad, on_delete=models.PROTECT, null=True, blank=True, related_name='beneficiarios')
+    comuna = models.ForeignKey(Comuna, on_delete=models.PROTECT, null=True, blank=True, related_name='beneficiarios')
+    direccion_especifica = models.TextField(verbose_name="Dirección Específica")
+
+    direccion = models.TextField(blank=True, null=True) 
+
+
+def save(self, *args, **kwargs):
+    self.nombre_completo = self.nombre_completo.upper()
+    self.documento_identidad = self.documento_identidad.upper().strip()
+    self.direccion_especifica = self.direccion_especifica.upper() if self.direccion_especifica else ""
+    super(Beneficiario, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.tipo_documento}-{self.documento_identidad} | {self.nombre_completo}"
@@ -59,12 +83,11 @@ class Visita(models.Model):
     motivo = models.CharField(max_length=20, choices=MOTIVO_CHOICES)
     descripcion = models.TextField(verbose_name="Observaciones de la visita")
     
-    # CAMBIO 2: Usar settings.AUTH_USER_MODEL en lugar de User
     registrado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
         null=True,
-        blank=True  # Recomendado para que el Admin no te obligue a llenarlo manualmente
+        blank=True  
     )
 
     class Meta:

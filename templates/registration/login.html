@@ -18,6 +18,15 @@
                             blue: '#002855',
                             dark: '#001a38'
                         }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(-10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
                     }
                 }
             }
@@ -32,7 +41,6 @@
             border-color: #C8102E;
             box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.1);
         }
-        /* Acordeón de ayuda mejorado */
         #help-content {
             max-height: 0;
             overflow: hidden;
@@ -55,41 +63,32 @@
             <div class="absolute -bottom-20 -left-20 w-80 h-80 bg-intu-red rounded-full blur-3xl opacity-20"></div>
 
             <div class="relative z-10">
-    <div class="bg-white p-4 md:p-6 rounded-[2rem] flex items-center justify-center mb-10 shadow-2xl transform hover:scale-105 transition duration-500 w-fit">
-        <img src="{% static 'images/sisi_logo.png' %}" 
-             alt="Logo INTU" 
-             class="h-20 md:h-28 w-full object-contain mix-blend-multiply border-none block">
-    </div>
+                <div class="bg-white p-4 md:p-6 rounded-[2rem] flex items-center justify-center mb-10 shadow-2xl transform hover:scale-105 transition duration-500 w-fit">
+                    <img src="{% static 'images/sisi_logo.png' %}" 
+                         alt="Logo INTU" 
+                         class="h-20 md:h-28 w-full object-contain mix-blend-multiply border-none block">
+                </div>
                 
                 <h1 class="text-3xl lg:text-4xl font-black leading-tight tracking-tighter uppercase mb-4">
                     Sistema Integral de<br> <span class="text-intu-red">Seguimiento INTU</span>
                 </h1>
                 <div class="h-1.5 w-24 bg-intu-red mb-8"></div>
-                <div class="relative z-10">
-    <div class="space-y-4">
-        <p class="text-indigo-100 text-sm leading-relaxed font-light">
-            Plataforma estratégica para la automatización y control del ciclo administrativo del INTU:
-        </p>
-        <ul class="space-y-3">
-            <li class="flex items-start gap-3">
-                <i class="fas fa-check-circle text-intu-red mt-1 text-xs"></i>
-                <p class="text-xs text-white/90"><strong>Identificación y Expedientes:</strong> consolidación digital de personas.</p>
-            </li>
-
-            {% comment ": Ocultando por ahora el módulo de contratos Descomentar cuando este operativo " %}
-            <li class="flex items-start gap-3">
-                <i class="fas fa-check-circle text-intu-red mt-1 text-xs"></i>
-                <p class="text-xs text-white/90"><strong>Documentación Legal:</strong> Gestión de Sellos Dorados y generación automatizada de contratos.</p>
-            </li>
-            {% endcomment %}
-
-            <li class="flex items-start gap-3">
-                <i class="fas fa-check-circle text-intu-red mt-1 text-xs"></i>
-                <p class="text-xs text-white/90"><strong>Control de Pagos:</strong> Estadísticas y  seguimiento de recibos oficiales.</p>
-            </li>
-        </ul>
-    </div>
-</div>
+                
+                <div class="space-y-4">
+                    <p class="text-indigo-100 text-sm leading-relaxed font-light">
+                        Plataforma estratégica para la automatización y control del ciclo administrativo del INTU:
+                    </p>
+                    <ul class="space-y-3">
+                        <li class="flex items-start gap-3">
+                            <i class="fas fa-check-circle text-intu-red mt-1 text-xs"></i>
+                            <p class="text-xs text-white/90"><strong>Identificación y Expedientes:</strong> consolidación digital de personas.</p>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fas fa-check-circle text-intu-red mt-1 text-xs"></i>
+                            <p class="text-xs text-white/90"><strong>Control de Pagos:</strong> Estadísticas y seguimiento de recibos oficiales.</p>
+                        </li>
+                    </ul>
+                </div>
             </div>
 
             <div class="relative z-10 mt-12 flex items-center gap-4">
@@ -112,6 +111,19 @@
                 <h2 class="text-2xl font-black text-intu-blue tracking-tight">Acceso Interno</h2>
                 <p class="text-gray-400 text-sm mt-1">Identifíquese para continuar</p>
             </div>
+
+            {# --- AVISO DE EXPULSIÓN POR INACTIVIDAD --- #}
+            {% if request.GET.reason == "inactive" %}
+                <div class="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center gap-4 animate-fade-in shadow-sm">
+                    <div class="h-10 w-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 flex-shrink-0">
+                        <i class="fas fa-user-clock"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-[11px] font-black text-amber-900 uppercase tracking-wider leading-none mb-1">Sesión Finalizada</h4>
+                        <p class="text-[10px] text-amber-700 font-bold uppercase opacity-80 leading-tight">Fuiste expulsado por inactividad prolongada.</p>
+                    </div>
+                </div>
+            {% endif %}
 
             <form method="post" class="space-y-5">
                 {% csrf_token %}
@@ -146,7 +158,7 @@
                 </button>
 
                 {% if form.errors %}
-                <div class="bg-red-50 border-l-4 border-intu-red p-4 rounded-r-xl">
+                <div class="bg-red-50 border-l-4 border-intu-red p-4 rounded-r-xl animate-fade-in">
                     <p class="text-[11px] font-bold text-intu-red uppercase">Error de autenticación</p>
                 </div>
                 {% endif %}

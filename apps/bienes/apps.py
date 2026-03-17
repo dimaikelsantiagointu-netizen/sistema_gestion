@@ -1,8 +1,0 @@
-from django.apps import AppConfig
-
-class BienesConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.bienes'
-    
-    def ready(self):
-        import apps.bienes.signals
