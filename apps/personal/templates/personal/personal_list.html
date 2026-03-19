@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-8 space-y-8">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tight">Panel de Talento Humano</h1>
+            <p class="text-slate-500 text-sm font-medium">Administración de datos del personal institucional</p>
+        </div>
+        <a href="{% url 'personal:crear' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-200 transition-all text-center">
+            <i class="fas fa-plus"></i> REGISTRAR TRABAJADOR
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+            <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
+                <i class="fas fa-users"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Personal</p>
+                <h3 class="text-2xl font-black text-slate-800">{{ personal_list.count }}</h3>
+            </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Personal Activo</p>
+                <h3 class="text-2xl font-black text-slate-800">{{ personal_list.all|dictsort:"activo"|length }}</h3> 
+            </div>
+        </div>
+
+        <a href="{% url 'beneficiarios:gestion_documental' %}" class="bg-slate-900 p-6 rounded-2xl shadow-lg flex items-center justify-between border-l-4 border-l-indigo-500 hover:bg-slate-800 transition-all group">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-white/10 text-white rounded-xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                    <i class="fas fa-folder-tree"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest text-white/60">Acceso Rápido</p>
+                    <h3 class="text-lg font-black text-white uppercase tracking-tighter">Gestion Documental</h3>
+                </div>
+            </div>
+            <i class="fas fa-external-link-alt text-white/20 text-xl group-hover:text-white/50 transition-colors"></i>
+        </a>
+    </div>
+
+    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-inner">
+        <form method="get" class="flex flex-wrap gap-4 items-end">
+            <div class="flex-1 min-w-[250px] space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Búsqueda Rápida</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Cédula o Apellido..." 
+                           class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all">
+                </div>
+            </div>
+
+            <div class="w-64 space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidad Administrativa</label>
+                <select name="unidad" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all">
+                    <option value="">TODAS LAS UNIDADES</option>
+                    {% for u in unidades %}
+                        <option value="{{ u }}" {% if request.GET.unidad == u %}selected{% endif %}>{{ u }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all">
+                    Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 border-b border-slate-100">
+                    <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Trabajador</th>
+                    <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Identificación</th>
+                    <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Contacto</th>
+                    <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cargo / Unidad</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50 text-sm">
+                {% for p in personal_list %}
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="p-4 font-black text-slate-800 uppercase">{{ p.nombres }} {{ p.apellidos }}</td>
+                    <td class="p-4 font-bold text-indigo-600">CI: {{ p.cedula }}</td>
+                    <td class="p-4">
+                        <p class="text-[11px] font-bold text-slate-700"><i class="fas fa-phone mr-2 text-slate-300"></i>{{ p.telefono|default:"---" }}</p>
+                        <p class="text-[10px] font-medium text-slate-400 lowercase">{{ p.email|default:"Sin correo" }}</p>
+                    </td>
+                    <td class="p-4">
+                        <p class="text-[10px] font-bold text-slate-600 uppercase">{{ p.cargo }}</p>
+                        <p class="text-[9px] text-indigo-500 font-black uppercase">{{ p.unidad_adscrita }}</p>
+                    </td>
+                    
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

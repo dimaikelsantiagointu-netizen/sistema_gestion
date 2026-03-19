@@ -26,8 +26,9 @@ INSTALLED_APPS = [
     # NUEVAS APPS:
     'apps.recibos.apps.RecibosConfig',
     'apps.users',
-    'apps.beneficiarios',
-    'apps.contratos',
+    'apps.beneficiarios',#Tambien encargada de los expedientes de los beneficiarios y personal
+    'apps.personal',#App para gestion de personal
+    'apps.contratos', 
     #'apps.bienes',
     'apps.territorio',#app para gestion de estados, municipios, ciudades, parroquias y comunas
 ]
