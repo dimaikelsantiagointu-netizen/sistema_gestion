@@ -4,6 +4,7 @@
 <div class="max-w-4xl mx-auto py-8 px-4">
     <div class="bg-white shadow-2xl rounded-3xl overflow-hidden border border-gray-100">
         
+        {# ENCABEZADO #}
         <div class="bg-indigo-900 px-8 py-7 flex items-center justify-between">
             <div>
                 <h2 class="text-2xl font-bold text-white flex items-center">
@@ -15,7 +16,7 @@
             <i class="fas fa-id-badge text-4xl text-indigo-800 opacity-40"></i>
         </div>
 
-        <form method="post" class="p-8">
+        <form method="post" class="p-8" id="userForm">
             {% csrf_token %}
 
             {% if form.non_field_errors %}
@@ -28,13 +29,19 @@
                 {% for field in form %}
                     
                     {% if field.name == 'user_permissions' %}
-                        {# SECCIÓN DE PERMISOS: Ocupa las 2 columnas #}
+                        {# SECCIÓN DE PERMISOS #}
                         <div class="md:col-span-2 mt-4">
-                            <label class="text-sm font-black text-indigo-900 uppercase tracking-widest mb-3 block border-b border-indigo-100 pb-2">
-                                <i class="fas fa-key mr-2 text-indigo-500"></i> PERMISOS DE MÓDULOS
-                            </label>
+                            <div class="flex items-center justify-between border-b border-indigo-100 pb-2 mb-4">
+                                <label class="text-sm font-black text-indigo-900 uppercase tracking-widest">
+                                    <i class="fas fa-key mr-2 text-indigo-500"></i> PERMISOS DE MÓDULOS
+                                </label>
+                                {# BOTÓN SELECCIONAR TODO #}
+                                <button type="button" onclick="toggleAllPermissions()" id="btn-select-all" class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-tighter bg-indigo-50 px-3 py-1 rounded-lg transition">
+                                    Seleccionar Todos
+                                </button>
+                            </div>
                             
-                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-gray-50 p-5 rounded-2xl border border-gray-200">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-gray-50 p-5 rounded-2xl border border-gray-200" id="permissions-container">
                                 {% for checkbox in field %}
                                     <label class="flex items-start p-2 hover:bg-white hover:shadow-sm rounded-lg transition cursor-pointer border border-transparent hover:border-indigo-100">
                                         <div class="flex items-center h-5">
@@ -49,7 +56,6 @@
                         </div>
 
                     {% elif field.name == 'observacion' %}
-                        {# SECCIÓN DE OBSERVACIÓN: Ocupa las 2 columnas #}
                         <div class="md:col-span-2 flex flex-col">
                             <label class="text-sm font-black text-gray-700 uppercase tracking-tighter mb-1">
                                 <i class="fas fa-comment-dots mr-1 text-gray-400"></i> {{ field.label }}
@@ -61,7 +67,6 @@
                         </div>
 
                     {% else %}
-                        {# CAMPOS NORMALES (Username, Email, Rol, etc.) #}
                         <div class="flex flex-col">
                             <label class="text-sm font-black text-gray-700 uppercase tracking-tighter mb-1 flex justify-between">
                                 {{ field.label }}
@@ -105,6 +110,25 @@
     </p>
 </div>
 
+{# LÓGICA JAVASCRIPT PARA SELECCIONAR TODOS #}
+<script>
+    function toggleAllPermissions() {
+        const container = document.getElementById('permissions-container');
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+        const btn = document.getElementById('btn-select-all');
+        
+        // Verificar si todos están marcados
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        checkboxes.forEach(cb => {
+            cb.checked = !allChecked;
+        });
+
+        // Cambiar texto del botón
+        btn.innerText = allChecked ? 'Seleccionar Todos' : 'Desmarcar Todos';
+    }
+</script>
+
 <style>
     /* Estilo para los Checkboxes de Permisos */
     input[type="checkbox"] {
@@ -113,9 +137,14 @@
         color: #4F46E5;
         width: 1.1rem;
         height: 1.1rem;
+        cursor: pointer;
     }
     input[type="checkbox"]:focus {
         --tw-ring-color: #C7D2FE;
+    }
+    /* Estilo para inputs de texto y select para que coincidan con el diseño */
+    input[type="text"], input[type="email"], input[type="password"], select, textarea {
+        @apply w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all outline-none font-medium text-gray-700;
     }
 </style>
 {% endblock %}
