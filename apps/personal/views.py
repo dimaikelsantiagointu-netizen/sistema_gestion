@@ -4,7 +4,6 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
-# IMPORTANTE: Importamos el mixin para las clases
 from django.contrib.auth.mixins import LoginRequiredMixin 
 
 from .models import Personal, DocumentoPersonal
@@ -36,7 +35,6 @@ class PersonalListView(LoginRequiredMixin, ListView):
         queryset = super().get_queryset()
         q = self.request.GET.get('q')
         
-        # Mantenemos tu lógica de búsqueda: Solo filtrar si hay parámetros
         if q:
             queryset = queryset.filter(
                 Q(cedula__icontains=q) | 
