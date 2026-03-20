@@ -40,174 +40,221 @@
         nav::-webkit-scrollbar { width: 4px; }
         nav::-webkit-scrollbar-track { background: transparent; }
         nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        
+        #main-sidebar {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @media (max-width: 1023px) {
+            .sidebar-hidden { transform: translateX(-100%); }
+            .sidebar-visible { transform: translateX(0); }
+        }
     </style>
 </head>
-<body class="min-h-screen flex flex-row overflow-hidden">
+<body class="min-h-screen flex flex-row overflow-hidden relative">
 
-    <div id="idle-modal" class="fixed inset-0 z-[9999] hidden flex items-center justify-center bg-slate-900/80 backdrop-blur-sm animate-fade-in">
+    {# --- MODAL DE INACTIVIDAD --- #}
+    <div id="idle-modal" class="fixed inset-0 z-[10000] hidden flex items-center justify-center bg-slate-900/80 backdrop-blur-sm animate-fade-in">
         <div class="bg-white rounded-[2.5rem] p-10 max-w-sm w-full mx-4 shadow-2xl border border-white text-center">
             <div class="h-20 w-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500 shadow-inner">
                 <i class="fas fa-user-lock text-3xl animate-pulse"></i>
             </div>
-            <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight mb-3">Sesión Expirada</h3>
-            <p class="text-sm text-slate-500 font-medium leading-relaxed mb-8">
-                Por seguridad, tu sesión ha finalizado debido a la inactividad.
+            <h3 class="text-xl font-black text-slate-900 mb-3">Sesión expirada</h3>
+            <p class="text-[13px] text-slate-500 font-medium leading-relaxed mb-8">
+                Por seguridad, tu sesión ha finalizado debido a la inactividad detectada.
             </p>
             <button onclick="cerrarSesionAhora()" 
-                    class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-4 rounded-2xl transition-all active:scale-95 shadow-lg shadow-slate-200 uppercase text-[11px] tracking-widest flex items-center justify-center gap-3">
+                    class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-4 rounded-2xl transition-all active:scale-95 shadow-lg shadow-slate-200 text-[12px] tracking-wider flex items-center justify-center gap-3">
                 <span>VOLVER AL ACCESO</span>
                 <i class="fas fa-arrow-right text-[10px]"></i>
             </button>
         </div>
     </div>
 
-<aside class="w-72 sidebar-gradient text-white flex-shrink-0 flex flex-col sticky top-0 h-screen shadow-2xl">
-    {# LOGO Y PERFIL #}
-    <div class="p-8 border-b border-white/5 flex items-center gap-4">
-        <div class="w-12 h-12 bg-white rounded-xl p-2 flex-shrink-0">
-            <img src="{% static 'images/sisi_logo.png' %}" class="w-full h-full object-contain" alt="Logo"> 
-        </div>
-        <div class="overflow-hidden">
-            <h3 class="font-black text-xs uppercase tracking-tight truncate">{{ user.first_name|default:user.username }}</h3>
-            <p class="text-[9px] text-indigo-300 font-bold uppercase tracking-wider">{{ user.get_rol_display }}</p>
-        </div>
-    </div>
+    {# --- OVERLAY MÓVIL --- #}
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[40] hidden lg:hidden transition-opacity duration-300"></div>
 
-    <nav class="flex-grow p-4 space-y-1 overflow-y-auto">
-        <p class="px-4 pt-4 pb-2 text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Menú Principal</p>
-
-        <a href="{% url 'home' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'home' %}bg-white/10 text-white{% else %}text-white/70 hover:bg-white/5{% endif %} rounded-xl text-[11px] font-bold transition group">
-            <i class="fas fa-th-large w-5 text-intu-red"></i> 
-            <span>DASHBOARD</span>
-        </a>
-
-        {# --- SECCIÓN NUEVA: GESTIÓN DE MÓDULOS --- #}
-        <div class="pt-6 pb-2">
-            <p class="px-4 text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Gestión de Módulos</p>
-        </div>
-
-        {# GESTIÓN DE PERSONAL #}
-        {% if user.is_superuser or user.rol == 'superadmin' or perms.users.ver_gestor_personal %}
-            <a href="{% url 'personal:lista' %}" 
-               class="flex items-center justify-between px-4 py-3 {% if 'personal' in request.path %}bg-white/10 text-white border-r-4 border-intu-red{% else %}text-white/70 hover:text-white hover:bg-white/5{% endif %} rounded-xl text-[11px] font-bold transition group">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-id-card-clip w-5 group-hover:text-intu-red transition"></i> 
-                    <span>GESTIÓN DE PERSONAL</span>
+    {# --- SIDEBAR --- #}
+    <aside id="main-sidebar" class="w-72 sidebar-gradient text-white flex-shrink-0 flex flex-col fixed inset-y-0 left-0 z-[50] lg:relative lg:translate-x-0 sidebar-hidden shadow-2xl lg:shadow-none">
+        
+        {# LOGO Y PERFIL #}
+        <div class="p-8 border-b border-white/5 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4 overflow-hidden">
+                <div class="w-12 h-12 bg-white rounded-xl p-2 flex-shrink-0">
+                    <img src="{% static 'images/sisi_logo.png' %}" class="w-full h-full object-contain" alt="Logo"> 
                 </div>
-            </a>
-        {% else %}
-            <div title="SIN ACCESO" 
-                 class="flex items-center justify-between px-4 py-3 text-white/30 rounded-xl text-[11px] font-bold cursor-not-allowed opacity-50 bg-black/10 mb-1 transition-all">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-id-card-clip w-5"></i> 
-                    <span>GESTIÓN DE PERSONAL</span>
+                <div class="overflow-hidden">
+                    <h3 class="font-bold text-[13px] truncate">{{ user.first_name|default:user.username }}</h3>
+                    <p class="text-[11px] text-indigo-300 font-medium tracking-wide">{{ user.get_rol_display }}</p>
                 </div>
-                <i class="fas fa-lock text-[9px]"></i>
             </div>
-        {% endif %}
+            <button onclick="toggleSidebar()" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 text-white">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </div>
 
-        {# GESTIÓN GEOGRÁFICA #}
-        {% if user.is_superuser or user.rol == 'superadmin' or perms.users.ver_gestion_geografica %}
-            <a href="{% url 'territorio:infraestructura' %}" 
-               class="flex items-center justify-between px-4 py-3 {% if 'territorio' in request.path %}bg-white/10 text-white border-r-4 border-intu-red{% else %}text-white/70 hover:text-white hover:bg-white/5{% endif %} rounded-xl text-[11px] font-bold transition group">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-map-location-dot w-5 group-hover:text-intu-red transition"></i> 
-                    <span>GESTIÓN GEOGRÁFICA</span>
-                </div>
+        <nav class="flex-grow p-4 space-y-1 overflow-y-auto">
+            <p class="px-4 pt-4 pb-2 text-[11px] font-bold text-white/30 uppercase tracking-[0.15em]">Menú Principal</p>
+
+            <a href="{% url 'home' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'home' %}bg-white/10 text-white{% else %}text-white/70 hover:bg-white/5{% endif %} rounded-xl text-[13px] font-semibold transition group">
+                <i class="fas fa-th-large w-5 text-intu-red"></i> 
+                <span>Dashboard</span>
             </a>
-        {% else %}
-            <div title="SIN ACCESO" 
-                 class="flex items-center justify-between px-4 py-3 text-white/30 rounded-xl text-[11px] font-bold cursor-not-allowed opacity-50 bg-black/10 mb-1 transition-all">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-map-location-dot w-5"></i> 
-                    <span>GESTIÓN GEOGRÁFICA</span>
-                </div>
-                <i class="fas fa-lock text-[9px]"></i>
-            </div>
-        {% endif %}
 
-        {# --- SECCIÓN: ADMINISTRACIÓN (SÓLO USUARIOS Y DJANGO) --- #}
-        {% if user.is_superuser or user.rol == 'superadmin' %}
             <div class="pt-6 pb-2">
-                <p class="px-4 text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Administración</p>
+                <p class="px-4 text-[11px] font-bold text-white/30 uppercase tracking-[0.15em]">Gestión de Módulos</p>
             </div>
 
-            <a href="{% url 'users:usuario_list' %}" 
-               class="flex items-center gap-3 px-4 py-3 {% if 'usuario_list' in request.path %}bg-white/10 text-white border-r-4 border-intu-red{% else %}text-white/70 hover:text-white hover:bg-white/5{% endif %} rounded-xl text-[11px] font-bold transition group">
-                <i class="fas fa-users-cog w-5 group-hover:text-intu-red transition"></i> 
-                <span>GESTIÓN DE USUARIOS</span>
-            </a>
-            
-            {% if user.is_superuser %}
-                <a href="/admin/" target="_blank"
-                   class="flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl text-[11px] font-bold transition group">
-                    <i class="fas fa-shield-halved w-5 group-hover:text-intu-red transition"></i> 
-                    <span>ADMINISTRACIÓN (DJANGO)</span>
+            {# GESTIÓN DE PERSONAL #}
+            {% if user.is_superuser or user.rol == 'superadmin' or perms.users.ver_gestor_personal %}
+                <a href="{% url 'personal:lista' %}" 
+                   class="flex items-center justify-between px-4 py-3 {% if 'personal' in request.path %}bg-white/10 text-white border-r-4 border-intu-red{% else %}text-white/70 hover:text-white hover:bg-white/5{% endif %} rounded-xl text-[13px] font-semibold transition group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-id-card-clip w-5 group-hover:text-intu-red transition"></i> 
+                        <span>Gestión de Personal</span>
+                    </div>
                 </a>
+            {% else %}
+                <div class="flex items-center justify-between px-4 py-3 text-white/30 rounded-xl text-[12px] font-medium cursor-not-allowed opacity-50 bg-black/10 mb-1">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-id-card-clip w-5"></i> 
+                        <span>Gestión de Personal</span>
+                    </div>
+                    <i class="fas fa-lock text-[10px]"></i>
+                </div>
             {% endif %}
-        {% endif %}
 
-        {# --- SECCIÓN: CONFIGURACIÓN (BAJADA) --- #}
-        <div class="pt-6 pb-2 border-t border-white/5 mt-4">
-            <p class="px-4 text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Configuración de Cuenta</p>
-        </div>
-        <a href="{% url 'users:mi_perfil' %}" 
-           class="flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-bold transition group {% if request.resolver_match.url_name == 'mi_perfil' %}bg-white/10 text-white border-r-4 border-intu-red{% else %}text-white/70 hover:bg-white/5 hover:text-white{% endif %}">
-            <i class="fas fa-user-gear w-5 group-hover:text-intu-red transition"></i> 
-            <span>MIS DATOS PERSONALES</span>
-        </a>
+            {# GESTIÓN GEOGRÁFICA #}
+            {% if user.is_superuser or user.rol == 'superadmin' or perms.users.ver_gestion_geografica %}
+                <a href="{% url 'territorio:infraestructura' %}" 
+                   class="flex items-center justify-between px-4 py-3 {% if 'territorio' in request.path %}bg-white/10 text-white border-r-4 border-intu-red{% else %}text-white/70 hover:text-white hover:bg-white/5{% endif %} rounded-xl text-[13px] font-semibold transition group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-map-location-dot w-5 group-hover:text-intu-red transition"></i> 
+                        <span>Gestión Geográfica</span>
+                    </div>
+                </a>
+            {% else %}
+                <div class="flex items-center justify-between px-4 py-3 text-white/30 rounded-xl text-[12px] font-medium cursor-not-allowed opacity-50 bg-black/10 mb-1">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-map-location-dot w-5"></i> 
+                        <span>Gestión Geográfica</span>
+                    </div>
+                    <i class="fas fa-lock text-[10px]"></i>
+                </div>
+            {% endif %}
 
-        {# --- SECCIÓN: AYUDA (AL FINAL) --- #}
-        <div class="pt-6 pb-2">
-            <p class="px-4 text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Ayuda</p>
-        </div>
-        <div class="pt-2">
-            <button onclick="toggleSupport()" 
-                    class="w-full flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl text-[11px] font-bold transition group text-left">
-                <i class="fas fa-headset w-5 group-hover:text-intu-red transition"></i> 
-                <span class="flex-grow uppercase">Soporte Técnico</span>
-                <i id="support-chevron" class="fas fa-chevron-right text-[8px] opacity-30 transition-transform duration-300"></i>
-            </button>
-            <div id="support-content" class="ml-12 border-l border-white/10 mt-1">
-                <div class="py-2 px-4">
-                    <p class="text-[10px] text-indigo-200 font-medium italic">sistemasintu@gmail.com</p>
+            {# --- SECCIÓN: ADMINISTRACIÓN --- #}
+            {% if user.is_superuser or user.rol == 'superadmin' %}
+                <div class="pt-6 pb-2 border-t border-white/5 mt-4">
+                    <p class="px-4 text-[11px] font-bold text-white/30 uppercase tracking-[0.15em]">Administración</p>
+                </div>
+
+                <a href="{% url 'users:usuario_list' %}" 
+                   class="flex items-center gap-3 px-4 py-3 {% if 'usuario_list' in request.path %}bg-white/10 text-white border-r-4 border-intu-red{% else %}text-white/70 hover:text-white hover:bg-white/5{% endif %} rounded-xl text-[13px] font-semibold transition group">
+                    <i class="fas fa-users-cog w-5 group-hover:text-intu-red transition"></i> 
+                    <span>Gestión de Usuarios</span>
+                </a>
+                
+                {% if user.is_superuser %}
+                    <a href="/admin/" target="_blank"
+                       class="flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl text-[13px] font-semibold transition group">
+                        <i class="fas fa-shield-halved w-5 group-hover:text-intu-red transition"></i> 
+                        <span>Panel de Control (Django)</span>
+                    </a>
+                {% endif %}
+            {% endif %}
+
+            <div class="pt-6 pb-2 border-t border-white/5 mt-4">
+                <p class="px-4 text-[11px] font-bold text-white/30 uppercase tracking-[0.15em]">Cuenta</p>
+            </div>
+            <a href="{% url 'users:mi_perfil' %}" 
+               class="flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold transition group {% if request.resolver_match.url_name == 'mi_perfil' %}bg-white/10 text-white border-r-4 border-intu-red{% else %}text-white/70 hover:bg-white/5 hover:text-white{% endif %}">
+                <i class="fas fa-user-gear w-5 group-hover:text-intu-red transition"></i> 
+                <span>Mis datos personales</span>
+            </a>
+
+            <div class="pt-6 pb-2">
+                <p class="px-4 text-[11px] font-bold text-white/30 uppercase tracking-[0.15em]">Soporte</p>
+            </div>
+            <div class="pt-2">
+                <button onclick="toggleSupport()" 
+                        class="w-full flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl text-[13px] font-semibold transition group text-left">
+                    <i class="fas fa-headset w-5 group-hover:text-intu-red transition"></i> 
+                    <span class="flex-grow">Soporte Técnico</span>
+                    <i id="support-chevron" class="fas fa-chevron-right text-[9px] opacity-30 transition-transform duration-300"></i>
+                </button>
+                <div id="support-content" class="ml-12 border-l border-white/10 mt-1">
+                    <div class="py-2 px-4">
+                        <p class="text-[12px] text-indigo-200 font-medium italic">sistemasintu@gmail.com</p>
+                    </div>
                 </div>
             </div>
+        </nav>
+
+        {# CERRAR SESIÓN #}
+        <div class="p-4 border-t border-white/5">
+            <form id="logout-form" action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 text-red-400/70 hover:text-red-400 hover:bg-red-400/5 rounded-xl text-[13px] font-bold transition group text-left">
+                    <i class="fas fa-power-off w-5"></i> 
+                    <span>Cerrar sesión</span>
+                </button>
+            </form>
         </div>
-    </nav>
+    </aside>
 
-    {# CERRAR SESIÓN #}
-    <div class="p-4 border-t border-white/5">
-        <form id="logout-form" action="{% url 'logout' %}" method="post">
-            {% csrf_token %}
-            <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 text-red-400/70 hover:text-red-400 hover:bg-red-400/5 rounded-xl text-[11px] font-bold transition group text-left">
-                <i class="fas fa-power-off w-5"></i> 
-                <span>CERRAR SESIÓN</span>
-            </button>
-        </form>
-    </div>
-</aside>
-
+    {# --- CONTENIDO PRINCIPAL --- #}
     <div class="flex-grow flex flex-col min-w-0 h-screen overflow-y-auto bg-[#f8fafc]">
-        <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-10 sticky top-0 z-10">
-            <h2 class="text-intu-blue font-black uppercase tracking-tight text-sm">SISTEMA INTEGRAL DE CONTROL Y SEGUIMIENTO INTU</h2>
-            <div class="flex items-center gap-4">
-                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-r border-gray-100 pr-4">
-                    {% now "d/m/Y" %}
+        
+{# --- HEADER CORREGIDO --- #}
+<header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-30">
+    <div class="flex items-center gap-4">
+        {# Botón Hamburguesa #}
+        <button onclick="toggleSidebar()" class="lg:hidden w-10 h-10 flex items-center justify-center text-intu-blue bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors shadow-sm">
+            <i class="fas fa-bars"></i>
+        </button>
+        <h2 class="text-intu-blue font-black uppercase tracking-tight text-[12px] lg:text-[14px] truncate">
+            <span class="hidden sm:inline">SISTEMA INTEGRAL DE CONTROL Y SEGUIMIENTO</span> INTU
+        </h2>
+    </div>
+    
+    <div class="flex items-center gap-4">
+        {# BLOQUE DE FECHA Y HORA REINTEGRADO #}
+        <div class="hidden md:flex items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-xl border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-2 border-r border-slate-200 pr-3">
+                <i class="fas fa-calendar-day text-intu-red text-[11px]"></i>
+                <span id="current-date" class="text-[12px] font-bold text-slate-600 uppercase tracking-wide">
+                    {% now "d M Y" %}
                 </span>
-                <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">
-                    <i class="fas fa-clock text-intu-blue text-[10px]"></i>
-                    <span id="digital-clock" class="text-xs font-black text-intu-blue tabular-nums tracking-wider">00:00:00</span>
-                </div>
             </div>
-        </header>
+            <div class="flex items-center gap-2">
+                <i class="fas fa-clock text-intu-blue text-[11px]"></i>
+                <span id="digital-clock" class="text-[13px] font-black text-intu-blue tabular-nums tracking-wider">00:00:00</span>
+            </div>
+        </div>
+    </div>
+</header>
 
-        <main class="p-10 flex-grow">
+        <main class="p-6 lg:p-10 flex-grow">
             {% block content %}{% endblock %}
         </main>
     </div>
 
     <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('main-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('sidebar-hidden')) {
+                sidebar.classList.remove('sidebar-hidden');
+                sidebar.classList.add('sidebar-visible');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.remove('sidebar-visible');
+                sidebar.classList.add('sidebar-hidden');
+                overlay.classList.add('hidden');
+            }
+        }
+
         function toggleSupport() {
             const content = document.getElementById('support-content');
             const chevron = document.getElementById('support-chevron');
@@ -215,23 +262,19 @@
             chevron.style.transform = content.classList.contains('open') ? 'rotate(90deg)' : 'rotate(0deg)';
         }
 
-        // LÓGICA DE INACTIVIDAD (MAX_IDLE_TIME = 5 minutos)
         let inactivityTimer;
         const MAX_IDLE_TIME = 300000; 
 
         function cerrarSesionAhora() {
             const logoutForm = document.getElementById('logout-form');
-            if (logoutForm) {
-                logoutForm.submit();
-            } else {
-                window.location.href = "{% url 'login' %}?reason=inactive";
-            }
+            if (logoutForm) logoutForm.submit();
+            else window.location.href = "{% url 'login' %}?reason=inactive";
         }
 
         function mostrarAviso() {
             const modal = document.getElementById('idle-modal');
             if(modal) modal.classList.remove('hidden');
-            setTimeout(cerrarSesionAhora, 30000); // 30 seg de gracia
+            setTimeout(cerrarSesionAhora, 30000); 
         }
 
         function resetInactivityTimer() {
@@ -247,7 +290,6 @@
 
         resetInactivityTimer();
 
-        // Reloj Digital3
         function updateClock() {
             const clockElement = document.getElementById('digital-clock');
             if (!clockElement) return;

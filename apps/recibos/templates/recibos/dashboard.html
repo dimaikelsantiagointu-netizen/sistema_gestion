@@ -11,28 +11,31 @@
     #log-display::-webkit-scrollbar-track { background: transparent; }
     #log-display::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     #log-display::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+    
+    /* Ajuste para scroll horizontal suave en tablas móviles */
+    .table-responsive { -webkit-overflow-scrolling: touch; }
 </style>
 
-<div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-   <div class="flex items-start gap-6">
-    <a href="{% url 'home' %}" 
-       class="h-14 w-14 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
-        <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
-    </a>
+<div class="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+    <div class="flex items-start gap-4 md:gap-6">
+        <a href="{% url 'home' %}" 
+           class="h-12 w-12 md:h-14 md:w-14 shrink-0 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
+            <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
+        </a>
 
-    <div>
-        <span class="text-[10px] font-black text-intu-red uppercase tracking-[0.3em]">Módulo Operativo</span>
-        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Gestión de Recibos</h1>
-        <p class="text-gray-500 font-medium italic text-sm">Generación, seguimiento y auditoría de pagos institucionales.</p>
+        <div>
+            <span class="text-[9px] md:text-[10px] font-black text-intu-red uppercase tracking-[0.3em]">Módulo Operativo</span>
+            <h1 class="text-2xl md:text-3xl font-black text-intu-blue uppercase tracking-tighter leading-none">Gestión de <span class="text-intu-red italic">Recibos</span></h1>
+            <p class="text-gray-500 font-medium italic text-xs md:text-sm mt-1">Generación, seguimiento y auditoría de pagos institucionales.</p>
+        </div>
     </div>
-</div>
     
-    <div class="flex gap-2">
-        <a href="{% url 'recibos:recibos_anulados' %}" class="px-4 py-2 text-[10px] font-black bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition uppercase tracking-wider flex items-center">
+    <div class="flex flex-wrap gap-2">
+        <a href="{% url 'recibos:recibos_anulados' %}" class="flex-1 md:flex-none px-4 py-2 text-[10px] font-black bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition uppercase tracking-wider flex items-center justify-center">
             <i class="fas fa-archive mr-2"></i> Ver Recibos Anulados
         </a>
         {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' %}
-        <a href="{% url 'recibos:estadisticas' %}" class="px-4 py-2 text-[10px] font-black bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition uppercase tracking-wider flex items-center shadow-lg shadow-blue-200">
+        <a href="{% url 'recibos:estadisticas' %}" class="flex-1 md:flex-none px-4 py-2 text-[10px] font-black bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition uppercase tracking-wider flex items-center justify-center shadow-lg shadow-blue-200">
             <i class="fas fa-chart-pie mr-2"></i> Estadísticas Globales
         </a>
         {% endif %}
@@ -50,7 +53,7 @@
 <div class="flex flex-col lg:flex-row gap-8">
 
     {# --- PANEL LATERAL (CARGA Y LOGS) --- #}
-    <aside class="w-full lg:w-1/3 xl:w-1/4 space-y-6">
+    <aside class="w-full lg:w-1/3 xl:w-1/4 space-y-6 order-2 lg:order-1">
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
             <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-4 flex items-center">
                 <i class="fas fa-file-upload mr-2 text-intu-red"></i> Carga de Archivos Excel
@@ -76,7 +79,7 @@
             </button>
         </div>
 
-        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col h-[350px] md:h-[400px]">
             <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-4 flex items-center shrink-0">
                 <i class="fas fa-clipboard-list mr-2 text-intu-red"></i> Procesos y Logs
             </h2>
@@ -95,9 +98,9 @@
     </aside>
 
     {# --- SECCIÓN PRINCIPAL (FILTROS Y TABLA) --- #}
-    <section class="flex-grow space-y-6">
+    <section class="flex-grow space-y-6 order-1 lg:order-2">
 
-        <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+        <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
             <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-6 flex items-center">
                 <i class="fas fa-filter mr-2 text-intu-red"></i> Módulo de Reportes (Filtro por Registro)
             </h2>
@@ -105,16 +108,16 @@
             <form method="get" action="{% url 'recibos:dashboard' %}" id="filter-form" class="space-y-6">
                 <input type="hidden" name="search_triggered" value="true">
 
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="md:col-span-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="lg:col-span-1">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Desde (Fecha Registro)</label>
                         <input type="date" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="lg:col-span-1">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hasta (Fecha Registro)</label>
                         <input type="date" name="fecha_fin" value="{{ request.GET.fecha_fin }}" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
                     </div>
-                    <div class="md:col-span-4">
+                    <div class="sm:col-span-2 lg:col-span-2">
                         <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado</label>
                         <select name="estado" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
                             <option value="">TODOS LOS ESTADOS</option>
@@ -129,12 +132,12 @@
 
                 <fieldset>
                     <legend class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Filtrar por Categorías</legend>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                         {% for codigo, nombre in categorias_list %}
                         <div class="flex items-center gap-3">
                             <input id="{{ codigo }}" name="{{ codigo }}" type="checkbox" {% if request.GET|get_item:codigo == 'on' %}checked{% endif %}
-                                class="w-4 h-4 text-intu-red border-gray-300 rounded focus:ring-intu-red">
-                            <label for="{{ codigo }}" class="text-[11px] font-bold text-gray-600 uppercase">{{ nombre }}</label>
+                                class="w-4 h-4 text-intu-red border-gray-300 rounded focus:ring-intu-red shrink-0">
+                            <label for="{{ codigo }}" class="text-[11px] font-bold text-gray-600 uppercase truncate">{{ nombre }}</label>
                         </div>
                         {% endfor %}
                     </div>
@@ -153,36 +156,39 @@
                     <button type="submit" name="action" value="pdf" formaction="{% url 'recibos:generar_reporte' %}" class="flex-1 py-3 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-700 transition">
                         <i class="fas fa-file-pdf mr-2"></i> Reporte PDF
                     </button>
+                
                 </div>
             </form>
         </div>
 
         <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-8 border-b border-gray-50">
+            <div class="p-6 md:p-8 border-b border-gray-50">
                 <form method="GET" action="." class="flex flex-col md:flex-row gap-4">
                     <input type="hidden" name="search_triggered" value="true">
                     {% for key, value in request.GET.items %}
                         {% if key != 'q' and key != 'page' and key != 'field' and key != 'search_triggered' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}
                     {% endfor %}
                     
-                    <div class="flex-none">
-                        <select name="field" class="bg-gray-50 border-none rounded-xl text-[11px] font-bold uppercase py-2 px-4 focus:ring-2 focus:ring-intu-blue/10">
+                    <div class="w-full md:w-auto">
+                        <select name="field" class="w-full bg-gray-50 border-none rounded-xl text-[11px] font-bold uppercase py-2 px-4 focus:ring-2 focus:ring-intu-blue/10">
                             <option value="">TODOS LOS CAMPOS</option>
                             <option value="nombre" {% if request.GET.field == 'nombre' %}selected{% endif %}>NOMBRE</option>
                             <option value="rif_cedula_identidad" {% if request.GET.field == 'rif_cedula_identidad' %}selected{% endif %}>CÉDULA/RIF</option>
                             <option value="numero_recibo" {% if request.GET.field == 'numero_recibo' %}selected{% endif %}>Nº RECIBO</option>
                         </select>
                     </div>
-                    <input type="text" name="q" placeholder="Introduce el texto a buscar..." value="{{ request.GET.q|default:'' }}"
-                           class="flex-grow bg-gray-50 border-none rounded-xl text-[11px] px-4 focus:ring-2 focus:ring-intu-blue/10">
-                    <button type="submit" class="px-6 py-2 bg-intu-blue text-white text-[10px] font-black uppercase rounded-xl hover:bg-intu-dark transition">
-                        <i class="fas fa-search"></i>
-                    </button>
+                    <div class="flex gap-2 flex-grow">
+                        <input type="text" name="q" placeholder="Introduce el texto a buscar..." value="{{ request.GET.q|default:'' }}"
+                               class="flex-grow bg-gray-50 border-none rounded-xl text-[11px] px-4 focus:ring-2 focus:ring-intu-blue/10">
+                        <button type="submit" class="px-6 py-2 bg-intu-blue text-white text-[10px] font-black uppercase rounded-xl hover:bg-intu-dark transition">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
                 </form>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+            <div class="overflow-x-auto table-responsive">
+                <table class="w-full text-left border-collapse min-w-[700px]">
                     <thead class="bg-gray-50/50">
                         <tr>
                             <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nº Recibo</th>
@@ -203,7 +209,7 @@
                                 </a>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="text-[11px] font-bold text-gray-700 uppercase break-words max-w-[280px] leading-tight">{{ recibo.nombre }}</div>
+                                <div class="text-[11px] font-bold text-gray-700 uppercase break-words max-w-[250px] leading-tight">{{ recibo.nombre }}</div>
                                 <div class="flex gap-3 mt-1.5">
                                     <span class="text-[9px] text-gray-400 flex items-center" title="Fecha de Pago">
                                         <i class="far fa-calendar-alt mr-1 text-gray-300"></i> {{ recibo.fecha|date:"d/m/Y" }}
@@ -225,7 +231,7 @@
                                 {% endif %}
                             </td>
                             <td class="px-6 py-4">
-                                <div class="flex justify-center gap-2">
+                                <div class="flex justify-center gap-3">
                                     <a href="{% url 'recibos:generar_pdf_recibo' recibo.pk %}" title="Descargar PDF" class="text-emerald-500 hover:scale-110 transition">
                                         <i class="fas fa-file-pdf text-lg"></i>
                                     </a>
@@ -258,12 +264,12 @@
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="6" class="p-32 text-center">
+                            <td colspan="6" class="p-24 md:p-32 text-center">
                                 <div class="flex flex-col items-center justify-center space-y-4">
                                     <div class="relative">
                                         <div class="absolute inset-0 bg-intu-blue/5 rounded-full animate-ping"></div>
-                                        <div class="relative w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100">
-                                            <i class="fas fa-search text-gray-300 text-3xl"></i>
+                                        <div class="relative w-16 h-16 md:w-20 md:h-20 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100">
+                                            <i class="fas fa-search text-gray-300 text-2xl md:text-3xl"></i>
                                         </div>
                                     </div>
                                     <div class="max-w-xs">
@@ -282,7 +288,7 @@
 
             {% if is_paginated %}
             <div class="p-6 bg-gray-50/50 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
-                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }}</span>
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }}</span>
                 <nav class="flex shadow-sm rounded-xl overflow-hidden border border-gray-100">
                     {% if page_obj.has_previous %}
                         <a href="?page={{ page_obj.previous_page_number }}{{ request.GET.urlencode|remove_query_param:'page' }}" class="px-4 py-2 bg-white text-gray-500 hover:bg-gray-100 transition"><i class="fas fa-chevron-left text-xs"></i></a>
@@ -298,7 +304,7 @@
     </section>
 </div>
 
-{# FORMULARIOS Y MODALES#}
+{# FORMULARIOS Y MODALES #}
 <form id="anular-form" method="POST" action="{% url 'recibos:dashboard' %}" class="hidden">
     {% csrf_token %}
     <input type="hidden" name="action" value="anular" id="form-action"> 
@@ -316,7 +322,7 @@
         <p id="modal-message" class="text-sm text-gray-500 leading-relaxed mb-8"></p>
         <div class="flex justify-end gap-3">
             <button type="button" onclick="hideModal()" class="px-6 py-2 text-[10px] font-black uppercase text-gray-400 hover:text-gray-600 transition">Cancelar</button>
-            <button type="button" id="confirm-action-button" class="px-6 py-2 bg-red-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-red-700 transition">Aceptar</button>
+            <button type="button" id="confirm-action-button" class="px-6 py-2 bg-red-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-red-700 transition shadow-lg shadow-red-100">Aceptar</button>
         </div>
     </div>
 </div>

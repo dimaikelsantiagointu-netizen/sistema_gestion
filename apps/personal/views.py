@@ -4,13 +4,16 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
+# IMPORTANTE: Importamos el mixin para las clases
+from django.contrib.auth.mixins import LoginRequiredMixin 
+
 from .models import Personal, DocumentoPersonal
 from .forms import PersonalForm
 
 # ==============================================================================
-# 1. REGISTRO DE PERSONAL
+# 1. REGISTRO DE PERSONAL (PROTEGIDO)
 # ==============================================================================
-class PersonalCreateView(CreateView):
+class PersonalCreateView(LoginRequiredMixin, CreateView):
     model = Personal
     form_class = PersonalForm
     template_name = 'personal/personal_form.html'
@@ -21,9 +24,9 @@ class PersonalCreateView(CreateView):
         return super().form_valid(form)
 
 # ==============================================================================
-# 2. LISTADO Y FILTROS INTELIGENTES
+# 2. LISTADO Y FILTROS INTELIGENTES (PROTEGIDO)
 # ==============================================================================
-class PersonalListView(ListView):
+class PersonalListView(LoginRequiredMixin, ListView):
     model = Personal
     template_name = 'personal/personal_list.html'
     context_object_name = 'personal_list'
@@ -32,6 +35,8 @@ class PersonalListView(ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         q = self.request.GET.get('q')
+        
+        # Mantenemos tu lógica de búsqueda: Solo filtrar si hay parámetros
         if q:
             queryset = queryset.filter(
                 Q(cedula__icontains=q) | 
@@ -55,20 +60,17 @@ class PersonalListView(ListView):
         return context
 
 # ==============================================================================
-# 3. EXPEDIENTE DIGITAL (DETALLE)
+# 3. EXPEDIENTE DIGITAL (PROTEGIDO)
 # ==============================================================================
-class PersonalDetailView(DetailView):
+class PersonalDetailView(LoginRequiredMixin, DetailView):
     model = Personal
     template_name = 'personal/personal_detail.html'
     context_object_name = 'trabajador'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        # CORRECCIÓN: Usamos 'expediente_personal' para evitar choque con beneficiarios
         context['documentos'] = self.object.expediente_personal.all().order_by('-fecha_subida')
         
-        # Categorías enviadas al select del template
         context['categorias'] = [
             ('ID', 'Documento de Identidad'),
             ('CV', 'Síntesis Curricular (CV)'),
@@ -79,7 +81,7 @@ class PersonalDetailView(DetailView):
         return context
 
 # ==============================================================================
-# 4. GESTIÓN DE ARCHIVOS (SUBIR Y ELIMINAR)
+# 4. GESTIÓN DE ARCHIVOS (PROTEGIDO POR DECORADORES)
 # ==============================================================================
 @login_required
 def subir_archivo_personal(request, pk):

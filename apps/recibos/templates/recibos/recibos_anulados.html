@@ -6,57 +6,54 @@
 
 {% block content %}
 <style>
-    /* Estilización de la barra de scroll para los Logs (Consistente con Dashboard) */
-    #log-display::-webkit-scrollbar {
-        width: 5px;
-    }
-    #log-display::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    #log-display::-webkit-scrollbar-thumb {
-        background: #e2e8f0;
-        border-radius: 10px;
+    /* Estilización de la barra de scroll */
+    #log-display::-webkit-scrollbar { width: 5px; }
+    #log-display::-webkit-scrollbar-track { background: transparent; }
+    #log-display::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    
+    /* Mejora de legibilidad en tablas para móviles */
+    @media (max-width: 640px) {
+        .table-responsive-text { font-size: 10px; }
     }
 </style>
 
-{# --- ENCABEZADO CON BOTÓN DE RETORNO --- #}
-<div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+{# --- ENCABEZADO --- #}
+<div class="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
     <div>
-        <span class="text-[10px] font-black text-red-600 uppercase tracking-[0.3em]">Módulo de Auditoría</span>
-        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter">Recibos Anulados</h1>
-        <p class="text-gray-500 font-medium italic text-sm">Historial de documentos invalidados y fuera de circulación.</p>
+        <span class="text-[10px] md:text-xs font-black text-red-600 uppercase tracking-[0.2em] md:tracking-[0.3em]">Módulo de Auditoría</span>
+        <h1 class="text-2xl md:text-3xl font-black text-intu-blue uppercase tracking-tighter leading-none mt-1">Recibos Anulados</h1>
+        <p class="text-gray-500 font-medium italic text-xs md:text-sm mt-1">Historial de documentos invalidados y fuera de circulación.</p>
     </div>
     
-    <div class="flex gap-2">
-        <a href="{% url 'recibos:dashboard' %}" class="px-4 py-2 text-[10px] font-black bg-intu-blue text-white rounded-xl hover:bg-intu-dark shadow-lg shadow-blue-100 transition uppercase tracking-wider flex items-center">
-            <i class="fas fa-arrow-left mr-2"></i> Volver a la Tabla Principal
+    <div class="flex">
+        <a href="{% url 'recibos:dashboard' %}" class="w-full md:w-auto px-5 py-3 md:py-2 text-[11px] font-black bg-intu-blue text-white rounded-xl hover:bg-intu-dark shadow-lg shadow-blue-100 transition uppercase tracking-wider flex items-center justify-center">
+            <i class="fas fa-arrow-left mr-2"></i> Volver al Panel
         </a>
     </div>
 </div>
 
-<div class="flex flex-col lg:flex-row gap-8">
+<div class="flex flex-col lg:flex-row gap-6 md:gap-8">
 
-    {# --- PANEL LATERAL INFORMATIVO --- #}
-    <aside class="w-full lg:w-1/3 xl:w-1/4 space-y-6">
-        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+    {# --- PANEL LATERAL --- #}
+    <aside class="w-full lg:w-1/3 xl:w-1/4 order-2 lg:order-1">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-6">
             <h2 class="text-xs font-black text-red-600 uppercase tracking-widest mb-4 flex items-center">
                 <i class="fas fa-exclamation-triangle mr-2"></i> Estado de Registros
             </h2>
-            <p class="text-[10px] text-gray-500 leading-relaxed mb-4">
-                Los recibos listados en esta sección <b>no suman al total de recaudación</b> y se mantienen únicamente para fines de auditoría institucional.
+            <p class="text-xs text-gray-500 leading-relaxed mb-4">
+                Los recibos listados <b>no suman al total de recaudación</b>. Se mantienen para fines de auditoría institucional.
             </p>
             <div class="p-4 bg-red-50 rounded-2xl border border-red-100">
-                <span class="text-[9px] font-black text-red-600 uppercase">Aviso de Seguridad</span>
-                <p class="text-[10px] text-red-500 mt-1 italic">Estos registros no pueden ser modificados ni reactivados.</p>
+                <span class="text-[10px] font-black text-red-600 uppercase">Aviso de Seguridad</span>
+                <p class="text-[11px] text-red-500 mt-1 italic leading-tight">Estos registros no pueden ser modificados ni reactivados bajo ningún proceso.</p>
             </div>
         </div>
     </aside>
 
-    {# --- SECCIÓN PRINCIPAL (TABLA DE ANULADOS) --- #}
-    <section class="flex-grow space-y-6">
-
+    {# --- SECCIÓN PRINCIPAL --- #}
+    <section class="flex-grow space-y-6 order-1 lg:order-2">
         <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
+            <div class="p-5 md:p-8 border-b border-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-gray-50/30">
                 <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest flex items-center">
                     <i class="fas fa-history mr-2 text-red-500"></i> Histórico de Anulaciones
                 </h2>
@@ -66,54 +63,49 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse min-w-[600px]">
                     <thead class="bg-gray-50/50">
                         <tr>
-                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nº Recibo</th>
-                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nombre</th>
-                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Cédula/RIF</th>
-                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Monto (Bs.)</th>
-                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
-                            <th class="px-6 py-4 text-[9px] font-black text-red-500 uppercase tracking-widest text-center">Fecha Anulado</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Nº Recibo</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Contribuyente</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Monto (Bs.)</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-red-500 uppercase tracking-widest text-center">Fecha Anulado</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">
                         {% for recibo in recibos %}
-                        <tr class="hover:bg-red-50/40 transition duration-150 bg-red-50/10">
+                        <tr class="hover:bg-red-50/40 transition duration-150 bg-red-50/5">
                             <td class="px-6 py-4">
-                                <span class="text-xs font-black text-red-700">
-                                    {{ recibo.numero_recibo|stringformat:"04d" }}
+                                <span class="text-xs md:text-sm font-black text-red-700">
+                                    #{{ recibo.numero_recibo|stringformat:"04d" }}
                                 </span>
                             </td>
 
                             <td class="px-6 py-4">
-                                <div class="text-[11px] font-bold text-gray-700 uppercase truncate max-w-[180px]">{{ recibo.nombre }}</div>
-                                <div class="text-[9px] text-gray-400">Fecha orig: {{ recibo.fecha|date:"d/m/Y" }}</div>
+                                <div class="text-[12px] font-bold text-gray-700 uppercase truncate max-w-[200px]">{{ recibo.nombre }}</div>
+                                <div class="text-[10px] text-gray-400 font-medium">{{ recibo.rif_cedula_identidad }} | <span class="italic text-[9px]">Orig: {{ recibo.fecha|date:"d/m/Y" }}</span></div>
                             </td>
 
-                            <td class="px-6 py-4 text-[11px] text-gray-500 font-medium">
-                                {{ recibo.rif_cedula_identidad }}
-                            </td>
-
-                            <td class="px-6 py-4 text-right font-black text-xs text-intu-blue">
+                            <td class="px-6 py-4 text-right font-black text-xs md:text-sm text-intu-blue">
                                 {{ recibo.total_monto_bs|floatformat:2 }}
                             </td>
 
                             <td class="px-6 py-4 text-center">
-                                <span class="px-2 py-0.5 bg-red-100 text-red-600 text-[9px] font-black rounded-full uppercase border border-red-200">
+                                <span class="px-3 py-1 bg-red-100 text-red-600 text-[9px] font-black rounded-full uppercase border border-red-200">
                                     Anulado
                                 </span>
                             </td>
 
-                            <td class="px-6 py-4 text-center text-[10px] text-red-600 font-bold italic">
+                            <td class="px-6 py-4 text-center text-[10px] md:text-xs text-red-600 font-bold italic">
                                 {{ recibo.fecha_anulacion|date:"d/m/Y H:i" }}
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="p-20 text-center opacity-30">
+                            <td colspan="5" class="p-20 text-center opacity-30">
                                 <i class="fas fa-search-minus text-5xl mb-4"></i>
-                                <p class="text-[10px] font-black uppercase tracking-widest">Sin registros anulados</p>
+                                <p class="text-xs font-black uppercase tracking-widest">Sin registros anulados</p>
                             </td>
                         </tr>
                         {% endfor %}
@@ -121,11 +113,11 @@
                 </table>
             </div>
 
-            {# Paginación (Si aplica para la vista de anulados) #}
+            {# Paginación #}
             {% if is_paginated %}
             <div class="p-6 bg-gray-50/50 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
                 <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }}</span>
-                <nav class="flex shadow-sm rounded-xl overflow-hidden border border-gray-100">
+                <nav class="flex shadow-sm rounded-xl overflow-hidden border border-gray-200">
                     {% if page_obj.has_previous %}
                         <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-white text-gray-500 hover:bg-gray-100 transition"><i class="fas fa-chevron-left text-xs"></i></a>
                     {% endif %}
@@ -139,5 +131,4 @@
         </div>
     </section>
 </div>
-
 {% endblock %}

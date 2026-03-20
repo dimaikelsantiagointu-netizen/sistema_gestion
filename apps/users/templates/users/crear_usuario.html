@@ -1,54 +1,76 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto py-8 px-4">
-    <div class="bg-white shadow-2xl rounded-3xl overflow-hidden border border-gray-100">
-        
-        {# ENCABEZADO #}
-        <div class="bg-indigo-900 px-8 py-7 flex items-center justify-between">
+<div class="max-w-5xl mx-auto py-8 px-4 md:px-6">
+    {# --- ENCABEZADO COHERENTE CON LA GESTIÓN --- #}
+    <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'users:usuario_list' %}" 
+               class="h-12 w-12 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:shadow-lg transition-all active:scale-90 flex-shrink-0">
+                <i class="fas fa-arrow-left text-lg"></i>
+            </a>
             <div>
-                <h2 class="text-2xl font-bold text-white flex items-center">
-                    <i class="fas fa-user-shield mr-3 text-indigo-400"></i>
-                    REGISTRO DE PERSONAL
-                </h2>
-                <p class="text-indigo-200 text-xs mt-1 uppercase tracking-widest">Administración de acceso al sistema integral</p>
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1 block leading-tight">
+                    SISI-INTU SISTEMA
+                </span>
+                <h1 class="text-2xl md:text-3xl font-black text-intu-blue uppercase tracking-tighter leading-none">
+                    Registro de <span class="text-intu-red italic px-1">personal</span>
+                </h1>
             </div>
-            <i class="fas fa-id-badge text-4xl text-indigo-800 opacity-40"></i>
+        </div>
+        <div class="hidden md:block h-1.5 w-20 bg-intu-red rounded-full shadow-lg shadow-red-200"></div>
+    </div>
+
+    {# --- CUERPO DEL FORMULARIO --- #}
+    <div class="bg-white shadow-2xl shadow-blue-900/10 rounded-[2.5rem] overflow-hidden border border-gray-50">
+        
+        <div class="bg-intu-blue px-8 py-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/10 p-2.5 rounded-xl">
+                    <i class="fas fa-user-shield text-white text-xl"></i>
+                </div>
+                <div class="text-white">
+                    <h2 class="text-sm font-black uppercase tracking-widest leading-none">Datos de Acceso</h2>
+                    <p class="text-[11px] text-blue-200 mt-1 font-medium italic">Configure los privilegios y contacto</p>
+                </div>
+            </div>
+            <i class="fas fa-id-card text-4xl text-white/5"></i>
         </div>
 
-        <form method="post" class="p-8" id="userForm">
+        <form method="post" class="p-6 md:p-10" id="userForm">
             {% csrf_token %}
 
             {% if form.non_field_errors %}
-                <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded-r-xl">
+                <div class="mb-8 p-4 bg-red-50 border-l-4 border-intu-red text-intu-red text-sm font-bold rounded-r-2xl animate-pulse">
                     {{ form.non_field_errors }}
                 </div>
             {% endif %}
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
                 {% for field in form %}
                     
                     {% if field.name == 'user_permissions' %}
                         {# SECCIÓN DE PERMISOS #}
                         <div class="md:col-span-2 mt-4">
-                            <div class="flex items-center justify-between border-b border-indigo-100 pb-2 mb-4">
-                                <label class="text-sm font-black text-indigo-900 uppercase tracking-widest">
-                                    <i class="fas fa-key mr-2 text-indigo-500"></i> PERMISOS DE MÓDULOS
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-3 mb-6 gap-3">
+                                <label class="text-xs font-black text-intu-blue uppercase tracking-widest flex items-center">
+                                    <span class="bg-intu-red w-2 h-2 rounded-full mr-2"></span>
+                                    Permisos de módulos
                                 </label>
-                                {# BOTÓN SELECCIONAR TODO #}
-                                <button type="button" onclick="toggleAllPermissions()" id="btn-select-all" class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-tighter bg-indigo-50 px-3 py-1 rounded-lg transition">
-                                    Seleccionar Todos
+                                <button type="button" onclick="toggleAllPermissions()" id="btn-select-all" 
+                                        class="text-[10px] font-black text-intu-blue hover:text-white hover:bg-intu-blue uppercase tracking-tight bg-blue-50 px-4 py-2 rounded-xl transition-all active:scale-95 border border-blue-100/50">
+                                    Seleccionar todos
                                 </button>
                             </div>
                             
-                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-gray-50 p-5 rounded-2xl border border-gray-200" id="permissions-container">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-gray-50/50 p-6 rounded-[2rem] border border-gray-100" id="permissions-container">
                                 {% for checkbox in field %}
-                                    <label class="flex items-start p-2 hover:bg-white hover:shadow-sm rounded-lg transition cursor-pointer border border-transparent hover:border-indigo-100">
+                                    <label class="group flex items-center p-3 hover:bg-white hover:shadow-md rounded-xl transition-all cursor-pointer border border-transparent hover:border-blue-100 relative">
                                         <div class="flex items-center h-5">
                                             {{ checkbox.tag }}
                                         </div>
-                                        <div class="ml-3 text-[11px]">
-                                            <span class="font-bold text-gray-700 uppercase tracking-tight">{{ checkbox.choice_label }}</span>
+                                        <div class="ml-3">
+                                            <span class="text-xs font-bold text-gray-500 group-hover:text-intu-blue transition-colors">{{ checkbox.choice_label }}</span>
                                         </div>
                                     </label>
                                 {% endfor %}
@@ -57,34 +79,34 @@
 
                     {% elif field.name == 'observacion' %}
                         <div class="md:col-span-2 flex flex-col">
-                            <label class="text-sm font-black text-gray-700 uppercase tracking-tighter mb-1">
-                                <i class="fas fa-comment-dots mr-1 text-gray-400"></i> {{ field.label }}
+                            <label class="text-xs font-black text-intu-blue uppercase tracking-widest mb-2 px-1">
+                                {{ field.label }}
                             </label>
                             {{ field }}
                             {% if field.errors %}
-                                <p class="text-red-600 text-[11px] font-bold mt-1"><i class="fas fa-times-circle mr-1"></i>{{ field.errors.0 }}</p>
+                                <p class="text-intu-red text-[11px] font-bold mt-2"><i class="fas fa-exclamation-circle mr-1"></i>{{ field.errors.0 }}</p>
                             {% endif %}
                         </div>
 
                     {% else %}
-                        <div class="flex flex-col">
-                            <label class="text-sm font-black text-gray-700 uppercase tracking-tighter mb-1 flex justify-between">
-                                {{ field.label }}
+                        <div class="flex flex-col group">
+                            <label class="text-xs font-black text-intu-blue uppercase tracking-widest mb-2 px-1 flex justify-between">
+                                <span>{{ field.label }}</span>
                                 {% if field.field.required %}
-                                    <span class="text-red-500">*</span>
+                                    <span class="text-intu-red">*</span>
                                 {% endif %}
                             </label>
                             
                             {{ field }}
 
                             {% if field.errors %}
-                                <p class="text-red-600 text-[11px] font-bold mt-1">
+                                <p class="text-intu-red text-[11px] font-bold mt-2">
                                     <i class="fas fa-times-circle mr-1"></i>{{ field.errors.0 }}
                                 </p>
                             {% endif %}
 
                             {% if field.help_text %}
-                                <p class="text-gray-400 text-[10px] mt-1 leading-tight italic">
+                                <p class="text-gray-400 text-[10px] mt-2 leading-tight italic opacity-70">
                                     {{ field.help_text|safe }}
                                 </p>
                             {% endif %}
@@ -94,57 +116,54 @@
                 {% endfor %}
             </div>
 
-            <div class="mt-10 pt-6 border-t border-gray-100 flex items-center justify-end space-x-4">
-                <a href="{% url 'users:usuario_list' %}" class="text-sm font-bold text-gray-400 hover:text-gray-600 transition">
-                    CANCELAR
+            {# BOTONES DE ACCIÓN #}
+            <div class="mt-12 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-end gap-4">
+                <a href="{% url 'users:usuario_list' %}" class="text-xs font-black text-gray-400 hover:text-intu-red transition-colors uppercase tracking-widest py-3 px-6">
+                    Cancelar registro
                 </a>
-                <button type="submit" class="px-10 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-100 transition-all transform hover:scale-[1.02] active:scale-95 flex items-center">
-                    <i class="fas fa-save mr-2"></i> GUARDAR USUARIO
+                <button type="submit" class="w-full sm:w-auto px-12 py-4 bg-intu-blue hover:bg-intu-red text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-900/10 transition-all transform hover:scale-[1.03] active:scale-95 flex items-center justify-center">
+                    <i class="fas fa-save mr-2 text-sm"></i> Guardar usuario
                 </button>
             </div>
         </form>
     </div>
-    
-    <p class="text-center text-gray-400 text-[10px] mt-6 uppercase tracking-widest">
-        Protección de datos activa - Registro verificado por el sistema
-    </p>
 </div>
 
-{# LÓGICA JAVASCRIPT PARA SELECCIONAR TODOS #}
 <script>
     function toggleAllPermissions() {
         const container = document.getElementById('permissions-container');
         const checkboxes = container.querySelectorAll('input[type="checkbox"]');
         const btn = document.getElementById('btn-select-all');
-        
-        // Verificar si todos están marcados
         const allChecked = Array.from(checkboxes).every(cb => cb.checked);
         
-        checkboxes.forEach(cb => {
-            cb.checked = !allChecked;
-        });
-
-        // Cambiar texto del botón
-        btn.innerText = allChecked ? 'Seleccionar Todos' : 'Desmarcar Todos';
+        checkboxes.forEach(cb => cb.checked = !allChecked);
+        btn.innerText = allChecked ? 'Seleccionar todos' : 'Desmarcar todos';
     }
 </script>
 
 <style>
-    /* Estilo para los Checkboxes de Permisos */
+    :root { --intu-blue: #003366; --intu-red: #E30613; }
+
+    /* Estilización de Inputs similar a la tabla */
+    input[type="text"], 
+    input[type="email"], 
+    input[type="password"], 
+    select, 
+    textarea {
+        @apply w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-base 
+        focus:bg-white focus:border-intu-blue focus:ring-4 focus:ring-blue-900/5 
+        transition-all outline-none font-bold text-intu-blue placeholder:text-gray-300;
+    }
+
+    textarea { min-height: 120px; }
+
+    /* Checkboxes modernos */
     input[type="checkbox"] {
-        border-radius: 4px;
-        border-color: #D1D5DB;
-        color: #4F46E5;
-        width: 1.1rem;
-        height: 1.1rem;
-        cursor: pointer;
+        @apply rounded-md border-gray-300 text-intu-blue focus:ring-intu-blue 
+        w-5 h-5 cursor-pointer transition-all;
     }
-    input[type="checkbox"]:focus {
-        --tw-ring-color: #C7D2FE;
-    }
-    /* Estilo para inputs de texto y select para que coincidan con el diseño */
-    input[type="text"], input[type="email"], input[type="password"], select, textarea {
-        @apply w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all outline-none font-medium text-gray-700;
-    }
+
+    /* Ajuste para fuentes pesadas */
+    .font-black { font-weight: 900; }
 </style>
 {% endblock %}
