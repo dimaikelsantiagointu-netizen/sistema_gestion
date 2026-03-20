@@ -29,8 +29,9 @@ INSTALLED_APPS = [
     'apps.beneficiarios',#Tambien encargada de los expedientes de los beneficiarios y personal
     'apps.personal',#App para gestion de personal
     'apps.contratos', 
-    #'apps.bienes',
+    #'apps.bienes', #App para gestion de bienes nacionales, actualmente en desarrollo
     'apps.territorio',#app para gestion de estados, municipios, ciudades, parroquias y comunas
+    'apps.auditoria', #App para gestion de auditoria y bitacora de eventos
 ]
 
 MIDDLEWARE = [
@@ -41,6 +42,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.auditoria.middleware.AuditoriaMiddleware', # Middleware personalizado para APP de auditoría
 ]
 
 ROOT_URLCONF = 'sistema_gestion.urls'

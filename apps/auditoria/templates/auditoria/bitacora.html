@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Auditoría{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
+    <header class="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div>
+            <span class="text-[10px] font-black text-red-600 uppercase tracking-[0.3em]">Seguridad & Transparencia</span>
+            <h1 class="text-3xl font-black text-slate-900 uppercase tracking-tighter">Bitácora del Sistema</h1>
+            <p class="text-xs text-slate-500 font-bold mt-1 uppercase tracking-tight">Historial de integridad de datos SICSI-INTU</p>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            {# --- Acciones de Exportación --- #}
+            <div class="flex gap-2">
+                <a href="{% url 'auditoria:exportar_excel' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" 
+                   class="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-600 hover:text-white transition-all flex items-center gap-2 border border-emerald-100">
+                    <i class="fas fa-file-excel"></i> Excel
+                </a>
+                <a href="{% url 'auditoria:exportar_pdf' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" 
+                   class="bg-rose-50 text-rose-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-rose-600 hover:text-white transition-all flex items-center gap-2 border border-rose-100">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </a>
+            </div>
+
+            {# --- Formulario de Filtros --- #}
+            <form method="GET" class="flex flex-wrap sm:flex-nowrap gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-100">
+                <input type="date" name="desde" value="{{ request.GET.desde }}"
+                       class="p-2 text-[10px] font-bold rounded-xl border-none bg-white shadow-sm focus:ring-2 focus:ring-slate-900">
+                <input type="text" name="modulo" placeholder="MÓDULO..." value="{{ request.GET.modulo }}"
+                       class="p-2 text-[10px] font-bold rounded-xl border-none bg-white shadow-sm focus:ring-2 focus:ring-slate-900 w-24">
+                <button type="submit" class="bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:scale-105 transition-transform">
+                    <i class="fas fa-filter mr-1"></i>
+                </button>
+                {% if request.GET.desde or request.GET.modulo %}
+                    <a href="{% url 'auditoria:ver_bitacora' %}" class="bg-white text-slate-400 p-2 rounded-xl hover:text-red-500 transition-colors">
+                        <i class="fas fa-times-circle"></i>
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+    </header>
+
+    <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-100">
+                        <th class="p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha/Hora</th>
+                        <th class="p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Usuario</th>
+                        <th class="p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Módulo</th>
+                        <th class="p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Acción</th>
+                        <th class="p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Descripción</th>
+                        <th class="p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dirección IP</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for log in logs %}
+                    <tr class="hover:bg-slate-50/50 transition-colors group">
+                        <td class="p-5 text-[10px] font-bold text-slate-500 font-mono">
+                            {{ log.timestamp|date:"d/m/Y" }}<br>
+                            <span class="text-slate-300">{{ log.timestamp|date:"H:i:s" }}</span>
+                        </td>
+                        <td class="p-5">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-[10px] font-black text-white shadow-lg shadow-slate-900/10">
+                                    {{ log.usuario.username|slice:":2"|upper }}
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-[11px] font-black text-slate-700 uppercase tracking-tighter">{{ log.usuario.username }}</span>
+                                    <span class="text-[9px] text-slate-400 font-bold uppercase">ID: {{ log.usuario.id }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-5">
+                            <span class="text-[10px] font-black text-slate-400 border border-slate-200 px-2 py-1 rounded-lg uppercase">
+                                {{ log.modulo }}
+                            </span>
+                        </td>
+                        <td class="p-5 text-center">
+                            <span class="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-tighter
+                                {% if log.accion == 'C' %}bg-emerald-100 text-emerald-700
+                                {% elif log.accion == 'M' %}bg-amber-100 text-amber-700
+                                {% elif log.accion == 'E' %}bg-rose-100 text-rose-700
+                                {% else %}bg-slate-100 text-slate-700{% endif %}">
+                                {{ log.get_accion_display }}
+                            </span>
+                        </td>
+                        <td class="p-5 text-[11px] text-slate-600 font-medium leading-relaxed max-w-xs">
+                            {{ log.descripcion }}
+                        </td>
+                        <td class="p-5">
+                            <span class="text-[9px] font-black font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded-md">
+                                {{ log.direccion_ip }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="p-20 text-center">
+                            <div class="flex flex-col items-center opacity-20">
+                                <i class="fas fa-folder-open text-5xl mb-4"></i>
+                                <p class="text-xs font-black uppercase tracking-widest">No hay registros en la bitácora</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

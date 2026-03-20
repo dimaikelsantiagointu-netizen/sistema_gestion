@@ -14,29 +14,26 @@ urlpatterns = [
     # 3. El Dashboard (Home)
     path('', DashboardView.as_view(), name='home'),
     
-    # 4. Aplicaciones del sistema
+    # 4. Aplicaciones de Usuario y Nómina
     path('users/', include('apps.users.urls', namespace='users')),
+    path('personal/', include('apps.personal.urls', namespace='personal')),
     path('recibos/', include('apps.recibos.urls', namespace='recibos')),
     
-    # 5. Gestión de Beneficiarios
+    # 5. Gestión de Beneficiarios y Contratos
     path('beneficiarios/', include('apps.beneficiarios.urls', namespace='beneficiarios')),
-
-    # 5.1 Gestión de Contratos 
     path('contratos/', include('apps.contratos.urls', namespace='contratos')),
     
+    # 6. Módulo de Seguridad y Auditoría (NUEVO)
+    path('auditoria/', include('apps.auditoria.urls', namespace='auditoria')),
     
-    #gestor de bienes temportalmente deshabilitado
-    #path('bienes/', include('apps.bienes.urls', namespace='bienes')),
-    
-    # 6. Configuración de Infraestructura Geográfica
+    # 7. Configuración de Infraestructura Geográfica
     path('configuracion-territorio/', include('apps.territorio.urls')),
     
-    path('personal/', include('apps.personal.urls', namespace='personal')),
-
-    
+    # Gestor de bienes temporalmente deshabilitado
+    # path('bienes/', include('apps.bienes.urls', namespace='bienes')),
 
 ] 
 
-# 6. Configuración para archivos media (Expedientes Digitales)
+# Configuración para archivos media (Expedientes Digitales)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
