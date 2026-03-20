@@ -3,19 +3,27 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth.models import Permission
 from .models import Usuario
 
-# Clase auxiliar para etiquetas limpias
+# Clase auxiliar para mostrar el nombre legible del permiso en lugar del código técnico
 class PermissionModelChoiceField(forms.ModelMultipleChoiceField):
     def label_from_instance(self, obj):
         return f"{obj.name}"
 
+# Lista unificada de tus 9 permisos para evitar errores de escritura
+MODULO_PERMISSIONS = [
+    "ver_gestor_recibos", 
+    "ver_gestor_clientes", 
+    "ver_gestor_pagos",
+    "ver_gestor_contratos", 
+    "ver_gestor_sellos", 
+    "ver_gestor_documental",
+    "ver_gestor_bienes",
+    "ver_gestion_geografica",
+    "ver_gestor_personal"
+]
+
 class CustomUserCreationForm(UserCreationForm):
     user_permissions = PermissionModelChoiceField(
-        queryset=Permission.objects.filter(
-            codename__in=[
-                "ver_gestor_recibos", "ver_gestor_clientes", "ver_gestor_pagos",
-                "ver_gestor_contratos", "ver_gestor_sellos", "ver_gestor_documental"
-            ]
-        ),
+        queryset=Permission.objects.filter(codename__in=MODULO_PERMISSIONS),
         widget=forms.CheckboxSelectMultiple,
         required=False,
         label="Accesos a Módulos"
@@ -23,14 +31,12 @@ class CustomUserCreationForm(UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = Usuario
-        # Se elimina 'cedula' y se agrega 'observacion'
         fields = ('username', 'first_name', 'last_name', 'email', 'telefono', 'rol', 'observacion', 'user_permissions')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
             if name != 'user_permissions':
-                # Widget específico para observación para que sea un cuadro de texto más grande
                 if name == 'observacion':
                     field.widget = forms.Textarea(attrs={'rows': 3})
                 
@@ -46,13 +52,7 @@ class CustomUserChangeForm(UserChangeForm):
     )
 
     user_permissions = PermissionModelChoiceField(
-        queryset=Permission.objects.filter(
-            codename__in=[
-                "ver_gestor_recibos", "ver_gestor_clientes", "ver_gestor_pagos",
-                "ver_gestor_contratos", "ver_gestor_sellos", "ver_gestor_documental",
-                "ver_gestor_bienes"
-            ]
-        ),
+        queryset=Permission.objects.filter(codename__in=MODULO_PERMISSIONS),
         widget=forms.CheckboxSelectMultiple,
         required=False,
         label="Accesos a Módulos"
@@ -60,12 +60,12 @@ class CustomUserChangeForm(UserChangeForm):
 
     class Meta:
         model = Usuario
-        # Se elimina 'cedula' y se agrega 'observacion'
         fields = ('username', 'first_name', 'last_name', 'email', 'telefono', 'rol', 'observacion', 'user_permissions')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
+        # Help text estilizado para la contraseña
         if 'password' in self.fields:
             self.fields['password'].help_text = (
                 '<span class="text-indigo-700 font-bold">'
@@ -85,22 +85,14 @@ class CustomUserChangeForm(UserChangeForm):
                 })
                 
 class UserProfileForm(forms.ModelForm):
-    """
-    Formulario simplificado para que los usuarios no administradores
-    puedan actualizar su propia información básica.
-    """
     class Meta:
         model = Usuario
-        # Solo campos de contacto y personales, nunca permisos ni roles
         fields = ('first_name', 'last_name', 'email', 'telefono')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Aplicamos el estilo visual consistente
         for name, field in self.fields.items():
             field.widget.attrs.update({
                 'class': 'mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10 font-bold'
             })
-        
-        # Opcional: Hacer que el correo sea obligatorio
         self.fields['email'].required = True

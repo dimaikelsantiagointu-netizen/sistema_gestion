@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load personal_extras %}
+
+{% block title %}Expediente RRHH | SICSI-INTU{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-10 animate-fade-in">
+    
+    {# --- ENCABEZADO RESPONSIVO --- #}
+    <div class="mb-8 md:mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="flex items-center gap-4 md:gap-6">
+            <div class="h-16 w-16 md:h-20 md:w-20 bg-slate-900 text-white rounded-2xl md:rounded-[2rem] flex items-center justify-center shadow-xl shadow-slate-200 ring-4 ring-white shrink-0">
+                <i class="fas fa-user-tie text-2xl md:text-3xl"></i>
+            </div>
+            <div class="min-w-0">
+                <a href="{% url 'beneficiarios:gestion_documental' %}?tipo=personal" class="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] hover:text-intu-blue transition-all flex items-center mb-1">
+                    <i class="fas fa-arrow-left mr-2"></i> Gestión de Personal
+                </a>
+                <h1 class="text-2xl md:text-4xl font-black text-slate-900 uppercase tracking-tighter truncate leading-tight">
+                    {{ trabajador.nombres }} {{ trabajador.apellidos }}
+                </h1>
+                <p class="text-[11px] md:text-[13px] font-bold text-slate-500 uppercase tracking-widest mt-1 flex flex-wrap gap-2 items-center">
+                    <span class="bg-intu-blue text-white px-2 py-0.5 rounded text-[10px]">{{ trabajador.cargo }}</span>
+                    <span class="text-red-600">Cédula: {{ trabajador.cedula }}</span>
+                </p>
+            </div>
+        </div>
+
+        {# Stats #}
+        <div class="flex gap-3 md:gap-4">
+            <div class="flex-1 md:flex-none bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-sm text-center">
+                <p class="text-[11px] font-black text-slate-400 uppercase tracking-tighter">Estatus</p>
+                <p class="text-xs font-black {% if trabajador.activo %}text-emerald-500{% else %}text-red-500{% endif %} uppercase mt-1">
+                    {% if trabajador.activo %}● Activo{% else %}○ Egresado{% endif %}
+                </p>
+            </div>
+            <div class="flex-1 md:flex-none bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-sm text-center">
+                <p class="text-[11px] font-black text-slate-400 uppercase tracking-tighter">Archivos</p>
+                <p class="text-xl md:text-2xl font-black text-intu-blue leading-none mt-1">{{ documentos.count }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-10">
+        
+        {# --- FORMULARIO DE CARGA --- #}
+        <div class="lg:col-span-4 order-2 lg:order-1">
+            <div class="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-2xl shadow-slate-200/40 lg:sticky lg:top-10">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-1.5 h-6 bg-intu-blue rounded-full"></div>
+                    <h3 class="text-xs font-black uppercase text-slate-800 tracking-widest">Carga de Expediente</h3>
+                </div>
+                
+                <form method="POST" action="{% url 'personal:subir_documento' trabajador.pk %}" enctype="multipart/form-data" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-slate-400 uppercase ml-1 tracking-widest">Categoría RRHH</label>
+                        <select name="categoria" required class="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl text-xs font-bold text-slate-700 focus:bg-white focus:border-intu-blue transition-all outline-none appearance-none cursor-pointer">
+                            <option value="" disabled selected>Seleccione...</option>
+                            {% for val, label in categorias %}
+                                <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-slate-400 uppercase ml-1 tracking-widest">Nombre del Documento</label>
+                        <input type="text" name="nombre_documento" placeholder="Ej: Síntesis Curricular" required
+                               class="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl text-xs font-bold text-slate-700 focus:bg-white focus:border-intu-blue transition-all outline-none">
+                    </div>
+                    
+                    <div class="relative group">
+                        <input type="file" name="archivo" id="file-input" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
+                        <div id="drop-zone" class="p-8 border-2 border-dashed border-slate-200 rounded-3xl text-center group-hover:border-intu-blue/50 group-hover:bg-blue-50/30 transition-all flex flex-col items-center">
+                            <i id="upload-icon" class="fas fa-cloud-upload-alt text-3xl text-slate-300 group-hover:text-intu-blue mb-3"></i>
+                            <p id="file-name" class="text-[11px] font-black text-slate-500 uppercase tracking-tight leading-tight">Seleccionar Archivo PDF/IMG</p>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-intu-blue transition-all shadow-lg active:scale-95">
+                        <i class="fas fa-check-circle mr-2"></i> Vincular a Nómina
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {# --- LISTADO DE DOCUMENTOS --- #}
+        <div class="lg:col-span-8 order-1 lg:order-2">
+            <div class="flex items-center justify-between mb-6 px-2">
+                <h3 class="text-xs font-black uppercase text-slate-500 tracking-[0.2em]">Historial Documental</h3>
+                <span class="text-[11px] font-bold text-slate-400 uppercase hidden sm:block">Ficha Técnica Digital</span>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-4">
+                {% for doc in documentos %}
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 md:p-5 bg-white rounded-[1.8rem] border border-slate-100 shadow-sm hover:border-intu-blue/20 transition-all group gap-4">
+                    <div class="flex items-center gap-4 w-full sm:w-auto">
+                        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl shrink-0
+                            {% if '.pdf' in doc.archivo.name|lower %} bg-red-50 text-red-500
+                            {% elif '.jpg' in doc.archivo.name|lower or '.png' in doc.archivo.name|lower or '.jpeg' in doc.archivo.name|lower %} bg-emerald-50 text-emerald-500
+                            {% else %} bg-slate-50 text-slate-500 {% endif %} group-hover:scale-105 transition-transform">
+                            {% if ".pdf" in doc.archivo.name|lower %}<i class="fas fa-file-pdf"></i>
+                            {% elif ".jpg" in doc.archivo.name|lower or ".png" in doc.archivo.name|lower or ".jpeg" in doc.archivo.name|lower %}<i class="fas fa-image"></i>
+                            {% else %}<i class="fas fa-file-alt"></i>{% endif %}
+                        </div>
+
+                        <div class="min-w-0">
+                            <h4 class="text-sm font-black text-slate-800 uppercase tracking-tight truncate">{{ doc.nombre_documento }}</h4>
+                            <div class="flex flex-wrap items-center gap-2 mt-1">
+                                <span class="text-[9px] font-black text-intu-blue uppercase bg-blue-50 px-2 py-0.5 rounded">{{ doc.get_categoria_display }}</span>
+                                <span class="text-[10px] font-bold text-slate-400 italic">{{ doc.fecha_subida|date:"d/m/Y" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {# ACCIONES: Aquí se cambió el botón por un enlace target="_blank" #}
+                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-50">
+                        <a href="{{ doc.archivo.url }}" target="_blank" 
+                           class="flex-1 sm:flex-none h-11 px-6 sm:w-11 sm:px-0 flex items-center justify-center rounded-xl bg-slate-50 text-slate-500 hover:bg-intu-blue hover:text-white transition-all shadow-sm group/btn">
+                            <i class="fas fa-external-link-alt text-xs"></i>
+                            <span class="ml-2 text-[10px] font-black sm:hidden uppercase tracking-widest">Ver Documento</span>
+                        </a>
+                        <a href="{{ doc.archivo.url }}" download class="flex-1 sm:flex-none h-11 px-6 sm:w-11 sm:px-0 flex items-center justify-center rounded-xl bg-slate-50 text-slate-500 hover:bg-emerald-500 hover:text-white transition-all shadow-sm">
+                            <i class="fas fa-download text-xs"></i>
+                            <span class="ml-2 text-[10px] font-black sm:hidden uppercase tracking-widest">Descargar</span>
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="py-20 text-center bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100">
+                    <i class="fas fa-folder-open text-4xl text-slate-100 mb-4 block"></i>
+                    <p class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-300">Sin registros en el expediente</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('file-input');
+    const fileNameText = document.getElementById('file-name');
+    const icon = document.getElementById('upload-icon');
+
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            fileNameText.innerText = this.files[0].name.toUpperCase();
+            fileNameText.classList.replace('text-slate-500', 'text-intu-blue');
+            icon.classList.replace('text-slate-300', 'text-intu-blue');
+        }
+    });
+</script>
+
+<style>
+    @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
+</style>
+{% endblock %}

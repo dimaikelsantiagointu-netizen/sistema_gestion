@@ -4,6 +4,10 @@ from django.utils import timezone
 from django.conf import settings 
 from apps.territorio.models import Estado, Municipio, Parroquia, Ciudad, Comuna
 
+# ==============================================================================
+# SECCIÓN 1: MAESTRO DE BENEFICIARIOS (CIUDADANOS)
+# ==============================================================================
+
 class Beneficiario(models.Model):
     CEDULA = 'V'
     RIF = 'J'
@@ -35,7 +39,7 @@ class Beneficiario(models.Model):
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     
-    # --- Ubicación Territorial (Vinculado a App Territorio) ---
+    # --- Ubicación Territorial ---
     estado = models.ForeignKey(Estado, on_delete=models.PROTECT, related_name='beneficiarios')
     municipio = models.ForeignKey(Municipio, on_delete=models.PROTECT, related_name='beneficiarios')
     parroquia = models.ForeignKey(Parroquia, on_delete=models.PROTECT, related_name='beneficiarios')
@@ -43,26 +47,20 @@ class Beneficiario(models.Model):
     comuna = models.ForeignKey(Comuna, on_delete=models.PROTECT, null=True, blank=True, related_name='beneficiarios')
     direccion_especifica = models.TextField(verbose_name="Dirección Específica")
 
-    direccion = models.TextField(blank=True, null=True) 
-
-
-def save(self, *args, **kwargs):
-    self.nombre_completo = self.nombre_completo.upper()
-    self.documento_identidad = self.documento_identidad.upper().strip()
-    self.direccion_especifica = self.direccion_especifica.upper() if self.direccion_especifica else ""
-    super(Beneficiario, self).save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        """Normalización de datos en mayúsculas"""
+        self.nombre_completo = self.nombre_completo.upper()
+        self.documento_identidad = self.documento_identidad.upper().strip()
+        self.direccion_especifica = self.direccion_especifica.upper() if self.direccion_especifica else ""
+        super(Beneficiario, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.tipo_documento}-{self.documento_identidad} | {self.nombre_completo}"
 
-def ruta_expediente_digital(instance, filename):
-    return os.path.join('expedientes', instance.beneficiario.documento_identidad, filename)
 
-class DocumentoExpediente(models.Model):
-    beneficiario = models.ForeignKey(Beneficiario, on_delete=models.CASCADE, related_name='documentos')
-    archivo = models.FileField(upload_to=ruta_expediente_digital)
-    nombre_documento = models.CharField(max_length=100, help_text="Ej: Copia de CI, RIF Vigente, etc.")
-    fecha_subida = models.DateTimeField(auto_now_add=True)
+# ==============================================================================
+# SECCIÓN 2: GESTIÓN DE ATENCIÓN Y VISITAS (SIN CAMPOS EXTRA)
+# ==============================================================================
 
 class Visita(models.Model):
     MOTIVO_CHOICES = [
@@ -79,16 +77,17 @@ class Visita(models.Model):
         related_name='visitas'
     )
     
-    fecha_registro = models.DateTimeField(default=timezone.now)
-    motivo = models.CharField(max_length=20, choices=MOTIVO_CHOICES)
-    descripcion = models.TextField(verbose_name="Observaciones de la visita")
-    
+    # Quién registró la visita (Auditoría interna)
     registrado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
-        null=True,
-        blank=True  
+        null=True, 
+        blank=True
     )
+
+    fecha_registro = models.DateTimeField(default=timezone.now)
+    motivo = models.CharField(max_length=20, choices=MOTIVO_CHOICES)
+    descripcion = models.TextField(verbose_name="Observaciones de la visita")
 
     class Meta:
         ordering = ['-fecha_registro']
@@ -97,3 +96,52 @@ class Visita(models.Model):
 
     def __str__(self):
         return f"{self.beneficiario.nombre_completo} - {self.fecha_registro.date()}"
+
+
+# ==============================================================================
+# SECCIÓN 3: MOTOR DE EXPEDIENTE DIGITAL (CONEXIÓN CON PERSONAL)
+# ==============================================================================
+
+def ruta_expediente_universal(instance, filename):
+    if instance.personal:
+        return os.path.join('expedientes', 'institucional', instance.personal.cedula, filename)
+    return os.path.join('expedientes', 'ciudadanos', instance.beneficiario.documento_identidad, filename)
+
+class DocumentoExpediente(models.Model):
+    CATEGORIA_CHOICES = [
+        ('ID', 'Documento de Identidad'),
+        ('CV', 'Síntesis Curricular (Personal)'),
+        ('TIT', 'Títulos y Certificaciones'),
+        ('CON', 'Contrato / Nombramiento'),
+        ('RIF', 'RIF Vigente'),
+        ('OTRO', 'Otros Documentos'),
+    ]
+
+    beneficiario = models.ForeignKey(
+        Beneficiario, 
+        on_delete=models.CASCADE, 
+        null=True, blank=True, 
+        related_name='documentos'
+    )
+    
+    # CRÍTICO: related_name debe ser 'documentos_institucionales' 
+    # para que Personal.estado_expediente funcione
+    personal = models.ForeignKey(
+        'personal.Personal', 
+        on_delete=models.CASCADE, 
+        null=True, blank=True, 
+        related_name='documentos_institucionales'
+    )
+
+    archivo = models.FileField(upload_to=ruta_expediente_universal)
+    categoria = models.CharField(max_length=4, choices=CATEGORIA_CHOICES, default='ID')
+    nombre_documento = models.CharField(max_length=100)
+    fecha_subida = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Documento Digital"
+        verbose_name_plural = "Expedientes Digitales"
+
+    def __str__(self):
+        dueno = self.beneficiario.nombre_completo if self.beneficiario else f"PERSONAL: {self.personal.apellidos}"
+        return f"{self.get_categoria_display()} - {dueno}"

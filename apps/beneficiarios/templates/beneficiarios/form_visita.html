@@ -1,39 +1,40 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-8">
-    {# Encabezado con estilo mejorado #}
-    <div class="mb-8">
-        <a href="{% url 'beneficiarios:lista' %}" class="inline-flex items-center text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hover:text-intu-blue transition-all group">
-            <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform"></i> Volver al listado
+<div class="max-w-4xl mx-auto px-4 py-8 animate-fade-in">
+    {# --- ENCABEZADO --- #}
+    <div class="mb-10">
+        <a href="{% url 'beneficiarios:lista' %}" class="inline-flex items-center text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] hover:text-intu-blue transition-all group">
+            <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform text-sm"></i> Volver al listado
         </a>
         <h1 class="text-4xl font-black text-intu-blue uppercase tracking-tighter mt-4 leading-none">
-            Registrar Visita <span class="text-gray-300">de Control</span>
+            Registrar visita <span class="text-gray-300 italic">de control</span>
         </h1>
+        <div class="h-1.5 w-20 bg-intu-red mt-4 rounded-full"></div>
     </div>
 
-    <form method="POST" class="bg-white p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 border border-gray-100 space-y-8 relative overflow-hidden">
+    <form method="POST" class="bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 space-y-10 relative overflow-hidden">
         {% csrf_token %}
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
             {# --- BUSCADOR DINÁMICO --- #}
             <div class="relative">
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Buscar Ciudadano</label>
-                <div class="relative flex items-center mt-2 group">
-                    <div class="absolute left-4 text-gray-400 group-focus-within:text-intu-blue transition-colors">
+                <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Buscar ciudadano</label>
+                <div class="relative flex items-center group">
+                    <div class="absolute left-5 text-gray-400 group-focus-within:text-intu-blue transition-colors text-lg">
                         <i class="fas fa-search"></i>
                     </div>
                     <input type="text" id="input_busqueda" autocomplete="off" 
-                           placeholder="Cédula o nombre..."
-                           class="block w-full bg-gray-50 border-2 border-transparent rounded-2xl text-sm focus:bg-white focus:border-intu-blue/20 focus:ring-4 focus:ring-intu-blue/5 font-bold transition-all p-4 pl-12">
+                           placeholder="Cédula o nombre del ciudadano..."
+                           class="block w-full bg-gray-50 border-2 border-transparent rounded-2xl text-base focus:bg-white focus:border-intu-blue/20 focus:ring-4 focus:ring-intu-blue/5 font-bold transition-all p-5 pl-14">
                 </div>
                 
                 {# Lista Desplegable de Resultados #}
-                <div id="contenedor_resultados" class="absolute z-50 w-full bg-white mt-2 rounded-2xl shadow-2xl border border-gray-100 hidden overflow-hidden transition-all">
-                    <div id="lista_resultados" class="max-h-64 overflow-y-auto custom-scrollbar"></div>
-                    <div class="bg-gray-50 p-3 border-t border-gray-100">
-                        <a href="{% url 'beneficiarios:crear' %}" class="text-[10px] font-bold text-intu-blue uppercase hover:underline">
-                            <i class="fas fa-plus-circle mr-1"></i> ¿No existe? Crear nuevo
+                <div id="contenedor_resultados" class="absolute z-50 w-full bg-white mt-3 rounded-2xl shadow-2xl border border-gray-100 hidden overflow-hidden transition-all">
+                    <div id="lista_resultados" class="max-h-72 overflow-y-auto custom-scrollbar"></div>
+                    <div class="bg-slate-50 p-4 border-t border-gray-100">
+                        <a href="{% url 'beneficiarios:crear' %}" class="text-[11px] font-black text-intu-blue uppercase hover:text-intu-red transition-colors flex items-center gap-2">
+                            <i class="fas fa-plus-circle text-sm"></i> ¿No existe? Crear nuevo registro
                         </a>
                     </div>
                 </div>
@@ -41,27 +42,27 @@
 
             {# --- BENEFICIARIO SELECCIONADO --- #}
             <div>
-                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Selección Actual</label>
-                <div id="card_seleccionado" class="mt-2 flex items-center p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 transition-all">
+                <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Selección actual</label>
+                <div id="card_seleccionado" class="flex items-center p-5 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 min-h-[72px] transition-all">
                     <div class="flex-1">
-                        <input type="text" id="nombre_confirmado" readonly placeholder="NADIE SELECCIONADO"
-                               class="bg-transparent border-none p-0 w-full text-sm font-black text-gray-400 placeholder-gray-300 focus:ring-0">
+                        <input type="text" id="nombre_confirmado" readonly placeholder="Nadie seleccionado"
+                               class="bg-transparent border-none p-0 w-full text-base font-black text-gray-400 placeholder-gray-300 focus:ring-0 uppercase tracking-tight">
                         <input type="hidden" name="beneficiario_id" id="id_oculto">
                     </div>
-                    <div id="check_ok" class="hidden text-green-500">
-                        <i class="fas fa-check-circle text-xl"></i>
+                    <div id="check_ok" class="hidden text-emerald-500 animate-bounce-short">
+                        <i class="fas fa-check-circle text-2xl"></i>
                     </div>
                 </div>
             </div>
 
             {# --- SECCIÓN DE DETALLES (Se desbloquea al seleccionar) --- #}
-            <div id="seccion_detalles" class="md:col-span-2 space-y-8 opacity-10 pointer-events-none blur-[2px] transition-all duration-700">
+            <div id="seccion_detalles" class="md:col-span-2 space-y-10 opacity-20 pointer-events-none blur-[1px] transition-all duration-700">
                 <div class="h-px bg-gradient-to-r from-transparent via-gray-100 to-transparent"></div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div class="group">
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Motivo de la Visita</label>
-                        <select name="motivo" class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-intu-blue/5 p-4 cursor-pointer">
+                        <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Motivo de la visita</label>
+                        <select name="motivo" class="block w-full bg-gray-50 border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-intu-blue/5 p-5 cursor-pointer appearance-none">
                             {% for code, name in motivos %}
                                 <option value="{{ code }}">{{ name }}</option>
                             {% endfor %}
@@ -69,22 +70,24 @@
                     </div>
                     
                     <div>
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Fecha y Hora</label>
+                        <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Fecha y hora de registro</label>
                         <input type="datetime-local" name="fecha_registro" 
                                value="{{ current_time|date:'Y-m-d\TH:i' }}"
-                               class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-intu-blue/5 p-4">
+                               class="block w-full bg-gray-50 border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-intu-blue/5 p-5">
                     </div>
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Observaciones Detalladas</label>
-                    <textarea name="descripcion" rows="4" placeholder="Escriba aquí los hallazgos de la visita..."
-                              class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-medium p-4 focus:ring-4 focus:ring-intu-blue/5 transition-all"></textarea>
+                    <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Observaciones detalladas de la visita</label>
+                    <textarea name="descripcion" rows="4" placeholder="Escriba aquí los hallazgos o novedades de la visita..."
+                              class="block w-full bg-gray-50 border-none rounded-2xl text-base font-medium p-5 focus:ring-4 focus:ring-intu-blue/5 transition-all"></textarea>
                 </div>
 
                 <div class="pt-4">
-                    <button type="submit" class="group relative w-full py-5 bg-intu-blue text-white text-xs font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-intu-dark transition-all shadow-xl shadow-blue-200 active:scale-[0.98]">
-                        <span class="relative z-10">Finalizar y Guardar Registro</span>
+                    <button type="submit" class="group relative w-full py-6 bg-intu-blue text-white text-[13px] font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-blue-800 transition-all shadow-xl shadow-blue-200 active:scale-[0.98]">
+                        <span class="relative z-10 flex items-center justify-center gap-3">
+                            <i class="fas fa-save text-lg"></i> Finalizar y guardar registro
+                        </span>
                         <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
                     </button>
                 </div>
@@ -95,13 +98,23 @@
 
 <style>
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
     
-    .bg-intu-blue { background-color: #1e40af; }
-    .text-intu-blue { color: #1e40af; }
-    .hover\:bg-intu-dark:hover { background-color: #1e3a8a; }
+    @keyframes fade-in {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+        animation: fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-bounce-short {
+        animation: bounce 1s ease-in-out 1;
+    }
+    @keyframes bounce {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+    }
 </style>
 
 <script>
@@ -129,14 +142,14 @@
                 if (data.encontrado) {
                     data.results.forEach(beneficiario => {
                         const div = document.createElement('div');
-                        div.className = "p-4 hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-50 last:border-0";
+                        div.className = "p-5 hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-50 last:border-0";
                         div.innerHTML = `
                             <div class="flex justify-between items-center">
                                 <div>
-                                    <p class="text-xs font-black text-gray-800">${beneficiario.nombre}</p>
-                                    <p class="text-[10px] text-gray-400 font-bold uppercase">${beneficiario.tipo_doc}: ${beneficiario.cedula}</p>
+                                    <p class="text-sm font-black text-slate-800 uppercase tracking-tight">${beneficiario.nombre}</p>
+                                    <p class="text-[11px] text-slate-400 font-bold uppercase mt-1 tracking-wider">${beneficiario.tipo_doc}: ${beneficiario.cedula}</p>
                                 </div>
-                                <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+                                <i class="fas fa-chevron-right text-blue-200 text-xs"></i>
                             </div>
                         `;
                         div.onclick = () => seleccionar(beneficiario);
@@ -144,7 +157,7 @@
                     });
                     contenedorResultados.classList.remove('hidden');
                 } else {
-                    listaResultados.innerHTML = '<div class="p-4 text-[10px] font-bold text-gray-400 uppercase text-center">No se encontraron resultados</div>';
+                    listaResultados.innerHTML = '<div class="p-6 text-[12px] font-bold text-slate-400 uppercase text-center italic">No se encontraron resultados</div>';
                     contenedorResultados.classList.remove('hidden');
                 }
             });
@@ -161,12 +174,11 @@
         checkOk.classList.remove('hidden');
         
         // Desbloquear formulario
-        seccionDetalles.classList.remove('opacity-10', 'pointer-events-none', 'blur-[2px]');
+        seccionDetalles.classList.remove('opacity-20', 'pointer-events-none', 'blur-[1px]');
         contenedorResultados.classList.add('hidden');
         inputBusqueda.value = '';
     }
 
-    // Cerrar buscador al hacer clic fuera
     document.addEventListener('click', (e) => {
         if (!inputBusqueda.contains(e.target) && !contenedorResultados.contains(e.target)) {
             contenedorResultados.classList.add('hidden');

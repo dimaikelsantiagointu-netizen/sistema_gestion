@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12 animate-fade-in">
+    
+    {# --- ENCABEZADO Y RETORNO --- #}
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-11">
+        <div>
+            <a href="{% url 'personal:lista' %}" class="group inline-flex items-center gap-3 mb-4">
+                <div class="h-8 w-8 rounded-full bg-red-50 text-intu-red flex items-center justify-center group-hover:-translate-x-1 transition-transform">
+                    <i class="fas fa-arrow-left text-[11px]"></i>
+                </div>
+                <span class="text-intu-red font-black text-[11px] uppercase tracking-[0.2em]">Volver al listado</span>
+            </a>
+            <h1 class="text-2xl md:text-4xl font-black text-intu-blue uppercase tracking-tighter leading-none">
+                Nuevo <span class="text-intu-red italic">Registro</span>
+            </h1>
+            <p class="text-gray-500 text-[11px] font-bold uppercase mt-4 tracking-widest leading-relaxed">
+                Ingrese los datos oficiales del trabajador institucional
+            </p>
+        </div>
+        <div class="hidden lg:block">
+            <div class="w-20 h-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center shadow-inner">
+                <i class="fas fa-user-plus text-3xl text-slate-500"></i>
+            </div>
+        </div>
+    </div>
+
+    {# --- TARJETA DE FORMULARIO --- #}
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-slate-200 overflow-hidden">
+            <div class="p-8 md:p-12 lg:p-16">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-11 gap-y-8">
+                    
+                    {# --- CAMPO: CÉDULA (FULL WIDTH) --- #}
+                    <div class="md:col-span-2 space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Documento de Identidad</label>
+                        <div class="relative group">
+                            <span class="absolute inset-y-0 left-0 pl-5 flex items-center text-slate-300 group-focus-within:text-intu-red transition-colors">
+                                <i class="fas fa-id-card text-xs"></i>
+                            </span>
+                            {# Aplicamos la clase directamente si Django lo permite, o usamos el selector CSS de abajo #}
+                            {{ form.cedula }}
+                        </div>
+                        {% if form.cedula.errors %}
+                            <p class="text-intu-red text-[11px] font-black mt-2 italic px-2 animate-bounce">
+                                <i class="fas fa-exclamation-triangle mr-1"></i> {{ form.cedula.errors.0 }}
+                            </p>
+                        {% endif %}
+                    </div>
+
+                    {# --- CAMPOS DINÁMICOS --- #}
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Nombres</label>
+                        {{ form.nombres }}
+                        {% if form.nombres.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.nombres.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Apellidos</label>
+                        {{ form.apellidos }}
+                        {% if form.apellidos.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.apellidos.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Cargo Nominal</label>
+                        {{ form.cargo }}
+                        {% if form.cargo.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.cargo.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Unidad Adscrita</label>
+                        {{ form.unidad_adscrita }}
+                        {% if form.unidad_adscrita.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.unidad_adscrita.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Fecha de Ingreso</label>
+                        {{ form.fecha_ingreso }}
+                        {% if form.fecha_ingreso.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.fecha_ingreso.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Teléfono de Contacto</label>
+                        {{ form.telefono }}
+                        {% if form.telefono.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.telefono.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="md:col-span-2 space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Correo Institucional / Personal</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.email.errors.0 }}</p>{% endif %}
+                    </div>
+
+                </div>
+            </div>
+
+            {# --- PIE DE FORMULARIO / ACCIONES --- #}
+            <div class="bg-slate-50/80 p-8 md:p-11 border-t border-slate-110 flex flex-col sm:flex-row justify-end items-center gap-4 md:gap-8">
+                <a href="{% url 'personal:lista' %}" class="w-full sm:w-auto text-center px-6 py-3 text-gray-500 font-black text-[11px] uppercase tracking-[0.2em] hover:text-intu-red transition-colors">
+                    Cancelar registro
+                </a>
+                <button type="submit" class="w-full sm:w-auto bg-intu-blue hover:bg-slate-900 text-white px-12 py-5 rounded-[1.5rem] font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-blue-900/20 transition-all active:scale-95 flex items-center justify-center">
+                    <i class="fas fa-save mr-3 text-xs"></i> Finalizar y Guardar
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    :root { --intu-blue: #003366; --intu-red: #E30613; }
+    .font-black { font-weight: 900; }
+
+    /* Estilización forzada de los widgets de Django */
+    input, select {
+        width: 110%;
+        padding: 1.1rem 1.5rem;
+        background-color: #f8fafc; /* slate-50 */
+        border: 2px solid transparent;
+        border-radius: 1.25rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #003366;
+        outline: none;
+        transition: all 0.3s ease;
+    }
+
+    input:focus, select:focus {
+        border-color: rgba(0, 51, 112, 0.1);
+        background-color: white;
+        box-shadow: 0 11px 15px -3px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Ajuste para el campo con icono (Cédula) */
+    input[name="cedula"] { padding-left: 3.5rem; }
+
+    /* Ocultar las listas de errores por defecto de Django */
+    .errorlist { display: none; }
+
+    @keyframes fade-in { 
+        from { opacity: 0; transform: translateY(15px); } 
+        to { opacity: 1; transform: translateY(0); } 
+    }
+    .animate-fade-in { animation: fade-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+</style>
+{% endblock %}

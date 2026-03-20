@@ -1,31 +1,40 @@
 {% extends 'base.html' %}
 
+{% block title %}{% if beneficiario.id %}Editar{% else %}Nuevo{% endif %} Ciudadano | SISI-INTU{% endblock %}
+
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 pb-12">
+<div class="max-w-4xl mx-auto px-6 pb-20 animate-fade-in">
+    
     {# --- ENCABEZADO --- #}
-    <div class="mb-10">
-        <a href="{% url 'beneficiarios:lista' %}" class="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-intu-blue transition group">
-            <i class="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i> Volver al listado
+    <div class="mb-12 flex items-center gap-6">
+        <a href="{% url 'beneficiarios:lista' %}" 
+           class="h-14 w-14 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 transition-all active:scale-90 group">
+            <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
         </a>
-        <h1 class="text-3xl font-black text-intu-blue uppercase tracking-tighter mt-4">
-            {% if beneficiario.id %}Editar{% else %}Nuevo{% endif %} <span class="text-gray-300">Ciudadano</span>
-        </h1>
+        <div>
+            <p class="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em] italic mb-1">Gestión de Expedientes</p>
+            <h1 class="text-4xl font-black text-intu-blue uppercase tracking-tighter leading-none">
+                {% if beneficiario.id %}Editar{% else %}Nuevo{% endif %} <span class="text-intu-red italic">Ciudadano</span>
+            </h1>
+        </div>
     </div>
 
-    <form method="POST" id="form-beneficiario" class="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-blue-900/5 border border-gray-100 space-y-10">
+    <form method="POST" id="form-beneficiario" class="space-y-8">
         {% csrf_token %}
         
-        {# --- SECCIÓN 1: IDENTIFICACIÓN --- #}
-        <div class="space-y-6">
-            <div class="flex items-center gap-3">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-intu-blue text-white text-[10px] font-black">1</span>
-                <h2 class="text-[11px] font-black uppercase text-slate-800 tracking-widest">Información Básica</h2>
+        {# --- SECCIÓN 1: IDENTIFICACIÓN (AZUL) --- #}
+        <div class="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm transition-all hover:shadow-md">
+            <div class="flex items-center gap-4 mb-10">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-intu-blue flex items-center justify-center border border-blue-100/50">
+                    <i class="fas fa-id-card"></i>
+                </div>
+                <h2 class="text-[13px] font-black uppercase text-slate-800 tracking-widest">Información de Identidad</h2>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tipo de Documento</label>
-                    <select name="tipo_documento" id="tipo_doc_selector" class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-intu-blue/5 p-4 transition-all">
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Tipo de Documento</label>
+                    <select name="tipo_documento" id="tipo_doc_selector" class="mt-3 block w-full bg-white border border-gray-200 rounded-2xl text-[14px] font-bold focus:ring-4 focus:ring-intu-blue/5 focus:border-intu-blue p-4 transition-all outline-none">
                         {% for code, name in TIPO_DOC_CHOICES %}
                             <option value="{{ code }}" {% if beneficiario.tipo_documento == code %}selected{% endif %}>{{ name }}</option>
                         {% endfor %}
@@ -33,36 +42,35 @@
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Número de Documento</label>
-                    <div class="relative flex items-center mt-2">
-                        <span id="visual-prefix" class="absolute left-4 text-sm font-black text-intu-blue opacity-40 border-r pr-2 border-gray-200">
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Número de Cédula / RIF</label>
+                    <div class="relative flex items-center mt-3">
+                        <span id="visual-prefix" class="absolute left-4 text-[14px] font-black text-intu-blue italic border-r pr-3 border-gray-200">
                             {{ beneficiario.tipo_documento|default:'V' }}-
                         </span>
                         <input type="text" name="documento_identidad" id="doc_number_input" required 
                                value="{{ beneficiario.documento_identidad|default:'' }}"
                                placeholder="12345678"
-                               class="block w-full bg-gray-50 border-none rounded-2xl text-sm focus:ring-4 focus:ring-intu-blue/5 pl-14 p-4 font-black transition-all">
+                               class="block w-full bg-white border border-gray-200 rounded-2xl text-[15px] focus:ring-4 focus:ring-intu-blue/5 focus:border-intu-blue pl-16 p-4 font-black transition-all outline-none">
                     </div>
-                    {# Mensaje de error de duplicado #}
-                    <p id="doc-error-msg" class="hidden text-[9px] font-black text-red-500 uppercase mt-2 ml-2 tracking-tighter animate-pulse">
-                        <i class="fas fa-exclamation-triangle mr-1"></i> Este documento ya existe en el sistema
+                    <p id="doc-error-msg" class="hidden text-[10px] font-black text-red-500 uppercase mt-3 ml-2 tracking-tight animate-pulse">
+                        <i class="fas fa-exclamation-triangle mr-1"></i> Este documento ya se encuentra registrado
                     </p>
                 </div>
 
                 <div class="md:col-span-2">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nombre Completo o Razón Social</label>
-                    <input type="text" name="nombre_completo" required placeholder="EJ: JUAN PEREZ"
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Nombres y Apellidos Completos</label>
+                    <input type="text" name="nombre_completo" required placeholder="EJ: JUAN ALBERTO PÉREZ"
                            value="{{ beneficiario.nombre_completo|default:'' }}"
-                           class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm focus:ring-4 focus:ring-intu-blue/5 uppercase font-black p-4 transition-all whitespace-normal">
+                           class="mt-3 block w-full bg-white border border-gray-200 rounded-2xl text-[15px] focus:ring-4 focus:ring-intu-blue/5 focus:border-intu-blue uppercase font-black p-4 transition-all outline-none">
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Género</label>
-                    <div class="flex gap-3 mt-2">
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Género</label>
+                    <div class="flex gap-4 mt-3">
                         {% for code, name in GENERO_CHOICES %}
                         <label class="flex-1 cursor-pointer group">
                             <input type="radio" name="genero" value="{{ code }}" class="hidden peer" {% if beneficiario.genero == code %}checked{% endif %} required>
-                            <div class="text-center p-3 bg-gray-50 rounded-xl text-[10px] font-black uppercase text-gray-400 peer-checked:bg-intu-blue peer-checked:text-white transition-all border-2 border-transparent peer-checked:border-blue-100">
+                            <div class="text-center p-4 bg-white border border-gray-200 rounded-2xl text-[11px] font-black uppercase text-gray-400 peer-checked:bg-intu-blue peer-checked:text-white peer-checked:border-intu-blue transition-all group-hover:border-gray-300 shadow-sm">
                                 {{ name }}
                             </div>
                         </label>
@@ -71,29 +79,29 @@
                 </div>
 
                 <div class="flex flex-col justify-center px-2">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">¿Posee alguna discapacidad?</label>
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-4">Condición Especial</label>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" name="discapacidad" class="sr-only peer" {% if beneficiario.discapacidad %}checked{% endif %}>
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                        <span class="ml-3 text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Marque si aplica</span>
+                        <div class="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                        <span class="ml-4 text-[11px] font-bold text-slate-500 uppercase tracking-tight">Posee discapacidad</span>
                     </label>
                 </div>
             </div>
         </div>
 
-        <hr class="border-gray-50">
-
-        {# --- SECCIÓN 2: UBICACIÓN TERRITORIAL --- #}
-        <div class="space-y-6">
-            <div class="flex items-center gap-3">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-black">2</span>
-                <h2 class="text-[11px] font-black uppercase text-slate-800 tracking-widest">Localización</h2>
+        {# --- SECCIÓN 2: UBICACIÓN (VERDE) --- #}
+        <div class="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm transition-all hover:shadow-md">
+            <div class="flex items-center gap-4 mb-10">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/50">
+                    <i class="fas fa-map-marked-alt"></i>
+                </div>
+                <h2 class="text-[13px] font-black uppercase text-slate-800 tracking-widest">Localización Territorial</h2>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Estado</label>
-                    <select name="estado" id="id_estado" required class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 p-4 transition-all">
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Estado</label>
+                    <select name="estado" id="id_estado" required class="mt-3 block w-full bg-white border border-gray-200 rounded-2xl text-[14px] font-bold focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 p-4 transition-all outline-none">
                         <option value="">Seleccione...</option>
                         {% for e in estados %}
                             <option value="{{ e.id }}" {% if beneficiario.estado_id == e.id %}selected{% endif %}>{{ e.nombre }}</option>
@@ -101,71 +109,76 @@
                     </select>
                 </div>
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Municipio</label>
-                    <select name="municipio" id="id_municipio" required disabled class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 p-4 transition-all opacity-50">
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Municipio</label>
+                    <select name="municipio" id="id_municipio" required disabled class="mt-3 block w-full bg-gray-50 border border-gray-100 rounded-2xl text-[14px] font-bold p-4 opacity-50 cursor-not-allowed">
                         <option value="">Esperando Estado...</option>
                     </select>
                 </div>
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Parroquia</label>
-                    <select name="parroquia" id="id_parroquia" required disabled class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 p-4 transition-all opacity-50">
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Parroquia</label>
+                    <select name="parroquia" id="id_parroquia" required disabled class="mt-3 block w-full bg-gray-50 border border-gray-100 rounded-2xl text-[14px] font-bold p-4 opacity-50 cursor-not-allowed">
                         <option value="">Esperando Municipio...</option>
                     </select>
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ciudad</label>
-                    <select name="ciudad" id="id_ciudad" required disabled class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 p-4 transition-all opacity-50">
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Ciudad</label>
+                    <select name="ciudad" id="id_ciudad" required disabled class="mt-3 block w-full bg-gray-50 border border-gray-100 rounded-2xl text-[14px] font-bold p-4 opacity-50 cursor-not-allowed">
                         <option value="">Esperando Estado...</option>
                     </select>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Comuna (Opcional)</label>
-                    <select name="comuna" id="id_comuna" disabled class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/5 p-4 transition-all opacity-50">
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Comuna (Opcional)</label>
+                    <select name="comuna" id="id_comuna" disabled class="mt-3 block w-full bg-gray-50 border border-gray-100 rounded-2xl text-[14px] font-bold p-4 opacity-50 cursor-not-allowed">
                         <option value="">Esperando Parroquia...</option>
                     </select>
                 </div>
 
                 <div class="md:col-span-3">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Dirección Específica</label>
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Dirección Específica</label>
                     <textarea name="direccion_especifica" rows="3" required placeholder="DETALLE DE CALLE, NRO DE CASA, PUNTO DE REFERENCIA..." 
-                              class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-medium p-4 focus:ring-4 focus:ring-emerald-500/5 uppercase whitespace-normal">{{ beneficiario.direccion_especifica|default:'' }}</textarea>
+                              class="mt-3 block w-full bg-white border border-gray-200 rounded-2xl text-[14px] font-medium p-4 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 uppercase outline-none">{{ beneficiario.direccion_especifica|default:'' }}</textarea>
                 </div>
             </div>
         </div>
 
-        <hr class="border-gray-50">
-
-        {# --- SECCIÓN 3: CONTACTO --- #}
-        <div class="space-y-6">
-            <div class="flex items-center gap-3">
-                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-black">3</span>
-                <h2 class="text-[11px] font-black uppercase text-slate-800 tracking-widest">Contacto Directo</h2>
+        {# --- SECCIÓN 3: CONTACTO (ÁMBER) --- #}
+        <div class="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm transition-all hover:shadow-md">
+            <div class="flex items-center gap-4 mb-10">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100/50">
+                    <i class="fas fa-phone"></i>
+                </div>
+                <h2 class="text-[13px] font-black uppercase text-slate-800 tracking-widest">Contacto Directo</h2>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Teléfono</label>
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Número Telefónico</label>
                     <input type="text" name="telefono" placeholder="0412-0000000" value="{{ beneficiario.telefono|default:'' }}"
-                           class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold p-4 focus:ring-4 focus:ring-amber-500/5 transition-all">
+                           class="mt-3 block w-full bg-white border border-gray-200 rounded-2xl text-[15px] font-black p-4 focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500 transition-all outline-none">
                 </div>
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Correo Electrónico</label>
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Correo Electrónico</label>
                     <input type="email" name="email" placeholder="ejemplo@correo.com" value="{{ beneficiario.email|default:'' }}"
-                           class="mt-2 block w-full bg-gray-50 border-none rounded-2xl text-sm font-bold p-4 focus:ring-4 focus:ring-amber-500/5 transition-all">
+                           class="mt-3 block w-full bg-white border border-gray-200 rounded-2xl text-[15px] font-black p-4 focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500 transition-all outline-none">
                 </div>
             </div>
         </div>
 
         <div class="pt-6">
-            <button type="submit" id="btn-submit" class="w-full py-5 bg-intu-blue text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-intu-dark transition-all shadow-xl shadow-blue-200 active:scale-[0.98]">
-                {{ boton|default:'Guardar Ciudadano' }}
+            <button type="submit" id="btn-submit" class="w-full py-6 bg-intu-blue text-white text-[12px] font-black uppercase tracking-[0.4em] rounded-2xl hover:bg-slate-900 transition-all shadow-xl shadow-blue-100 active:scale-[0.98] flex items-center justify-center gap-3">
+                <i class="fas fa-save"></i> {{ boton|default:'Confirmar Registro' }}
             </button>
         </div>
     </form>
 </div>
 
+<style>
+    @keyframes fade-in { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fade-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    input:focus, select:focus, textarea:focus { border-color: transparent !important; }
+</style>
+
 <script>
-    // --- ELEMENTOS ---
     const typeSelector = document.getElementById('tipo_doc_selector');
     const visualPrefix = document.getElementById('visual-prefix');
     const docInput = document.getElementById('doc_number_input');
@@ -183,24 +196,22 @@
     const API_TERRITORIO = '/configuracion-territorio/ajax';
     const API_CHECK_DOC = '/beneficiarios/api/check-documento/';
 
-    // --- LÓGICA DE DOCUMENTO Y VALIDACIÓN EN TIEMPO REAL ---
     function updatePrefix() {
         const selectedValue = typeSelector.value;
         visualPrefix.innerText = selectedValue + '-';
-        docInput.style.paddingLeft = (visualPrefix.offsetWidth + 10) + 'px';
+        docInput.style.paddingLeft = (visualPrefix.offsetWidth + 16) + 'px';
     }
 
     let typingTimer;
     docInput.addEventListener('input', function() {
-        this.value = this.value.replace(/[^0-9]/g, ''); // Solo números
-        
+        this.value = this.value.replace(/[^0-9]/g, '');
         clearTimeout(typingTimer);
         errorMsg.classList.add('hidden');
         docInput.classList.remove('ring-2', 'ring-red-500', 'bg-red-50');
         submitBtn.disabled = false;
-        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        submitBtn.classList.remove('opacity-50', 'grayscale');
 
-        if (this.value.length > 5) { // Validar después de 6 dígitos
+        if (this.value.length > 5) {
             typingTimer = setTimeout(async () => {
                 try {
                     const response = await fetch(`${API_CHECK_DOC}?doc_id=${docInput.value}`);
@@ -209,7 +220,7 @@
                         errorMsg.classList.remove('hidden');
                         docInput.classList.add('ring-2', 'ring-red-500', 'bg-red-50');
                         submitBtn.disabled = true;
-                        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        submitBtn.classList.add('opacity-50', 'grayscale');
                     }
                 } catch (e) { console.error("Error validando documento"); }
             }, 500);
@@ -219,12 +230,12 @@
     typeSelector.addEventListener('change', updatePrefix);
     window.addEventListener('DOMContentLoaded', updatePrefix);
 
-    // --- LÓGICA TERRITORIAL ---
     function resetSelect(field, message) {
         if (!field) return;
         field.innerHTML = `<option value="">${message}</option>`;
         field.disabled = true;
         field.classList.add('opacity-50');
+        field.classList.remove('bg-white');
     }
 
     function enableSelect(field, label) {
@@ -232,20 +243,18 @@
         field.innerHTML = `<option value="">Seleccione ${label}...</option>`;
         field.disabled = false;
         field.classList.remove('opacity-50');
+        field.classList.add('bg-white');
     }
 
     async function cargarDatos(url, field, label) {
         try {
             const response = await fetch(url);
-            if (!response.ok) throw new Error();
             const data = await response.json();
             enableSelect(field, label);
             data.forEach(item => {
                 field.innerHTML += `<option value="${item.id}">${item.nombre}</option>`;
             });
-        } catch (error) {
-            resetSelect(field, "Error al cargar");
-        }
+        } catch (error) { resetSelect(field, "Error al cargar"); }
     }
 
     fields.estado.addEventListener('change', function() {

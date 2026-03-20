@@ -3,159 +3,181 @@
 {% block title %}Inteligencia de Datos | SISI-INTU{% endblock %}
 
 {% block content %}
-<div class="max-w-[1600px] mx-auto animate-fade-in pb-10 px-4 sm:px-6">
+<div class="max-w-[1600px] mx-auto animate-fade-in pb-16 px-4 sm:px-6">
 
     {# --- ENCABEZADO --- #}
-    <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div class="flex items-center gap-5">
-            <div class="w-16 h-16 bg-intu-blue text-white rounded-[1.5rem] flex items-center justify-center shadow-xl shadow-blue-100 ring-4 ring-white">
-                <i class="fas fa-chart-line text-2xl"></i>
-            </div>
+    <div class="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-8">
+        <div class="flex items-start gap-6">
+            <a href="{% url 'beneficiarios:lista' %}" 
+               class="h-16 w-16 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-md transition-all duration-300 active:scale-90 group mt-1">
+                <i class="fas fa-arrow-left text-xl group-hover:-translate-x-1 transition-transform"></i>
+            </a>
+
             <div>
-                <a href="{% url 'beneficiarios:lista' %}" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-intu-blue transition flex items-center mb-1">
-                    <i class="fas fa-arrow-left mr-2"></i> Volver al Censo
-                </a>
-                <h1 class="text-3xl font-black text-slate-900 uppercase tracking-tighter">Reporte Analítico de Gestión</h1>
-                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-                    Monitoreo en tiempo real: <span class="text-intu-red">Territorio y Operaciones</span>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em] italic">Panel de Control</span>
+                </div>
+                <h1 class="text-4xl font-black text-intu-blue uppercase tracking-tighter leading-none">
+                    Reporte <span class="text-intu-red italic">Analítico</span> de Gestión
+                </h1>
+                <p class="text-[13px] font-bold text-slate-500 mt-2">
+                    Monitoreo en tiempo real de <span class="text-slate-900">Territorio y Operaciones</span>
                 </p>
             </div>
         </div>
     </div>
 
-    {# --- FILA 1: KPIs PRINCIPALES --- #}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Beneficiarios</p>
-            <h3 class="text-4xl font-black text-slate-900">{{ total_beneficiarios }}</h3>
-            <p class="text-[9px] font-bold text-intu-blue mt-2 uppercase tracking-tighter italic">Población total registrada</p>
+    {# --- FILA 1: KPIs COMPACTOS Y MINIMALISTAS --- #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        
+        {# Total Ciudadanos #}
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-intu-blue flex items-center justify-center shrink-0">
+                <i class="fas fa-users text-lg"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ciudadanos</p>
+                <h3 class="text-2xl font-black text-slate-900 leading-none">{{ total_beneficiarios }}</h3>
+            </div>
         </div>
 
-        <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 border-l-4 border-l-intu-red">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado con mayor carga</p>
-            {# CAMBIO: Usamos .estado__nombre #}
-            <h3 class="text-2xl font-black text-slate-900 uppercase">{{ estado_top.estado__nombre|default:"N/A" }}</h3>
-            <p class="text-[11px] font-bold text-intu-red">{{ estado_top.total|default:"0" }} Expedientes</p>
+        {# Estado Líder #}
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-red-50 text-intu-red flex items-center justify-center shrink-0">
+                <i class="fas fa-map-marker-alt text-lg"></i>
+            </div>
+            <div class="overflow-hidden">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carga Máxima</p>
+                <h3 class="text-[15px] font-black text-slate-900 truncate uppercase">{{ estado_top.estado__nombre|default:"N/A" }}</h3>
+                <p class="text-[11px] font-bold text-intu-red leading-none">{{ estado_top.total|default:"0" }} <span class="text-[9px] uppercase">Expedientes</span></p>
+            </div>
         </div>
 
-        <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Motivo predominante</p>
-            <h3 class="text-[13px] font-black text-slate-900 uppercase leading-tight">{{ visitas_por_tipo.0.motivo|default:"SIN REGISTROS" }}</h3>
-            <p class="text-[11px] font-bold text-slate-500 mt-1">{{ visitas_por_tipo.0.total|default:"0" }} Solicitudes</p>
+        {# Motivo #}
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-clipboard-list text-lg"></i>
+            </div>
+            <div class="overflow-hidden">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tendencia</p>
+                <h3 class="text-[14px] font-black text-slate-800 truncate uppercase leading-tight">{{ visitas_por_tipo.0.motivo|default:"S/D" }}</h3>
+            </div>
         </div>
 
-        <div class="bg-slate-900 p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Visitas Ejecutadas</p>
-            <h3 class="text-4xl font-black text-white">{{ total_visitas|default:"0" }}</h3>
-            <p class="text-[9px] font-bold text-emerald-400 mt-2 uppercase tracking-tighter">Gestiones de campo</p>
+        {# Gestiones #}
+        <div class="bg-slate-900 p-5 rounded-2xl flex items-center gap-4 shadow-lg shadow-slate-200/50">
+            <div class="w-12 h-12 rounded-xl bg-white/10 text-emerald-400 flex items-center justify-center shrink-0">
+                <i class="fas fa-bolt text-lg"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gestiones</p>
+                <h3 class="text-2xl font-black text-white leading-none">{{ total_visitas|default:"0" }}</h3>
+            </div>
         </div>
+
     </div>
 
-    {# --- FILA 2: DISTRIBUCIÓN TERRITORIAL Y GESTIÓN POR OPERADOR --- #}
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
+    {# --- FILA 2: DISTRIBUCIÓN TERRITORIAL Y PRODUCTIVIDAD --- #}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
         
-        {# Distribución Geográfica #}
-        <div class="lg:col-span-7 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/30">
-            <div class="flex items-center gap-3 mb-8">
-                <div class="w-2 h-6 bg-intu-red rounded-full"></div>
-                <h3 class="text-[12px] font-black uppercase text-slate-800 tracking-widest">Densidad de Beneficiarios por Estado</h3>
+        {# Densidad por Estado #}
+        <div class="lg:col-span-7 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm">
+            <div class="flex items-center justify-between mb-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-6 bg-intu-red rounded-full"></div>
+                    <h3 class="text-[13px] font-black uppercase text-slate-800 tracking-widest">Densidad por Estado</h3>
+                </div>
             </div>
-            <div class="space-y-6">
+            
+            <div class="space-y-8">
                 {% for est in visitas_por_estado %}
                 <div class="group">
-                    <div class="flex justify-between items-center mb-2">
-                        {# CAMBIO: Ahora imprimimos el nombre del estado directamente #}
-                        <span class="text-[11px] font-black text-slate-700 uppercase tracking-tight">
-                            {{ est.estado__nombre|default:"SIN NOMBRE" }}
-                        </span>
-                        <span class="text-[11px] font-black text-intu-blue">{{ est.total }}</span>
+                    <div class="flex justify-between items-end mb-3">
+                        <span class="text-[13px] font-black text-slate-700 uppercase tracking-tight">{{ est.estado__nombre|default:"No Especificado" }}</span>
+                        <span class="text-[14px] font-black text-intu-blue">{{ est.total }}</span>
                     </div>
-                    <div class="h-2.5 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                        <div class="bg-slate-900 group-hover:bg-intu-red transition-all duration-700 h-full" 
+                    <div class="h-3 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-[2px]">
+                        <div class="bg-gradient-to-r from-slate-700 to-slate-900 group-hover:from-intu-red group-hover:to-red-700 transition-all duration-1000 h-full rounded-full" 
                              style="width: {% if total_beneficiarios > 0 %}{% widthratio est.total total_beneficiarios 100 %}{% else %}0{% endif %}%"></div>
                     </div>
                 </div>
                 {% empty %}
-                <div class="text-center py-10"><p class="text-xs font-bold text-slate-400 uppercase">No hay datos geográficos</p></div>
+                <div class="py-20 text-center"><p class="text-sm font-bold text-slate-300 uppercase italic">Esperando datos geográficos...</p></div>
                 {% endfor %}
             </div>
         </div>
 
-        {# Gestión por Operador #}
-        <div class="lg:col-span-5 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/30">
-            <div class="flex items-center gap-3 mb-8">
+        {# Productividad #}
+        <div class="lg:col-span-5 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-3 mb-10">
                 <div class="w-2 h-6 bg-intu-blue rounded-full"></div>
-                <h3 class="text-[12px] font-black uppercase text-slate-800 tracking-widest">Productividad del Personal</h3>
+                <h3 class="text-[13px] font-black uppercase text-slate-800 tracking-widest">Productividad de Analistas</h3>
             </div>
             <div class="space-y-4">
-{# --- SECCIÓN DE PRODUCTIVIDAD --- #}
-{% for op in gestion_por_operador %}
-<div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-intu-blue/20 hover:bg-white transition-all">
-    <div class="flex items-center gap-4">
-        <div class="w-10 h-10 rounded-full bg-intu-blue text-white flex items-center justify-center font-black text-xs uppercase">
-            {# Iniciales del Operador #}
-            {{ op.registrado_por__username|slice:":2" }}
-        </div>
-        <div>
-            <p class="text-[11px] font-black text-slate-800 uppercase leading-none">
-                {{ op.registrado_por__username }}
-            </p>
-            <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">Gestiones Realizadas</p>
-        </div>
-    </div>
-    <div class="text-right">
-        <span class="text-lg font-black text-slate-900">{{ op.total }}</span>
-        <p class="text-[8px] font-black text-intu-blue uppercase tracking-tighter">Acciones</p>
-    </div>
-</div>
-{% endfor %}
+                {% for op in gestion_por_operador %}
+                <div class="flex items-center justify-between p-5 bg-slate-50 rounded-[1.5rem] border border-transparent hover:border-intu-blue/20 hover:bg-white transition-all group">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center font-black text-[14px] text-intu-blue shadow-sm group-hover:bg-intu-blue group-hover:text-white transition-all">
+                            {{ op.registrado_por__username|slice:":2"|upper }}
+                        </div>
+                        <div>
+                            <p class="text-[14px] font-black text-slate-800 uppercase leading-none mb-1">
+                                {{ op.registrado_por__username }}
+                            </p>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">Analista de Datos</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-2xl font-black text-slate-900 leading-none block">{{ op.total }}</span>
+                        <span class="text-[10px] font-black text-intu-blue uppercase italic">Acciones</span>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
 
-    {# --- FILA 3: DESGLOSE POR MOTIVO Y GÉNERO --- #}
+    {# --- FILA 3: MOTIVOS Y GÉNERO --- #}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {# Motivos de Visita #}
-        <div class="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/30">
-            <div class="flex items-center gap-3 mb-8">
+        {# Motivos #}
+        <div class="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-3 mb-10">
                 <div class="w-2 h-6 bg-slate-900 rounded-full"></div>
-                <h3 class="text-[12px] font-black uppercase text-slate-800 tracking-widest">Frecuencia por Motivo</h3>
+                <h3 class="text-[13px] font-black uppercase text-slate-800 tracking-widest">Frecuencia por Motivo</h3>
             </div>
-            <div class="grid grid-cols-1 gap-3">
+            <div class="grid grid-cols-1 gap-4">
                 {% for m in visitas_por_tipo %}
-                <div class="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl group hover:shadow-lg transition-all">
-                    <span class="text-[10px] font-black text-slate-600 uppercase">{{ m.motivo|default:"NO ESPECIFICADO" }}</span>
-                    <span class="text-[11px] font-black text-white bg-slate-900 px-3 py-1 rounded-lg group-hover:bg-intu-red transition-colors">{{ m.total }}</span>
+                <div class="flex items-center justify-between p-5 bg-white border border-slate-100 rounded-2xl group hover:border-intu-red transition-all shadow-sm hover:shadow-md">
+                    <span class="text-[12px] font-black text-slate-700 uppercase tracking-tight">{{ m.motivo|default:"No especificado" }}</span>
+                    <span class="text-[14px] font-black text-white bg-slate-900 px-4 py-1.5 rounded-xl group-hover:bg-intu-red transition-colors">{{ m.total }}</span>
                 </div>
-                {% empty %}
-                <p class="text-center py-10 text-xs text-slate-400 font-bold uppercase tracking-widest">Sin solicitudes registradas</p>
                 {% endfor %}
             </div>
         </div>
 
-        {# Distribución por Género #}
-        <div class="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/30">
-            <div class="flex items-center gap-3 mb-8">
+        {# Género #}
+        <div class="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-3 mb-10">
                 <div class="w-2 h-6 bg-emerald-500 rounded-full"></div>
-                <h3 class="text-[12px] font-black uppercase text-slate-800 tracking-widest">Demografía por Género</h3>
+                <h3 class="text-[13px] font-black uppercase text-slate-800 tracking-widest">Demografía de Género</h3>
             </div>
-            <div class="flex flex-col gap-6">
+            <div class="space-y-10 py-4">
                 {% for g in genero_data %}
-                <div class="relative">
-                    <div class="flex justify-between text-[11px] font-black uppercase mb-2">
-                        <span class="text-slate-600">
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[13px] font-black text-slate-700 uppercase">
                             {% if g.genero == 'M' or g.genero == 'MASCULINO' %} 
-                                <i class="fas fa-mars mr-1 text-intu-blue"></i> MASCULINO
+                                <i class="fas fa-mars mr-2 text-intu-blue"></i> Masculino
                             {% elif g.genero == 'F' or g.genero == 'FEMENINO' %} 
-                                <i class="fas fa-venus mr-1 text-pink-500"></i> FEMENINO
+                                <i class="fas fa-venus mr-2 text-pink-500"></i> Femenino
                             {% else %} 
-                                <i class="fas fa-genderless mr-1 text-slate-400"></i> OTRO / NO ESPECIFICADO ({{ g.genero }})
+                                <i class="fas fa-genderless mr-2 text-slate-400"></i> Otro / No definido
                             {% endif %}
                         </span>
-                        <span class="text-slate-900 font-black">{{ g.total }}</span>
+                        <span class="text-xl font-black text-slate-900">{{ g.total }}</span>
                     </div>
-                    <div class="h-4 w-full bg-slate-50 rounded-lg overflow-hidden border border-slate-100 shadow-inner">
-                        <div class="h-full transition-all duration-1000
+                    <div class="h-5 w-full bg-slate-50 rounded-xl overflow-hidden border border-slate-100 shadow-inner">
+                        <div class="h-full transition-all duration-1000 shadow-lg
                             {% if g.genero == 'M' or g.genero == 'MASCULINO' %} bg-intu-blue 
                             {% elif g.genero == 'F' or g.genero == 'FEMENINO' %} bg-pink-500 
                             {% else %} bg-slate-300 {% endif %}" 
@@ -168,4 +190,9 @@
         </div>
     </div>
 </div>
+
+<style>
+    @keyframes fade-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+</style>
 {% endblock %}

@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
             name='DocumentoExpediente',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('archivo', models.FileField(upload_to=apps.beneficiarios.models.ruta_expediente_digital)),
+                ('archivo', models.FileField(upload_to=apps.beneficiarios.models.ruta_expediente_universal)),
                 ('nombre_documento', models.CharField(help_text='Ej: Copia de CI, RIF Vigente, etc.', max_length=100)),
                 ('fecha_subida', models.DateTimeField(auto_now_add=True)),
                 ('beneficiario', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='documentos', to='beneficiarios.beneficiario')),

@@ -26,8 +26,9 @@ INSTALLED_APPS = [
     # NUEVAS APPS:
     'apps.recibos.apps.RecibosConfig',
     'apps.users',
-    'apps.beneficiarios',
-    'apps.contratos',
+    'apps.beneficiarios',#Tambien encargada de los expedientes de los beneficiarios y personal
+    'apps.personal',#App para gestion de personal
+    'apps.contratos', 
     #'apps.bienes',
     'apps.territorio',#app para gestion de estados, municipios, ciudades, parroquias y comunas
 ]
@@ -117,5 +118,5 @@ SITE_DOMAIN = os.getenv('SITE_DOMAIN', 'http://127.0.0.1:8000')
 
 # --- CONFIGURACIÓN DE SESIÓN POR INACTIVIDAD ---
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_AGE =  3000  # 50 minutos en segundos temporalmente para pruebas, ajustar a 300 para producción (5 minutos)
+SESSION_COOKIE_AGE =  5 * 60
 SESSION_SAVE_EVERY_REQUEST = True
