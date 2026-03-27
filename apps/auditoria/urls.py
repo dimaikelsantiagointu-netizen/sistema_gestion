@@ -10,4 +10,5 @@ urlpatterns = [
     # Rutas para generación de reportes (Punto 5 de requerimientos)
     path('exportar/excel/', views.exportar_auditoria_excel, name='exportar_excel'),
     path('exportar/pdf/', views.exportar_auditoria_pdf, name='exportar_pdf'),
+    path('dashboard/', views.estadisticas_auditoria, name='estadisticas_auditoria'),
 ]
