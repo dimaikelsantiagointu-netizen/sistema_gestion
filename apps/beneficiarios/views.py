@@ -7,13 +7,20 @@ from django.db.models import Q, Count
 from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
-from django.contrib.auth.decorators import login_required
-from .models import Beneficiario, DocumentoExpediente, Visita
-from django.core.paginator import Paginator
-from apps.territorio.models import Estado, Municipio, Parroquia
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import IntegrityError
 
-logger = logging.getLogger(__name__)
+# Importación de modelos locales
+from .models import Beneficiario, DocumentoExpediente, Visita
+# Importación de modelos de territorio
+from apps.territorio.models import Estado, Municipio, Parroquia, Ciudad, Comuna
+
+# Configuración del Logger vinculado a la configuración de settings.py
+logger = logging.getLogger('apps.recibos')
+
+# Función de verificación para acceso administrativo
+def es_administrador(user):
+    return user.is_authenticated and (user.is_superuser or getattr(user, 'rol', '') == 'ADMINISTRADOR')
 
 # ================================================================
 # 1. SECCIÓN: GESTIÓN INTEGRAL DE BENEFICIARIOS (CRUD Y LISTADOS)
@@ -30,7 +37,10 @@ def lista_beneficiarios(request):
     hoy_local = timezone.localtime(timezone.now()).date()
 
     if ha_filtrado:
-        beneficiarios_list = Beneficiario.objects.select_related('estado', 'municipio', 'parroquia').all()
+        # select_related optimizado para incluir la nueva jerarquía territorial
+        beneficiarios_list = Beneficiario.objects.select_related(
+            'estado', 'municipio', 'parroquia', 'ciudad', 'comuna'
+        ).all()
         
         if query:
             beneficiarios_list = beneficiarios_list.filter(
@@ -49,6 +59,7 @@ def lista_beneficiarios(request):
             
         beneficiarios_list = beneficiarios_list.order_by('nombre_completo')
     else:
+        # Por rendimiento, no cargamos nada si no hay filtros activos
         beneficiarios_list = Beneficiario.objects.none()
 
     total_beneficiarios = Beneficiario.objects.count()
@@ -69,6 +80,7 @@ def crear_beneficiario(request):
     if request.method == 'POST':
         doc_id = request.POST.get('documento_identidad')
         
+        # Validación de duplicados antes de intentar guardar
         if Beneficiario.objects.filter(documento_identidad=doc_id).exists():
             messages.error(request, f"Error: Ya existe un ciudadano registrado con el documento {doc_id}.")
             context = {
@@ -90,6 +102,7 @@ def crear_beneficiario(request):
                 telefono=request.POST.get('telefono'),
                 email=request.POST.get('email'),
                 direccion_especifica=request.POST.get('direccion_especifica'),
+                # Campos territoriales completos
                 estado_id=request.POST.get('estado') or None,
                 municipio_id=request.POST.get('municipio') or None,
                 parroquia_id=request.POST.get('parroquia') or None,
@@ -97,12 +110,16 @@ def crear_beneficiario(request):
                 comuna_id=request.POST.get('comuna') or None,
             )
             beneficiario.save()
+            logger.info(f"CIUDADANO REGISTRADO: {beneficiario.nombre_completo} (C.I: {doc_id}) por {request.user.username}")
             messages.success(request, f"Ciudadano {beneficiario.nombre_completo} registrado con éxito.")
             return redirect('beneficiarios:lista')
 
         except IntegrityError:
             messages.error(request, "Error de integridad: El documento ya está en uso.")
             return redirect('beneficiarios:crear')
+        except Exception as e:
+            logger.error(f"Error al crear beneficiario: {str(e)}")
+            messages.error(request, f"Error inesperado al guardar: {e}")
 
     context = {
         'estados': Estado.objects.all().order_by('nombre'),
@@ -120,10 +137,21 @@ def editar_beneficiario(request, id):
             beneficiario.tipo_documento = request.POST.get('tipo_documento')
             beneficiario.documento_identidad = request.POST.get('documento_identidad')
             beneficiario.nombre_completo = request.POST.get('nombre_completo')
+            beneficiario.genero = request.POST.get('genero')
+            beneficiario.discapacidad = request.POST.get('discapacidad') == 'on'
             beneficiario.telefono = request.POST.get('telefono')
             beneficiario.email = request.POST.get('email')
-            beneficiario.direccion = request.POST.get('direccion')
+            beneficiario.direccion_especifica = request.POST.get('direccion_especifica')
+            
+            # Actualización de la jerarquía territorial
+            beneficiario.estado_id = request.POST.get('estado') or None
+            beneficiario.municipio_id = request.POST.get('municipio') or None
+            beneficiario.parroquia_id = request.POST.get('parroquia') or None
+            beneficiario.ciudad_id = request.POST.get('ciudad') or None
+            beneficiario.comuna_id = request.POST.get('comuna') or None
+            
             beneficiario.save()
+            logger.info(f"CIUDADANO ACTUALIZADO: {beneficiario.nombre_completo} por {request.user.username}")
             messages.success(request, "Datos actualizados correctamente.")
             return redirect('beneficiarios:lista')
         except Exception as e:
@@ -132,7 +160,10 @@ def editar_beneficiario(request, id):
     return render(request, 'beneficiarios/formulario.html', {
         'titulo': 'Editar Beneficiario',
         'boton': 'Guardar Cambios',
-        'beneficiario': beneficiario
+        'beneficiario': beneficiario,
+        'estados': Estado.objects.all().order_by('nombre'),
+        'TIPO_DOC_CHOICES': Beneficiario.TIPO_DOC_CHOICES,
+        'GENERO_CHOICES': Beneficiario.GENERO_CHOICES,
     })
 
 @login_required
@@ -140,7 +171,8 @@ def eliminar_beneficiario(request, id):
     beneficiario = get_object_or_404(Beneficiario, id=id)
     nombre = beneficiario.nombre_completo
     beneficiario.delete()
-    messages.warning(request, f"Beneficiario {nombre} eliminado.")
+    logger.warning(f"CIUDADANO ELIMINADO: {nombre} por {request.user.username}")
+    messages.warning(request, f"Beneficiario {nombre} eliminado del sistema.")
     return redirect('beneficiarios:lista')
 
 @login_required
@@ -175,14 +207,14 @@ def detalle_beneficiario(request, id):
     return render(request, 'beneficiarios/detalle.html', {
         'beneficiario': beneficiario,
         'visitas': visitas,
-        'titulo_pagina': 'Historial de Visitas'
+        'titulo_pagina': 'Historial de Atención'
     })
 
 # ================================================================
 # 2. SECCIÓN: ESTADÍSTICAS, EXPORTACIÓN Y CANALES API (AJAX)
 # ================================================================
 
-@login_required
+@user_passes_test(es_administrador)
 def beneficiarios_estadisticas(request):
     total_beneficiarios = Beneficiario.objects.count()
     total_visitas = Visita.objects.count()
@@ -227,61 +259,58 @@ def exportar_excel(request):
         white_font = Font(color="FFFFFF", bold=True, size=11)
         title_font = Font(bold=True, size=14, color="1E293B")
 
+        # Hoja 1: Resumen
         ws_stats = wb.active
         ws_stats.title = "Resumen Ejecutivo"
-        ws_stats["A1"] = "INFORME ESTRATÉGICO DE GESTIÓN"
+        ws_stats["A1"] = "INFORME ESTRATÉGICO DE GESTIÓN - SIG INTU"
         ws_stats["A1"].font = title_font
         ws_stats.append([]) 
         ws_stats.append(["INDICADOR", "VALOR ACTUAL"])
         ws_stats.append(["Total Beneficiarios", Beneficiario.objects.count()])
         ws_stats.append(["Total de Visitas", Visita.objects.count()])
 
+        # Hoja 2: Base de Datos Completa
         ws_ben = wb.create_sheet(title="Base de Beneficiarios")
-        headers_ben = ['TIPO ID', 'DOCUMENTO', 'NOMBRE COMPLETO', 'TELÉFONO', 'EMAIL', 'DIRECCIÓN ESPECÍFICA']
+        headers_ben = ['TIPO ID', 'DOCUMENTO', 'NOMBRE COMPLETO', 'TELÉFONO', 'ESTADO', 'MUNICIPIO', 'CIUDAD', 'PARROQUIA', 'COMUNA']
         ws_ben.append(headers_ben)
-        beneficiarios = Beneficiario.objects.all() 
+        
+        beneficiarios = Beneficiario.objects.select_related('estado', 'municipio', 'ciudad', 'parroquia', 'comuna').all()
         for b in beneficiarios:
             ws_ben.append([
                 b.tipo_documento,
                 b.documento_identidad,
                 b.nombre_completo.upper() if b.nombre_completo else "SIN NOMBRE",
                 b.telefono or "N/A",
-                b.email or "Sin correo",
-                b.direccion_especifica or "Sin dirección"
+                str(b.estado.nombre) if b.estado else "N/A",
+                str(b.municipio.nombre) if b.municipio else "N/A",
+                str(b.ciudad.nombre) if b.ciudad else "N/A",
+                str(b.parroquia.nombre) if b.parroquia else "N/A",
+                str(b.comuna.nombre) if b.comuna else "N/A"
             ])
 
-        ws_visitas = wb.create_sheet(title="Historial de Visitas")
-        headers_vis = ['FECHA Y HORA', 'BENEFICIARIO', 'CÉDULA', 'MOTIVO', 'ATENDIDO POR']
-        ws_visitas.append(headers_vis)
-        visitas = Visita.objects.select_related('beneficiario', 'registrado_por').all()
-        for v in visitas:
-            f_fecha = v.fecha_registro.strftime("%d/%m/%Y %H:%M") if hasattr(v, 'fecha_registro') and v.fecha_registro else "N/A"
-            ws_visitas.append([
-                f_fecha,
-                v.beneficiario.nombre_completo,
-                v.beneficiario.documento_identidad,
-                v.get_motivo_display(),
-                v.registrado_por.username if v.registrado_por else "Sistema"
-            ])
-
+        # Aplicar estilos a todas las hojas
         for sheet in wb.worksheets:
             for row in sheet.iter_rows(min_row=1, max_row=1):
-                for cell in row:
-                    cell.fill = header_fill
-                    cell.font = white_font
+                if sheet.title != "Resumen Ejecutivo" or row[0].row > 2:
+                    for cell in row:
+                        cell.fill = header_fill
+                        cell.font = white_font
             
             for column_cells in sheet.columns:
                 length = max(len(str(cell.value)) for cell in column_cells)
                 sheet.column_dimensions[get_column_letter(column_cells[0].column)].width = length + 5
 
+        logger.info(f"REPORTE EXCEL GENERADO: por {request.user.username}")
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename="Reporte_SIG_INTU.xlsx"'
+        response['Content-Disposition'] = 'attachment; filename="Reporte_SIG_INTU_Beneficiarios.xlsx"'
         wb.save(response)
         return response
     except Exception as e:
+        logger.error(f"Error al exportar Excel: {str(e)}")
         messages.error(request, f"Error técnico al generar Excel: {str(e)}")
         return redirect('beneficiarios:lista')
 
+# APIs TERRITORIALES PARA CARGA DINÁMICA (AJAX)
 def api_get_municipios(request, estado_id):
     municipios = Municipio.objects.filter(estado_id=estado_id).values('id', 'nombre').order_by('nombre')
     return JsonResponse(list(municipios), safe=False)
@@ -289,6 +318,14 @@ def api_get_municipios(request, estado_id):
 def api_get_parroquias(request, municipio_id):
     parroquias = Parroquia.objects.filter(municipio_id=municipio_id).values('id', 'nombre').order_by('nombre')
     return JsonResponse(list(parroquias), safe=False)
+
+def api_get_ciudades(request, estado_id):
+    ciudades = Ciudad.objects.filter(estado_id=estado_id).values('id', 'nombre').order_by('nombre')
+    return JsonResponse(list(ciudades), safe=False)
+
+def api_get_comunas(request, parroquia_id):
+    comunas = Comuna.objects.filter(parroquia_id=parroquia_id).values('id', 'nombre').order_by('nombre')
+    return JsonResponse(list(comunas), safe=False)
 
 @login_required
 def buscar_beneficiario(request):
@@ -308,13 +345,11 @@ def buscar_beneficiario(request):
 def buscar_beneficiario_api(request):
     query = request.GET.get('cedula', '').strip()
     results = []
-    
     if len(query) >= 2:
         beneficiarios = Beneficiario.objects.filter(
             Q(documento_identidad__icontains=query) | 
             Q(nombre_completo__icontains=query)
         )[:5]  
-        
         for b in beneficiarios:
             results.append({
                 'id': b.id,
@@ -322,7 +357,6 @@ def buscar_beneficiario_api(request):
                 'cedula': b.documento_identidad,
                 'tipo_doc': b.tipo_documento
             })
-            
     return JsonResponse({'encontrado': len(results) > 0, 'results': results})
 
 def check_documento(request):
@@ -335,11 +369,7 @@ def check_documento(request):
 # ================================================================
 
 def gestion_documental(request):
-    """
-    Vista del Archivo Central con soporte para Beneficiarios y Personal.
-    """
-    from apps.personal.models import Personal  # Importación local para evitar conflictos
-    
+    from apps.personal.models import Personal  # Importación local para evitar circularidad
     query = request.GET.get('q', '').strip()
     tipo_archivo = request.GET.get('tipo', 'beneficiario')
     
@@ -351,33 +381,28 @@ def gestion_documental(request):
         personal_list = Personal.objects.all().order_by('apellidos')
         if query:
             personal_list = personal_list.filter(
-                Q(nombres__icontains=query) | 
-                Q(apellidos__icontains=query) | 
-                Q(cedula__icontains=query)
+                Q(nombres__icontains=query) | Q(apellidos__icontains=query) | Q(cedula__icontains=query)
             )
         total_registros = personal_list.count()
     else:
         beneficiarios_list = Beneficiario.objects.all().order_by('nombre_completo')
         if query:
             beneficiarios_list = beneficiarios_list.filter(
-                Q(nombre_completo__icontains=query) | 
-                Q(documento_identidad__icontains=query)
+                Q(nombre_completo__icontains=query) | Q(documento_identidad__icontains=query)
             )
         total_registros = beneficiarios_list.count()
 
-    context = {
+    return render(request, 'beneficiarios/gestion_documental.html', {
         'beneficiarios': beneficiarios_list,
         'personal_list': personal_list,
         'query': query,
         'total_beneficiarios': total_registros,
         'tipo_archivo': tipo_archivo,
-    }
-    return render(request, 'beneficiarios/gestion_documental.html', context)
+    })
 
 @login_required
 def expediente_beneficiario(request, id):
     beneficiario = get_object_or_404(Beneficiario, id=id)
-    
     if request.method == 'POST':
         archivos_subidos = request.FILES.getlist('archivos')
         nombre_descriptivo = request.POST.get('nombre_documento')
@@ -395,8 +420,7 @@ def expediente_beneficiario(request, id):
                     )
                 else:
                     messages.error(request, f"El archivo {f.name} excede los 5MB.")
-            
-            messages.success(request, "Proceso de carga finalizado.")
+            messages.success(request, "Documentación cargada correctamente.")
             return redirect('beneficiarios:expediente', id=beneficiario.id)
 
     documentos = beneficiario.documentos.all()
@@ -405,21 +429,16 @@ def expediente_beneficiario(request, id):
         'documentos': documentos
     })
 
-def expediente_detalle(request, pk):
-    beneficiario = get_object_or_404(Beneficiario, pk=pk)
-    context = {
-        'beneficiario': beneficiario,
-    }
-    return render(request, 'beneficiarios/expediente_archivo.html', context)
-
 @login_required
 def eliminar_documento(request, doc_id):
     documento = get_object_or_404(DocumentoExpediente, id=doc_id)
     b_id = documento.beneficiario.id  
-    
     if documento.archivo:
         documento.archivo.delete(save=False)
-    
     documento.delete()
-    messages.success(request, "Archivo eliminado correctamente.")
+    messages.success(request, "Archivo eliminado del expediente.")
     return redirect('beneficiarios:expediente', id=b_id)
+
+def expediente_detalle(request, pk):
+    beneficiario = get_object_or_404(Beneficiario, pk=pk)
+    return render(request, 'beneficiarios/expediente_archivo.html', {'beneficiario': beneficiario})

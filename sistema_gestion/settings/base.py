@@ -124,17 +124,16 @@ SESSION_COOKIE_AGE =  5 * 60
 SESSION_SAVE_EVERY_REQUEST = True
 
 # ==============================================================================
-# 6. CONFIGURACIÓN DE LOGGING (SOLUCIÓN A POLUCIÓN DE LOGS)
+# 6. CONFIGURACIÓN DE LOGGING (VERSIÓN FILTRADA)
 # ==============================================================================
 
-# Crear carpeta de logs si no existe
 LOGS_DIR = os.path.join(BASE_DIR, 'logs')
 if not os.path.exists(LOGS_DIR):
     os.makedirs(LOGS_DIR)
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False, # No desactivar loggers por defecto de Django
+    'disable_existing_loggers': False,
     'formatters': {
         'estandar': {
             'format': '[{asctime}] {levelname} [{name}] {message}',
@@ -142,39 +141,47 @@ LOGGING = {
         },
     },
     'handlers': {
-        # Manejador para la App de Recibos
         'file_recibos': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': os.path.join(LOGS_DIR, 'recibos.log'),
             'formatter': 'estandar',
         },
-        # Manejador para la App de Auditoría (Bitácora Global)
         'file_auditoria': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': os.path.join(LOGS_DIR, 'auditoria_global.log'),
             'formatter': 'estandar',
         },
-        # Consola para desarrollo
         'console': {
-            'level': 'DEBUG',
+            'level': 'INFO', # <--- CAMBIADO de DEBUG a INFO para evitar mensajes basura
             'class': 'logging.StreamHandler',
             'formatter': 'estandar',
         },
     },
     'loggers': {
-        # Logger específico para Recibos
+        # Recibos: Visible en consola y archivo
         'apps.recibos': {
-            'handlers': ['file_recibos', 'console'] if DEBUG else ['file_recibos'],
+            'handlers': ['file_recibos', 'console'],
             'level': 'INFO',
-            'propagate': False, # <--- EVITA QUE EL LOG SUBA Y SE MEZCLE
+            'propagate': False,
         },
-        # Logger específico para Auditoría
+        # Auditoría: Solo a su archivo (Invisible en consola para no molestar)
         'apps.auditoria': {
-            'handlers': ['file_auditoria', 'console'] if DEBUG else ['file_auditoria'],
+            'handlers': ['file_auditoria'], # <--- QUITAMOS 'console' de aquí
             'level': 'INFO',
-            'propagate': False, # <--- EVITA QUE EL LOG SUBA Y SE MEZCLE
+            'propagate': False,
+        },
+        # SILENCIAR RUIDO EXTERNO (MarioA, Sesiones, etc.)
+        'apps.users': {
+            'level': 'WARNING', # Solo errores o advertencias
+            'handlers': ['console'],
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING', # Silencia el "Restaurando sesión" y logs internos
+            'propagate': False,
         },
     },
 }
