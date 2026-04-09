@@ -122,3 +122,59 @@ SITE_DOMAIN = os.getenv('SITE_DOMAIN', 'http://127.0.0.1:8000')
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE =  5 * 60
 SESSION_SAVE_EVERY_REQUEST = True
+
+# ==============================================================================
+# 6. CONFIGURACIÓN DE LOGGING (SOLUCIÓN A POLUCIÓN DE LOGS)
+# ==============================================================================
+
+# Crear carpeta de logs si no existe
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False, # No desactivar loggers por defecto de Django
+    'formatters': {
+        'estandar': {
+            'format': '[{asctime}] {levelname} [{name}] {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        # Manejador para la App de Recibos
+        'file_recibos': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOGS_DIR, 'recibos.log'),
+            'formatter': 'estandar',
+        },
+        # Manejador para la App de Auditoría (Bitácora Global)
+        'file_auditoria': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOGS_DIR, 'auditoria_global.log'),
+            'formatter': 'estandar',
+        },
+        # Consola para desarrollo
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'estandar',
+        },
+    },
+    'loggers': {
+        # Logger específico para Recibos
+        'apps.recibos': {
+            'handlers': ['file_recibos', 'console'] if DEBUG else ['file_recibos'],
+            'level': 'INFO',
+            'propagate': False, # <--- EVITA QUE EL LOG SUBA Y SE MEZCLE
+        },
+        # Logger específico para Auditoría
+        'apps.auditoria': {
+            'handlers': ['file_auditoria', 'console'] if DEBUG else ['file_auditoria'],
+            'level': 'INFO',
+            'propagate': False, # <--- EVITA QUE EL LOG SUBA Y SE MEZCLE
+        },
+    },
+}

@@ -27,7 +27,7 @@ from django.views.generic import ListView
 from django.db.models.functions import TruncDay, Cast
 from django.db.models import DateField
 from django.contrib.auth.decorators import login_required, user_passes_test
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('apps.recibos')
 # --- CONFIGURACIÓN DE RUTAS Y CONSTANTES (Mantener por si otras funciones lo usan) ---
 try:
     HEADER_IMAGE = os.path.join(

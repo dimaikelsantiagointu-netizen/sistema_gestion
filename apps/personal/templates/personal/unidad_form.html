@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-10 space-y-8 animate-fade-in">
+    
+    {# --- ENCABEZADO CON BOTÓN DE REGRESO --- #}
+    <div class="flex items-start gap-4 md:gap-6">
+        <a href="{% url 'personal:unidades_lista' %}" 
+           class="h-12 w-12 md:h-14 md:w-14 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
+            <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
+        </a>
+
+        <div>
+            <span class="text-[9px] md:text-[11px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1 md:mb-2 px-1 block italic">
+                Configuración de Estructura
+            </span>
+            <h1 class="text-2xl md:text-4xl font-black text-intu-blue uppercase tracking-tighter leading-none">
+                {% if form.instance.pk %}Editar{% else %}Nueva{% endif %} <span class="text-intu-red italic">Unidad</span>
+            </h1>
+            <p class="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase mt-3 md:mt-4 tracking-widest leading-relaxed">
+                Define los departamentos y divisiones para la asignación de personal
+            </p>
+        </div>
+    </div>
+
+    {# --- TARJETA DEL FORMULARIO --- #}
+    <div class="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden relative">
+        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-intu-blue to-intu-red"></div>
+        
+        <form method="POST" class="p-8 md:p-12 space-y-8">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 gap-8">
+                {% for field in form %}
+                <div class="space-y-3">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 italic">
+                        {{ field.label }}
+                    </label>
+                    
+                    <div class="relative">
+                        {# Renderizado del campo con clases de Tailwind #}
+                        {% if field.name == 'descripcion' %}
+                            <textarea name="{{ field.name }}" id="{{ field.id_for_label }}" rows="4" 
+                                class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-intu-blue/20 transition-all shadow-sm resize-none"
+                                placeholder="Escribe una breve descripción de las funciones de esta unidad...">{{ field.value|default_if_none:"" }}</textarea>
+                        {% else %}
+                            <input type="{{ field.field.widget.input_type|default:'text' }}" name="{{ field.name }}" id="{{ field.id_for_label }}" 
+                                value="{{ field.value|default_if_none:'' }}"
+                                class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-intu-blue/20 transition-all shadow-sm"
+                                placeholder="Ej: Dirección de Tecnología">
+                        {% endif %}
+
+                        {% if field.errors %}
+                        <div class="flex items-center gap-2 mt-2 ml-2 text-intu-red">
+                            <i class="fas fa-exclamation-circle text-[10px]"></i>
+                            <p class="text-[10px] font-black uppercase tracking-tight">{{ field.errors.0 }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {# --- BOTONES DE ACCIÓN --- #}
+            <div class="flex flex-col sm:flex-row items-center justify-end gap-4 pt-6 border-t border-slate-50">
+                <a href="{% url 'personal:unidades_lista' %}" 
+                   class="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors px-6">
+                    Cancelar operación
+                </a>
+                
+                <button type="submit" 
+                    class="w-full sm:w-auto bg-intu-blue hover:bg-slate-900 text-white px-10 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-lg shadow-blue-900/10 active:scale-95 flex items-center justify-center">
+                    <i class="fas fa-save mr-2 text-blue-400"></i> Guardar Unidad
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    :root { --intu-blue: #003366; --intu-red: #E30613; }
+    .font-black { font-weight: 900; }
+    @keyframes fade-in { 
+        from { opacity: 0; transform: translateY(10px); } 
+        to { opacity: 1; transform: translateY(0); } 
+    }
+    .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
+</style>
+{% endblock %}
