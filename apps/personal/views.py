@@ -9,6 +9,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Personal, DocumentoPersonal, UnidadAdscrita 
 from .forms import PersonalForm, UnidadAdscritaForm
 from apps.territorio.models import Estado
+import logging
+
+logger_personal = logging.getLogger('CH_PERSONAL')
 
 # ==============================================================================
 # 1. GESTIÓN DE PERSONAL (CRUD TRABAJADORES)
@@ -21,51 +24,44 @@ class PersonalCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('personal:lista')
 
     def form_valid(self, form):
-        messages.success(self.request, f"TRABAJADOR {form.cleaned_data['nombres']} REGISTRADO EXITOSAMENTE.")
-        return super().form_valid(form)
+        nombre = form.cleaned_data.get('nombres')
+        cedula = form.cleaned_data.get('cedula')
+        response = super().form_valid(form)
+        messages.success(self.request, f"TRABAJADOR {nombre} REGISTRADO EXITOSAMENTE.")
+        logger_personal.info(f"CREATE | TRABAJADOR: {nombre} | CNI: {cedula} | BY: {self.request.user}")
+        return response
 
 class PersonalListView(LoginRequiredMixin, ListView):
     model = Personal
     template_name = 'personal/personal_list.html'
-    context_object_name = 'personal_list' # Asegúrate que coincida con tu template
+    context_object_name = 'personal_list'
     paginate_by = 15
 
     def get_queryset(self):
-        # Usamos select_related para optimizar consultas de claves foráneas
         queryset = Personal.objects.select_related('unidad_adscrita', 'estado').all()
-        
-        # Capturamos los parámetros GET (Deben coincidir con el 'name' en el HTML)
         unidad_id = self.request.GET.get('unidad')
-        estado_id = self.request.GET.get('estado_f') # En tu HTML pusiste 'estado_f'
+        estado_id = self.request.GET.get('estado_f')
         busqueda = self.request.GET.get('q')
 
-        # Aplicamos los filtros si existen y no están vacíos
         if unidad_id:
             queryset = queryset.filter(unidad_adscrita_id=unidad_id)
-        
         if estado_id:
             queryset = queryset.filter(estado_id=estado_id)
-            
         if busqueda:
             queryset = queryset.filter(
                 Q(cedula__icontains=busqueda) |
                 Q(nombres__icontains=busqueda) |
                 Q(apellidos__icontains=busqueda)
             )
-            
         return queryset.order_by('-id')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Datos para llenar los selects
         context['unidades'] = UnidadAdscrita.objects.all()
         context['estados'] = Estado.objects.all()
-        
-        # Importante: devolvemos los valores para que el template sepa qué marcar como 'selected'
         context['unidad_selected'] = self.request.GET.get('unidad', '')
         context['estado_selected'] = self.request.GET.get('estado_f', '')
         context['q_value'] = self.request.GET.get('q', '')
-        
         return context
 
 class PersonalUpdateView(LoginRequiredMixin, UpdateView):
@@ -75,8 +71,11 @@ class PersonalUpdateView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy('personal:lista')
 
     def form_valid(self, form):
-        messages.info(self.request, f"DATOS DE {form.cleaned_data['nombres']} ACTUALIZADOS CORRECTAMENTE.")
-        return super().form_valid(form)
+        nombre = form.cleaned_data.get('nombres')
+        response = super().form_valid(form)
+        messages.info(self.request, f"DATOS DE {nombre} ACTUALIZADOS CORRECTAMENTE.")
+        logger_personal.info(f"UPDATE | TRABAJADOR_ID: {self.object.id} | BY: {self.request.user}")
+        return response
 
 class PersonalDetailView(LoginRequiredMixin, DetailView):
     model = Personal
@@ -85,9 +84,7 @@ class PersonalDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Traemos los documentos asociados
         context['documentos'] = self.object.expediente_personal.all().order_by('-fecha_subida')
-        
         context['categorias'] = [
             ('ID', 'Documento de Identidad'),
             ('CV', 'Síntesis Curricular (CV)'),
@@ -107,7 +104,6 @@ class UnidadListView(LoginRequiredMixin, ListView):
     context_object_name = 'unidades'
 
     def get_queryset(self):
-        # Usamos el related_name definido en tu modelo para el count
         return UnidadAdscrita.objects.annotate(
             total_trabajadores=Count('personal_asignado')
         ).order_by('nombre')
@@ -119,8 +115,11 @@ class UnidadCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('personal:unidades_lista')
 
     def form_valid(self, form):
+        nombre = form.cleaned_data.get('nombre')
+        response = super().form_valid(form)
         messages.success(self.request, "NUEVA UNIDAD REGISTRADA.")
-        return super().form_valid(form)
+        logger_personal.info(f"CREATE_UNIDAD: {nombre} | BY: {self.request.user}")
+        return response
 
 class UnidadUpdateView(LoginRequiredMixin, UpdateView):
     model = UnidadAdscrita
@@ -129,8 +128,11 @@ class UnidadUpdateView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy('personal:unidades_lista')
 
     def form_valid(self, form):
+        nombre = form.cleaned_data.get('nombre')
+        response = super().form_valid(form)
         messages.info(self.request, "UNIDAD ACTUALIZADA CORRECTAMENTE.")
-        return super().form_valid(form)
+        logger_personal.info(f"UPDATE_UNIDAD: {nombre} | BY: {self.request.user}")
+        return response
 
 @login_required
 def eliminar_unidad(request, pk):
@@ -139,7 +141,9 @@ def eliminar_unidad(request, pk):
         nombre = unidad.nombre
         unidad.delete()
         messages.warning(request, f"UNIDAD {nombre} ELIMINADA.")
-    except Exception:
+        logger_personal.info(f"DELETE_UNIDAD: {nombre} | BY: {request.user}")
+    except Exception as e:
+        logger_personal.error(f"ERROR_DELETE_UNIDAD: {str(e)}")
         messages.error(request, "NO SE PUEDE ELIMINAR: Esta unidad tiene personal asociado.")
     return redirect('personal:unidades_lista')
 
@@ -156,15 +160,21 @@ def subir_archivo_personal(request, pk):
         nombre_personalizado = request.POST.get('nombre_documento')
 
         if archivo:
+            if archivo.size > 10 * 1024 * 1024:
+                messages.error(request, "EL ARCHIVO EXCEDE EL LÍMITE DE 10MB.")
+                return redirect('personal:detalle', pk=pk)
+            
             try:
-                DocumentoPersonal.objects.create(
+                doc = DocumentoPersonal.objects.create(
                     personal=trabajador,
                     archivo=archivo,
                     categoria=categoria,
                     nombre_documento=nombre_personalizado if nombre_personalizado else archivo.name
                 )
-                messages.success(request, f"DOCUMENTO VINCULADO: {archivo.name}")
+                messages.success(request, f"DOCUMENTO VINCULADO: {doc.nombre_documento}")
+                logger_personal.info(f"FILE_UPLOAD | DOC: {doc.nombre_documento} | TRABAJADOR: {trabajador.cedula}")
             except Exception as e:
+                logger_personal.error(f"FILE_UPLOAD_ERROR: {str(e)}")
                 messages.error(request, f"ERROR AL GUARDAR: {str(e)}")
         else:
             messages.error(request, "NO SE DETECTÓ NINGÚN ARCHIVO.")
@@ -175,6 +185,11 @@ def eliminar_documento_personal(request, doc_id):
     documento = get_object_or_404(DocumentoPersonal, id=doc_id)
     persona_id = documento.personal.id
     nombre = documento.nombre_documento
-    documento.delete()
-    messages.warning(request, f"DOCUMENTO ELIMINADO: {nombre}")
+    try:
+        documento.delete()
+        messages.warning(request, f"DOCUMENTO ELIMINADO: {nombre}")
+        logger_personal.info(f"FILE_DELETE | DOC: {nombre} | BY: {request.user}")
+    except Exception as e:
+        logger_personal.error(f"FILE_DELETE_ERROR: {str(e)}")
+        messages.error(request, "ERROR AL ELIMINAR EL DOCUMENTO.")
     return redirect('personal:detalle', pk=persona_id)

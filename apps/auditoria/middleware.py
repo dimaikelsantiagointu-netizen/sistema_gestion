@@ -14,7 +14,15 @@ class AuditoriaMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # 1. Capturar usuario
+        # --- LISTA DE EXCLUSIÓN ---
+        # Si la URL pertenece a la app de recibos, limpiamos los datos del hilo
+        # para que nada se guarde en la base de datos de auditoría.
+        if 'recibos/' in request.path:
+            _thread_locals.user = None
+            _thread_locals.ip = None
+            return self.get_response(request)
+
+        # 1. Capturar usuario (Solo si no es una ruta excluida)
         _thread_locals.user = request.user if request.user.is_authenticated else None
         
         # 2. Capturar IP
@@ -25,4 +33,9 @@ class AuditoriaMiddleware:
             _thread_locals.ip = request.META.get('REMOTE_ADDR')
 
         response = self.get_response(request)
+        
+        # Limpieza de seguridad al finalizar la petición para evitar fugas de memoria
+        _thread_locals.user = None
+        _thread_locals.ip = None
+        
         return response

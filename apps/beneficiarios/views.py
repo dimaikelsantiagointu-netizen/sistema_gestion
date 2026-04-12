@@ -16,7 +16,7 @@ from .models import Beneficiario, DocumentoExpediente, Visita
 from apps.territorio.models import Estado, Municipio, Parroquia, Ciudad, Comuna
 
 # Configuración del Logger vinculado a la configuración de settings.py
-logger = logging.getLogger('apps.recibos')
+logger_beneficiarios = logging.getLogger('CH_BENEFICIARIOS')
 
 # Función de verificación para acceso administrativo
 def es_administrador(user):
@@ -110,7 +110,7 @@ def crear_beneficiario(request):
                 comuna_id=request.POST.get('comuna') or None,
             )
             beneficiario.save()
-            logger.info(f"CIUDADANO REGISTRADO: {beneficiario.nombre_completo} (C.I: {doc_id}) por {request.user.username}")
+            logger_beneficiarios.info(f"CIUDADANO REGISTRADO: {beneficiario.nombre_completo} (C.I: {doc_id}) por {request.user.username}")
             messages.success(request, f"Ciudadano {beneficiario.nombre_completo} registrado con éxito.")
             return redirect('beneficiarios:lista')
 
@@ -118,7 +118,7 @@ def crear_beneficiario(request):
             messages.error(request, "Error de integridad: El documento ya está en uso.")
             return redirect('beneficiarios:crear')
         except Exception as e:
-            logger.error(f"Error al crear beneficiario: {str(e)}")
+            logger_beneficiarios.error(f"Error al crear beneficiario: {str(e)}")
             messages.error(request, f"Error inesperado al guardar: {e}")
 
     context = {
@@ -151,7 +151,7 @@ def editar_beneficiario(request, id):
             beneficiario.comuna_id = request.POST.get('comuna') or None
             
             beneficiario.save()
-            logger.info(f"CIUDADANO ACTUALIZADO: {beneficiario.nombre_completo} por {request.user.username}")
+            logger_beneficiarios.info(f"CIUDADANO ACTUALIZADO: {beneficiario.nombre_completo} por {request.user.username}")
             messages.success(request, "Datos actualizados correctamente.")
             return redirect('beneficiarios:lista')
         except Exception as e:
@@ -171,7 +171,7 @@ def eliminar_beneficiario(request, id):
     beneficiario = get_object_or_404(Beneficiario, id=id)
     nombre = beneficiario.nombre_completo
     beneficiario.delete()
-    logger.warning(f"CIUDADANO ELIMINADO: {nombre} por {request.user.username}")
+    logger_beneficiarios.warning(f"CIUDADANO ELIMINADO: {nombre} por {request.user.username}")
     messages.warning(request, f"Beneficiario {nombre} eliminado del sistema.")
     return redirect('beneficiarios:lista')
 
@@ -300,13 +300,13 @@ def exportar_excel(request):
                 length = max(len(str(cell.value)) for cell in column_cells)
                 sheet.column_dimensions[get_column_letter(column_cells[0].column)].width = length + 5
 
-        logger.info(f"REPORTE EXCEL GENERADO: por {request.user.username}")
+        logger_beneficiarios.info(f"REPORTE EXCEL GENERADO: por {request.user.username}")
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = 'attachment; filename="Reporte_SIG_INTU_Beneficiarios.xlsx"'
         wb.save(response)
         return response
     except Exception as e:
-        logger.error(f"Error al exportar Excel: {str(e)}")
+        logger_beneficiarios.error(f"Error al exportar Excel: {str(e)}")
         messages.error(request, f"Error técnico al generar Excel: {str(e)}")
         return redirect('beneficiarios:lista')
 

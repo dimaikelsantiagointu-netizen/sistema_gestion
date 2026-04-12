@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Count
-from django.core.paginator import Paginator # Importante para los 10 registros
+from django.core.paginator import Paginator
 from .models import LogAuditoria
 
 # Librerías para Excel
@@ -21,18 +21,25 @@ def es_administrador(user):
     return user.is_superuser or user.groups.filter(name='Auditores').exists()
 
 def obtener_logs_filtrados(request):
-    """ Lógica unificada de filtrado para web y reportes """
+    """ Lógica unificada de filtrado con exclusión de ruido de Recibos """
     usuario_id = request.GET.get('usuario')
     modulo = request.GET.get('modulo')
     fecha_inicio = request.GET.get('desde')
     fecha_fin = request.GET.get('hasta')
 
+    # Base del queryset
     logs = LogAuditoria.objects.all().select_related('usuario').order_by('-timestamp')
+
+    # --- FILTRO DE EXCLUSIÓN DE RECIBOS ---
+    # Si no se está buscando un módulo específico, ocultamos RECIBOS para limpiar la vista.
+    if not modulo:
+        logs = logs.exclude(modulo__icontains='RECIBOS')
+    else:
+        # Si se busca un módulo, filtramos normalmente
+        logs = logs.filter(modulo__icontains=modulo)
 
     if usuario_id:
         logs = logs.filter(usuario_id=usuario_id)
-    if modulo:
-        logs = logs.filter(modulo__icontains=modulo)
     if fecha_inicio:
         logs = logs.filter(timestamp__date__gte=fecha_inicio)
     if fecha_fin:
@@ -45,15 +52,15 @@ def obtener_logs_filtrados(request):
 def lista_auditoria(request):
     """ Muestra la tabla de bitácora con paginación de 10 registros """
     logs_filtrados = obtener_logs_filtrados(request)
-    modulos = LogAuditoria.objects.values_list('modulo', flat=True).distinct()
+    # Filtramos también los módulos disponibles en el select para no mostrar 'RECIBOS'
+    modulos = LogAuditoria.objects.exclude(modulo__icontains='RECIBOS').values_list('modulo', flat=True).distinct()
     
-    # Implementación del Paginator
-    paginator = Paginator(logs_filtrados, 10) # Máximo 10 registros por página
+    paginator = Paginator(logs_filtrados, 10) 
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     return render(request, 'auditoria/bitacora.html', {
-        'logs': page_obj, # Ahora 'logs' es el objeto paginado
+        'logs': page_obj,
         'modulos': modulos,
         'total_logs': logs_filtrados.count()
     })
@@ -61,7 +68,7 @@ def lista_auditoria(request):
 @login_required
 @user_passes_test(es_administrador)
 def exportar_auditoria_excel(request):
-    """ Genera y descarga el reporte en formato Excel .xlsx """
+    """ Genera y descarga el reporte en formato Excel .xlsx (Sin ruido de Recibos) """
     logs = obtener_logs_filtrados(request)
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = f'attachment; filename="Auditoria_{timezone.now().strftime("%Y%m%d")}.xlsx"'
@@ -108,7 +115,7 @@ def exportar_auditoria_excel(request):
 @login_required
 @user_passes_test(es_administrador)
 def exportar_auditoria_pdf(request):
-    """ Genera y descarga el reporte en formato PDF horizontal """
+    """ Genera y descarga el reporte en formato PDF horizontal (Sin ruido de Recibos) """
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="Auditoria_{timezone.now().strftime("%Y%m%d")}.pdf"'
     
@@ -120,7 +127,7 @@ def exportar_auditoria_pdf(request):
     elements.append(Paragraph(f"Generado por: {request.user.username} | Fecha: {timezone.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
     elements.append(Spacer(1, 20))
     
-    logs = obtener_logs_filtrados(request)[:500] # Límite razonable para PDF
+    logs = obtener_logs_filtrados(request)[:500] 
     data = [['FECHA/HORA', 'USUARIO', 'MÓDULO', 'ACCIÓN', 'DESCRIPCIÓN', 'IP']]
     
     for log in logs:
@@ -153,20 +160,21 @@ def exportar_auditoria_pdf(request):
 @login_required
 @user_passes_test(es_administrador)
 def estadisticas_auditoria(request):
-    """ Genera estadísticas de uso y alertas de seguridad """
+    """ Genera estadísticas excluyendo el ruido de la app Recibos """
     hoy = timezone.now()
     hace_30_dias = hoy - timezone.timedelta(days=30)
 
+    # Estadísticas sin incluir RECIBOS
     ops_por_modulo = LogAuditoria.objects.filter(
         timestamp__gte=hace_30_dias
-    ).values('modulo').annotate(total=Count('id')).order_by('-total')
+    ).exclude(modulo__icontains='RECIBOS').values('modulo').annotate(total=Count('id')).order_by('-total')
 
-    alertas_seguridad = LogAuditoria.objects.filter(accion='F').order_by('-timestamp')[:10]
-    eliminaciones = LogAuditoria.objects.filter(accion='E').order_by('-timestamp')[:10]
+    alertas_seguridad = LogAuditoria.objects.filter(accion='F').exclude(modulo__icontains='RECIBOS').order_by('-timestamp')[:10]
+    eliminaciones = LogAuditoria.objects.filter(accion='E').exclude(modulo__icontains='RECIBOS').order_by('-timestamp')[:10]
 
     return render(request, 'auditoria/estadisticas.html', {
         'ops_por_modulo': ops_por_modulo,
         'alertas_seguridad': alertas_seguridad,
         'eliminaciones': eliminaciones,
-        'total_30_dias': LogAuditoria.objects.filter(timestamp__gte=hace_30_dias).count()
+        'total_30_dias': LogAuditoria.objects.filter(timestamp__gte=hace_30_dias).exclude(modulo__icontains='RECIBOS').count()
     })
