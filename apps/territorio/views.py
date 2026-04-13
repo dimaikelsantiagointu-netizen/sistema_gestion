@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required  # Importación de seguridad
+from django.contrib.auth.decorators import login_required
 from .models import Estado, Municipio, Ciudad, Parroquia, Comuna
 
 # --- VISTA PRINCIPAL DEL PANEL ---
@@ -16,7 +16,7 @@ def infraestructura_geografica(request):
     }
     return render(request, 'territorio/territorio_admin.html', context)
 
-# --- VISTAS DE CREACIÓN (PROTEGIDAS) ---
+# --- VISTAS DE CREACIÓN (MANTENIENDO TU LÓGICA ORIGINAL) ---
 
 @login_required
 def estado_create(request):
@@ -34,7 +34,6 @@ def municipio_create(request):
     if request.method == "POST":
         nombre = request.POST.get('nombre', '').strip().upper()
         estado_id = request.POST.get('parent_id') 
-        
         if nombre and estado_id:
             Municipio.objects.create(nombre=nombre, estado_id=estado_id)
             messages.success(request, f"Municipio {nombre} registrado.")
@@ -47,7 +46,6 @@ def ciudad_create(request):
     if request.method == "POST":
         nombre = request.POST.get('nombre', '').strip().upper()
         estado_id = request.POST.get('parent_id')
-        
         if nombre and estado_id:
             Ciudad.objects.create(nombre=nombre, estado_id=estado_id)
             messages.success(request, f"Ciudad {nombre} registrada.")
@@ -60,7 +58,6 @@ def parroquia_create(request):
     if request.method == "POST":
         nombre = request.POST.get('nombre', '').strip().upper()
         municipio_id = request.POST.get('parent_id')
-        
         if nombre and municipio_id:
             Parroquia.objects.create(nombre=nombre, municipio_id=municipio_id)
             messages.success(request, f"Parroquia {nombre} registrada.")
@@ -73,37 +70,44 @@ def comuna_create(request):
     if request.method == "POST":
         nombre = request.POST.get('nombre', '').strip().upper()
         parroquia_id = request.POST.get('parent_id')
-        
         if nombre and parroquia_id:
-            Comuna.objects.create(
-                nombre=nombre, 
-                parroquia_id=parroquia_id
-            )
+            Comuna.objects.create(nombre=nombre, parroquia_id=parroquia_id)
             messages.success(request, f"Comuna {nombre} registrada correctamente.")
         else:
             messages.error(request, "Faltan datos para registrar la comuna.")
-            
     return redirect('territorio:infraestructura')
 
-# --- VISTAS API AJAX (PROTEGIDAS) ---
-# Es vital protegerlas para evitar que scripts externos consulten tu estructura territorial
+# --- VISTAS API AJAX (CORREGIDAS PARA EL FORMULARIO DE PERSONAL) ---
 
 @login_required
-def api_get_municipios(request, estado_id):
+def api_get_municipios(request, estado_id=None):
+    # Si no viene en la URL, lo buscamos en el parámetro GET (?estado_id=)
+    if not estado_id:
+        estado_id = request.GET.get('estado_id')
+    
     data = Municipio.objects.filter(estado_id=estado_id).values('id', 'nombre').order_by('nombre')
     return JsonResponse(list(data), safe=False)
 
 @login_required
-def api_get_ciudades(request, estado_id):
+def api_get_ciudades(request, estado_id=None):
+    if not estado_id:
+        estado_id = request.GET.get('estado_id')
+        
     data = Ciudad.objects.filter(estado_id=estado_id).values('id', 'nombre').order_by('nombre')
     return JsonResponse(list(data), safe=False)
 
 @login_required
-def api_get_parroquias(request, municipio_id):
+def api_get_parroquias(request, municipio_id=None):
+    if not municipio_id:
+        municipio_id = request.GET.get('municipio_id')
+        
     data = Parroquia.objects.filter(municipio_id=municipio_id).values('id', 'nombre').order_by('nombre')
     return JsonResponse(list(data), safe=False)
 
 @login_required
-def api_get_comunas(request, parroquia_id):
+def api_get_comunas(request, parroquia_id=None):
+    if not parroquia_id:
+        parroquia_id = request.GET.get('parroquia_id')
+        
     data = Comuna.objects.filter(parroquia_id=parroquia_id).values('id', 'nombre').order_by('nombre')
     return JsonResponse(list(data), safe=False)

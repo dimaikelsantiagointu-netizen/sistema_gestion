@@ -13,7 +13,7 @@
                 <span class="text-intu-red font-black text-[11px] uppercase tracking-[0.2em]">Volver al listado</span>
             </a>
             <h1 class="text-2xl md:text-4xl font-black text-intu-blue uppercase tracking-tighter leading-none">
-                Nuevo <span class="text-intu-red italic">Registro</span>
+                {% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} <span class="text-intu-red italic">Registro</span>
             </h1>
             <p class="text-gray-500 text-[11px] font-bold uppercase mt-4 tracking-widest leading-relaxed">
                 Ingrese los datos oficiales del trabajador institucional
@@ -27,78 +27,125 @@
     </div>
 
     {# --- TARJETA DE FORMULARIO --- #}
-    <form method="post" class="space-y-6">
+    <form method="post" class="space-y-6" id="personalForm">
         {% csrf_token %}
         
         <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-900/5 border border-slate-200 overflow-hidden">
             <div class="p-8 md:p-12 lg:p-16">
+                
+                {# SECCIÓN 1: IDENTIFICACIÓN Y CONTACTO #}
+                <div class="mb-10 pb-6 border-b border-slate-100 flex justify-between items-center">
+                    <h3 class="text-intu-blue font-black text-[13px] uppercase tracking-widest flex items-center gap-2">
+                        <span class="w-8 h-[2px] bg-intu-red"></span> Datos Personales y Laborales
+                    </h3>
+                    {# CAMPO ACTIVO #}
+                    <div class="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estatus Activo</label>
+                        {{ form.activo }}
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-11 gap-y-8">
-                    
-                    {# --- CAMPO: CÉDULA (FULL WIDTH) --- #}
+                    {# Cédula #}
                     <div class="md:col-span-2 space-y-2">
                         <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Documento de Identidad</label>
                         <div class="relative group">
-                            <span class="absolute inset-y-0 left-0 pl-5 flex items-center text-slate-300 group-focus-within:text-intu-red transition-colors">
+                            <span class="absolute inset-y-0 left-0 pl-5 flex items-center text-slate-300 group-focus-within:text-intu-red transition-colors z-10">
                                 <i class="fas fa-id-card text-xs"></i>
                             </span>
-                            {# Aplicamos la clase directamente si Django lo permite, o usamos el selector CSS de abajo #}
                             {{ form.cedula }}
                         </div>
-                        {% if form.cedula.errors %}
-                            <p class="text-intu-red text-[11px] font-black mt-2 italic px-2 animate-bounce">
-                                <i class="fas fa-exclamation-triangle mr-1"></i> {{ form.cedula.errors.0 }}
-                            </p>
-                        {% endif %}
+                        {% if form.cedula.errors %}<p class="text-intu-red text-[11px] font-black mt-2 italic animate-pulse">{{ form.cedula.errors.0 }}</p>{% endif %}
                     </div>
 
-                    {# --- CAMPOS DINÁMICOS --- #}
+                    {# Nombres y Apellidos #}
                     <div class="space-y-2">
                         <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Nombres</label>
                         {{ form.nombres }}
-                        {% if form.nombres.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.nombres.errors.0 }}</p>{% endif %}
+                        {% if form.nombres.errors %}<p class="text-intu-red text-[10px] font-bold">{{ form.nombres.errors.0 }}</p>{% endif %}
                     </div>
 
                     <div class="space-y-2">
                         <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Apellidos</label>
                         {{ form.apellidos }}
-                        {% if form.apellidos.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.apellidos.errors.0 }}</p>{% endif %}
+                        {% if form.apellidos.errors %}<p class="text-intu-red text-[10px] font-bold">{{ form.apellidos.errors.0 }}</p>{% endif %}
                     </div>
 
+                    {# Cargo y Unidad #}
                     <div class="space-y-2">
                         <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Cargo Nominal</label>
                         {{ form.cargo }}
-                        {% if form.cargo.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.cargo.errors.0 }}</p>{% endif %}
                     </div>
 
                     <div class="space-y-2">
                         <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Unidad Adscrita</label>
                         {{ form.unidad_adscrita }}
-                        {% if form.unidad_adscrita.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.unidad_adscrita.errors.0 }}</p>{% endif %}
                     </div>
 
+                    {# Fecha Ingreso #}
                     <div class="space-y-2">
                         <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Fecha de Ingreso</label>
                         {{ form.fecha_ingreso }}
-                        {% if form.fecha_ingreso.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.fecha_ingreso.errors.0 }}</p>{% endif %}
                     </div>
 
+                    {# Teléfono #}
                     <div class="space-y-2">
                         <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Teléfono de Contacto</label>
                         {{ form.telefono }}
-                        {% if form.telefono.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.telefono.errors.0 }}</p>{% endif %}
+                        {% if form.telefono.errors %}<p class="text-intu-red text-[10px] font-bold">{{ form.telefono.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    {# Email (REINTEGRADO) #}
+                    <div class="md:col-span-2 space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Correo Electrónico Institucional / Personal</label>
+                        <div class="relative group">
+                            <span class="absolute inset-y-0 left-0 pl-5 flex items-center text-slate-300 group-focus-within:text-intu-red transition-colors z-10">
+                                <i class="fas fa-envelope text-xs"></i>
+                            </span>
+                            <style>input[name="email"] { padding-left: 3.5rem !important; }</style>
+                            {{ form.email }}
+                        </div>
+                        {% if form.email.errors %}<p class="text-intu-red text-[11px] font-black mt-2 italic">{{ form.email.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                {# SECCIÓN 2: UBICACIÓN GEOGRÁFICA (TERRITORIO) #}
+                <div class="mt-16 mb-10 pb-6 border-b border-slate-100">
+                    <h3 class="text-intu-blue font-black text-[13px] uppercase tracking-widest flex items-center gap-2">
+                        <span class="w-8 h-[2px] bg-intu-red"></span> Residencia y Territorio
+                    </h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-11 gap-y-8">
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Estado</label>
+                        {{ form.estado }}
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Municipio</label>
+                        {{ form.municipio }}
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Parroquia</label>
+                        {{ form.parroquia }}
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Comuna (Opcional)</label>
+                        {{ form.comuna }}
                     </div>
 
                     <div class="md:col-span-2 space-y-2">
-                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Correo Institucional / Personal</label>
-                        {{ form.email }}
-                        {% if form.email.errors %}<p class="text-intu-red text-[9px] font-black italic mt-1">{{ form.email.errors.0 }}</p>{% endif %}
+                        <label class="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1 italic">Dirección Exacta</label>
+                        {{ form.direccion_exacta }}
                     </div>
-
                 </div>
             </div>
 
-            {# --- PIE DE FORMULARIO / ACCIONES --- #}
-            <div class="bg-slate-50/80 p-8 md:p-11 border-t border-slate-110 flex flex-col sm:flex-row justify-end items-center gap-4 md:gap-8">
+            {# --- PIE DE FORMULARIO --- #}
+            <div class="bg-slate-50/80 p-8 md:p-11 border-t border-slate-100 flex flex-col sm:flex-row justify-end items-center gap-4 md:gap-8">
                 <a href="{% url 'personal:lista' %}" class="w-full sm:w-auto text-center px-6 py-3 text-gray-500 font-black text-[11px] uppercase tracking-[0.2em] hover:text-intu-red transition-colors">
                     Cancelar registro
                 </a>
@@ -110,17 +157,88 @@
     </form>
 </div>
 
+{# --- LÓGICA AJAX PARA TERRITORIO --- #}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const estadoSelect = document.getElementById('id_estado');
+        const municipioSelect = document.getElementById('id_municipio');
+        const parroquiaSelect = document.getElementById('id_parroquia');
+        const comunaSelect = document.getElementById('id_comuna');
+
+        const clearSelect = (select, text) => {
+            if (!select) return;
+            select.innerHTML = `<option value="">--- ${text} ---</option>`;
+        };
+
+        // CARGAR MUNICIPIOS
+        estadoSelect.addEventListener('change', function() {
+            const estadoId = this.value;
+            clearSelect(municipioSelect, 'SELECCIONE MUNICIPIO');
+            clearSelect(parroquiaSelect, 'SELECCIONE PARROQUIA');
+            clearSelect(comunaSelect, 'SELECCIONE COMUNA');
+
+            if (estadoId) {
+                fetch("{% url 'territorio:ajax_municipios_base' %}?estado_id=" + estadoId)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(item => {
+                            const option = new Option(item.nombre, item.id);
+                            municipioSelect.add(option);
+                        });
+                    })
+                    .catch(error => console.error('Error cargando municipios:', error));
+            }
+        });
+
+        // CARGAR PARROQUIAS
+        municipioSelect.addEventListener('change', function() {
+            const municipioId = this.value;
+            clearSelect(parroquiaSelect, 'SELECCIONE PARROQUIA');
+            clearSelect(comunaSelect, 'SELECCIONE COMUNA');
+
+            if (municipioId) {
+                fetch("{% url 'territorio:ajax_parroquias_base' %}?municipio_id=" + municipioId)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(item => {
+                            const option = new Option(item.nombre, item.id);
+                            parroquiaSelect.add(option);
+                        });
+                    })
+                    .catch(error => console.error('Error cargando parroquias:', error));
+            }
+        });
+
+        // CARGAR COMUNAS
+        parroquiaSelect.addEventListener('change', function() {
+            const parroquiaId = this.value;
+            clearSelect(comunaSelect, 'SELECCIONE COMUNA');
+
+            if (parroquiaId) {
+                fetch("{% url 'territorio:ajax_comunas_base' %}?parroquia_id=" + parroquiaId)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(item => {
+                            const option = new Option(item.nombre, item.id);
+                            comunaSelect.add(option);
+                        });
+                    })
+                    .catch(error => console.error('Error cargando comunas:', error));
+            }
+        });
+    });
+</script>
+
 <style>
     :root { --intu-blue: #003366; --intu-red: #E30613; }
     .font-black { font-weight: 900; }
 
-    /* Estilización forzada de los widgets de Django */
-    input, select {
-        width: 110%;
+    input, select, textarea {
+        width: 100% !important;
         padding: 1.1rem 1.5rem;
-        background-color: #f8fafc; /* slate-50 */
-        border: 2px solid transparent;
-        border-radius: 1.25rem;
+        background-color: #f8fafc;
+        border: 2px solid transparent !important;
+        border-radius: 1.25rem !important;
         font-size: 0.8rem;
         font-weight: 700;
         color: #003366;
@@ -128,16 +246,23 @@
         transition: all 0.3s ease;
     }
 
-    input:focus, select:focus {
-        border-color: rgba(0, 51, 112, 0.1);
+    input:focus, select:focus, textarea:focus {
+        border-color: rgba(227, 6, 19, 0.2) !important;
         background-color: white;
-        box-shadow: 0 11px 15px -3px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 15px 30px -10px rgba(0, 51, 102, 0.1);
     }
 
-    /* Ajuste para el campo con icono (Cédula) */
-    input[name="cedula"] { padding-left: 3.5rem; }
+    /* Estilo para el checkbox de 'activo' */
+    input[type="checkbox"] {
+        width: 20px !important;
+        height: 20px !important;
+        padding: 0 !important;
+        cursor: pointer;
+        accent-color: var(--intu-red);
+    }
 
-    /* Ocultar las listas de errores por defecto de Django */
+    input[name="cedula"] { padding-left: 3.5rem !important; }
+
     .errorlist { display: none; }
 
     @keyframes fade-in { 

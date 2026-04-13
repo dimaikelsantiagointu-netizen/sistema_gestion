@@ -2,19 +2,17 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
+# 1. CONFIGURACIÓN BÁSICA Y DIRECTORIOS
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-clave-temporal-cambiar-en-produccion')
-
 DEBUG = os.getenv('DEBUG', 'False') == 'True' 
 
-# En producción, asegúrate de configurar ALLOWED_HOSTS correctamente
 ALLOWED_HOSTS = ['192.168.0.102', 'localhost', '127.0.0.1']
 
+# 2. DEFINICIÓN DE APLICACIONES
 INSTALLED_APPS = [
-    # APPS ESTÁNDAR DE DJANGO
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -23,15 +21,15 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'django.contrib.humanize',
-    # NUEVAS APPS:
-    'apps.recibos.apps.RecibosConfig',
+    
+    # APPS LOCALES
     'apps.users',
-    'apps.beneficiarios',#Tambien encargada de los expedientes de los beneficiarios y personal
-    'apps.personal',#App para gestion de personal
+    'apps.recibos.apps.RecibosConfig',
+    'apps.beneficiarios',
+    'apps.personal',
     'apps.contratos', 
-    #'apps.bienes', #App para gestion de bienes nacionales, actualmente en desarrollo
-    'apps.territorio',#app para gestion de estados, municipios, ciudades, parroquias y comunas
-    'apps.auditoria', #App para gestion de auditoria y bitacora de eventos
+    'apps.territorio',
+    'apps.auditoria', 
 ]
 
 MIDDLEWARE = [
@@ -42,7 +40,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'apps.auditoria.middleware.AuditoriaMiddleware', # Middleware personalizado para APP de auditoría
+    # Middleware de Auditoría al final para capturar el usuario autenticado correctamente
+    'apps.auditoria.middleware.AuditoriaMiddleware', 
 ]
 
 ROOT_URLCONF = 'sistema_gestion.urls'
@@ -58,7 +57,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                
             ],
         },
     },
@@ -66,35 +64,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'sistema_gestion.wsgi.application'
 
+# 3. BASE DE DATOS
 DATABASES = {
     'default': {
-        # Motor PostgreSQL.
         'ENGINE': 'django.db.backends.postgresql', 
-        
         'NAME': os.environ.get('DB_NAME', 'django_default_db'), 
         'USER': os.environ.get('DB_USER', 'postgres'),  
         'PASSWORD': os.environ.get('DB_PASSWORD', '123456'), 
-        
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
-# 3. AUTENTICACIÓN Y LOCALIZACIÓN
-
+# 4. AUTENTICACIÓN Y LOCALIZACIÓN
 LOGIN_URL = 'login' 
-
 LOGIN_REDIRECT_URL = 'home'
-
 LOGOUT_REDIRECT_URL = 'login' 
-
 AUTH_USER_MODEL = 'users.Usuario'
-AUTH_PASSWORD_VALIDATORS = [
-    { 'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator', },
-    { 'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', },
-    { 'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator', },
-    { 'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator', },
-]
 
 LANGUAGE_CODE = 'es-ve'
 TIME_ZONE = 'America/Caracas'
@@ -102,10 +88,9 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
-# 4. ARCHIVOS ESTÁTICOS Y MEDIA
+# 5. ARCHIVOS ESTÁTICOS Y MEDIA
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),]
-
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
@@ -113,12 +98,64 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 5. DOMINIO PARA GENERACIÓN DE CÓDIGOS QR usanndo el modelo BienNacional
-SITE_DOMAIN = os.getenv('SITE_DOMAIN', 'http://127.0.0.1:8000')
-#Agregar SITE_DOMAIN al .env con el dominio real en producción, ej: 'https://www.tu-sitio.com'
-
-
-# --- CONFIGURACIÓN DE SESIÓN POR INACTIVIDAD ---
+# 6. SEGURIDAD Y SESIÓN
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_AGE =  5 * 60
+SESSION_COOKIE_AGE = 5 * 60
 SESSION_SAVE_EVERY_REQUEST = True
+
+# ==============================================================================
+# 7. CONFIGURACIÓN DE LOGGING (SISTEMA DE CANALES INDEPENDIENTES)
+# ==============================================================================
+
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False, 
+    'formatters': {
+        'estandar': {
+            'format': '[{asctime}] {levelname} [{name}] {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'h_recibos': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOGS_DIR, 'recibos.log'),
+            'formatter': 'estandar',
+        },
+        'h_auditoria': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOGS_DIR, 'auditoria_global.log'),
+            'formatter': 'estandar',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'estandar',
+        },
+    },
+    'loggers': {
+        # BLOQUEO DE PROPAGACIÓN NIVEL DIOS
+        'CH_RECIBOS': {
+            'handlers': ['h_recibos'], 
+            'level': 'INFO',
+            'propagate': False, # Detiene el viaje hacia arriba
+        },
+        # Aseguramos que el logger 'django' no esté capturando tus loggers personalizados
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+    # CONFIGURACIÓN ROOT: Solo la auditoría global vive aquí
+    'root': {
+        'handlers': ['h_auditoria'],
+        'level': 'INFO',
+    },
+}

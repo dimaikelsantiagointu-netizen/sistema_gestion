@@ -15,9 +15,21 @@ urlpatterns = [
     path('comuna/create/', views.comuna_create, name='comuna_create'),
 
     # --- CARGA DINÁMICA (API) ---
-    # Usamos las funciones api_get_... que ya tienes en tus views
+    # Nota: Registramos dos patrones para cada una para máxima compatibilidad
+    
+    # Municipios
+    path('ajax/municipios/', views.api_get_municipios, name='ajax_municipios_base'), 
     path('ajax/municipios/<int:estado_id>/', views.api_get_municipios, name='ajax_load_municipios'),
+    
+    # Ciudades
+    path('ajax/ciudades/', views.api_get_ciudades, name='ajax_ciudades_base'),
     path('ajax/ciudades/<int:estado_id>/', views.api_get_ciudades, name='ajax_load_ciudades'),
+    
+    # Parroquias
+    path('ajax/parroquias/', views.api_get_parroquias, name='ajax_parroquias_base'),
     path('ajax/parroquias/<int:municipio_id>/', views.api_get_parroquias, name='ajax_load_parroquias'),
+    
+    # Comunas
+    path('ajax/comunas/', views.api_get_comunas, name='ajax_comunas_base'),
     path('ajax/comunas/<int:parroquia_id>/', views.api_get_comunas, name='ajax_load_comunas'),
 ]

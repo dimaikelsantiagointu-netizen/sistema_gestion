@@ -42,7 +42,14 @@
         nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         
         #main-sidebar {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar-hidden { transform: translateX(-100%); }
+        
+        /* Persistencia en escritorio */
+        @media (min-width: 1024px) {
+            .sidebar-hidden { margin-left: -18rem; }
         }
 
         @media (max-width: 1023px) {
@@ -72,11 +79,21 @@
     </div>
 
     {# --- OVERLAY MÓVIL --- #}
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[40] hidden lg:hidden transition-opacity duration-300"></div>
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[40] hidden transition-opacity duration-300"></div>
 
     {# --- SIDEBAR --- #}
-    <aside id="main-sidebar" class="w-72 sidebar-gradient text-white flex-shrink-0 flex flex-col fixed inset-y-0 left-0 z-[50] lg:relative lg:translate-x-0 sidebar-hidden shadow-2xl lg:shadow-none">
+    <aside id="main-sidebar" class="w-72 sidebar-gradient text-white flex-shrink-0 flex flex-col fixed inset-y-0 left-0 z-[50] lg:relative shadow-2xl lg:shadow-none">
         
+        <script>
+            /* Bloqueo de parpadeo inicial */
+            (function() {
+                const state = localStorage.getItem('sidebar-hidden');
+                if (state === 'true' || (window.innerWidth < 1024)) {
+                    document.getElementById('main-sidebar').classList.add('sidebar-hidden');
+                }
+            })();
+        </script>
+
         {# LOGO Y PERFIL #}
         <div class="p-8 border-b border-white/5 flex items-center justify-between gap-4">
             <div class="flex items-center gap-4 overflow-hidden">
@@ -88,8 +105,9 @@
                     <p class="text-[11px] text-indigo-300 font-medium tracking-wide">{{ user.get_rol_display }}</p>
                 </div>
             </div>
-            <button onclick="toggleSidebar()" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 text-white">
-                <i class="fas fa-xmark"></i>
+            <button onclick="toggleSidebar()" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 text-white">
+                <i class="fas fa-chevron-left text-xs lg:block hidden"></i>
+                <i class="fas fa-xmark lg:hidden"></i>
             </button>
         </div>
 
@@ -161,9 +179,6 @@
                         <i class="fas fa-shield-halved w-5 group-hover:text-intu-red transition"></i> 
                         <span>Panel de Control (Django)</span>
                     </a>
-
-                    
-                    {# BOTÓN NUEVO: BITÁCORA DE AUDITORÍA #}
                     <a href="{% url 'auditoria:ver_bitacora' %}" 
                        class="flex items-center gap-3 px-4 py-3 {% if 'auditoria' in request.path %}bg-white/10 text-white border-r-4 border-intu-red{% else %}text-white/70 hover:text-white hover:bg-white/5{% endif %} rounded-xl text-[13px] font-semibold transition group">
                         <i class="fas fa-fingerprint w-5 group-hover:text-intu-red transition"></i> 
@@ -214,34 +229,31 @@
     {# --- CONTENIDO PRINCIPAL --- #}
     <div class="flex-grow flex flex-col min-w-0 h-screen overflow-y-auto bg-[#f8fafc]">
         
-{# --- HEADER CORREGIDO --- #}
-<header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-30">
-    <div class="flex items-center gap-4">
-        {# Botón Hamburguesa #}
-        <button onclick="toggleSidebar()" class="lg:hidden w-10 h-10 flex items-center justify-center text-intu-blue bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors shadow-sm">
-            <i class="fas fa-bars"></i>
-        </button>
-        <h2 class="text-intu-blue font-black uppercase tracking-tight text-[12px] lg:text-[14px] truncate">
-            <span class="hidden sm:inline">SISTEMA INTEGRAL DE CONTROL Y SEGUIMIENTO</span> INTU
-        </h2>
-    </div>
-    
-    <div class="flex items-center gap-4">
-        {# BLOQUE DE FECHA Y HORA REINTEGRADO #}
-        <div class="hidden md:flex items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-xl border border-slate-100 shadow-sm">
-            <div class="flex items-center gap-2 border-r border-slate-200 pr-3">
-                <i class="fas fa-calendar-day text-intu-red text-[11px]"></i>
-                <span id="current-date" class="text-[12px] font-bold text-slate-600 uppercase tracking-wide">
-                    {% now "d M Y" %}
-                </span>
+        <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-30">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSidebar()" class="w-10 h-10 flex items-center justify-center text-intu-blue bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors shadow-sm">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h2 class="text-intu-blue font-black uppercase tracking-tight text-[12px] lg:text-[14px] truncate">
+                    <span class="hidden sm:inline">SISTEMA INTEGRAL DE CONTROL Y SEGUIMIENTO</span> INTU
+                </h2>
             </div>
-            <div class="flex items-center gap-2">
-                <i class="fas fa-clock text-intu-blue text-[11px]"></i>
-                <span id="digital-clock" class="text-[13px] font-black text-intu-blue tabular-nums tracking-wider">00:00:00</span>
+            
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-xl border border-slate-100 shadow-sm">
+                    <div class="flex items-center gap-2 border-r border-slate-200 pr-3">
+                        <i class="fas fa-calendar-day text-intu-red text-[11px]"></i>
+                        <span id="current-date" class="text-[12px] font-bold text-slate-600 uppercase tracking-wide">
+                            {% now "d M Y" %}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-clock text-intu-blue text-[11px]"></i>
+                        <span id="digital-clock" class="text-[13px] font-black text-intu-blue tabular-nums tracking-wider">00:00:00</span>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-</header>
+        </header>
 
         <main class="p-6 lg:p-10 flex-grow">
             {% block content %}{% endblock %}
@@ -252,14 +264,16 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('main-sidebar');
             const overlay = document.getElementById('sidebar-overlay');
+            const isMobile = window.innerWidth < 1024;
+
             if (sidebar.classList.contains('sidebar-hidden')) {
                 sidebar.classList.remove('sidebar-hidden');
-                sidebar.classList.add('sidebar-visible');
-                overlay.classList.remove('hidden');
+                if (isMobile) overlay.classList.remove('hidden');
+                if (!isMobile) localStorage.setItem('sidebar-hidden', 'false');
             } else {
-                sidebar.classList.remove('sidebar-visible');
                 sidebar.classList.add('sidebar-hidden');
-                overlay.classList.add('hidden');
+                if (isMobile) overlay.classList.add('hidden');
+                if (!isMobile) localStorage.setItem('sidebar-hidden', 'true');
             }
         }
 
