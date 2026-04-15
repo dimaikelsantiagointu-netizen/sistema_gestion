@@ -96,7 +96,7 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequired
     template_name = 'recibos/dashboard.html'
     permission_required = 'users.ver_gestor_recibos'
     context_object_name = 'recibos'
-    paginate_by = 20
+    paginate_by = 30
     raise_exception = True
     
     def test_func(self):
@@ -151,36 +151,54 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequired
         return redirect('recibos:dashboard')
 
     def get_queryset(self):
-        queryset = Recibo.objects.filter(anulado=False).order_by('-fecha_creacion', '-numero_recibo')
-        search_query = self.request.GET.get('q', '').strip()
-        search_field = self.request.GET.get('field', 'todos')
+            # 1. Filtro base (No anulados y orden cronológico/numérico inverso)
+            queryset = Recibo.objects.filter(anulado=False).order_by('-fecha_creacion', '-numero_recibo')
+            
+            # 2. Captura de parámetros de búsqueda general
+            search_query = self.request.GET.get('q', '').strip()
+            search_field = self.request.GET.get('field', 'todos')
 
-        if search_query:
-            if search_field != 'todos' and hasattr(Recibo, search_field):
-                queryset = queryset.filter(**{f'{search_field}__icontains': search_query})
-            else:
-                q_objects = (
-                    Q(nombre__icontains=search_query) | Q(rif_cedula_identidad__icontains=search_query) |
-                    Q(numero_recibo__icontains=search_query) | Q(numero_transferencia__icontains=search_query) |
-                    Q(estado__icontains=search_query)
-                )
-                queryset = queryset.filter(q_objects)
+            if search_query:
+                if search_field != 'todos' and hasattr(Recibo, search_field):
+                    queryset = queryset.filter(**{f'{search_field}__icontains': search_query})
+                else:
+                    q_objects = (
+                        Q(nombre__icontains=search_query) | Q(rif_cedula_identidad__icontains=search_query) |
+                        Q(numero_recibo__icontains=search_query) | Q(numero_transferencia__icontains=search_query) |
+                        Q(estado__icontains=search_query)
+                    )
+                    queryset = queryset.filter(q_objects)
 
-        estado = self.request.GET.get('estado')
-        if estado: queryset = queryset.filter(estado__iexact=estado)
+            # 3. Filtro por Estado (Ubicación)
+            estado = self.request.GET.get('estado')
+            if estado: 
+                queryset = queryset.filter(estado__iexact=estado)
 
-        f_inicio = self.request.GET.get('fecha_inicio')
-        f_fin = self.request.GET.get('fecha_fin')
-        if f_inicio: queryset = queryset.filter(fecha_creacion__date__gte=f_inicio)
-        if f_fin: queryset = queryset.filter(fecha_creacion__date__lte=f_fin)
+            # 4. Filtro por Rango de Fechas
+            f_inicio = self.request.GET.get('fecha_inicio')
+            f_fin = self.request.GET.get('fecha_fin')
+            if f_inicio: queryset = queryset.filter(fecha_creacion__date__gte=f_inicio)
+            if f_fin: queryset = queryset.filter(fecha_creacion__date__lte=f_fin)
 
-        category_filters = Q()
-        for codigo, _ in CATEGORY_CHOICES:
-            if self.request.GET.get(codigo) == 'on':
-                category_filters |= Q(**{f'{codigo}': True})
-        if category_filters: queryset = queryset.filter(category_filters)
+            # 5. NUEVO: Filtro por Rango de Números de Recibo
+            n_desde = self.request.GET.get('numero_desde')
+            n_hasta = self.request.GET.get('numero_hasta')
+            
+            if n_desde and n_desde.isdigit():
+                queryset = queryset.filter(numero_recibo__gte=int(n_desde))
+            if n_hasta and n_hasta.isdigit():
+                queryset = queryset.filter(numero_recibo__lte=int(n_hasta))
 
-        return queryset
+            # 6. Filtro por Categorías (Checkboxes)
+            category_filters = Q()
+            for codigo, _ in CATEGORY_CHOICES:
+                if self.request.GET.get(codigo) == 'on':
+                    category_filters |= Q(**{f'{codigo}': True})
+            
+            if category_filters: 
+                queryset = queryset.filter(category_filters)
+
+            return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -202,7 +220,7 @@ class ReciboListView(LoginRequiredMixin, UserPassesTestMixin, PermissionRequired
 
 @login_required
 def generar_reporte_view(request):
-    """Genera reportes aplicando filtros dinámicos de búsqueda y categorías."""
+    """Genera reportes aplicando filtros dinámicos de búsqueda, categorías y rango de números."""
     log_rec = logging.getLogger('CH_RECIBOS')
     recibos_queryset = Recibo.objects.filter(anulado=False).order_by('-fecha_creacion', '-numero_recibo')
 
@@ -210,7 +228,7 @@ def generar_reporte_view(request):
     filtros_aplicados = {}
     periodo_str = 'Todas las fechas'
 
-    # Filtros de Estado y Fecha
+    # 1. Filtros de Estado y Fecha (Mantenidos)
     estado_seleccionado = request.GET.get('estado')
     if estado_seleccionado:
         filters &= Q(estado__iexact=estado_seleccionado)
@@ -231,7 +249,23 @@ def generar_reporte_view(request):
     
     filtros_aplicados['periodo'] = periodo_str
 
-    # Filtros de Categorías
+    # --- NUEVO: FILTRO POR RANGO DE NÚMEROS DE RECIBO ---
+    n_desde = request.GET.get('numero_desde')
+    n_hasta = request.GET.get('numero_hasta')
+    rango_recibos_str = "Todos"
+
+    if n_desde and n_desde.isdigit():
+        filters &= Q(numero_recibo__gte=int(n_desde))
+        rango_recibos_str = f"Desde Nº {n_desde}"
+    
+    if n_hasta and n_hasta.isdigit():
+        filters &= Q(numero_recibo__lte=int(n_hasta))
+        rango_recibos_str = f"{rango_recibos_str} Hasta Nº {n_hasta}" if rango_recibos_str != "Todos" else f"Hasta Nº {n_hasta}"
+
+    filtros_aplicados['rango_recibos'] = rango_recibos_str
+    # ----------------------------------------------------
+
+    # 2. Filtros de Categorías (Mantenidos)
     selected_categories_names = []
     category_filters = Q()
     for codigo, nombre_display in CATEGORY_CHOICES:
@@ -245,7 +279,7 @@ def generar_reporte_view(request):
     else:
         filtros_aplicados['categorias'] = 'Todas las categorías'
 
-    # Búsqueda textual
+    # 3. Búsqueda textual (Mantenida)
     search_query = request.GET.get('q')
     search_field = request.GET.get('field', 'todos')
 
@@ -268,10 +302,11 @@ def generar_reporte_view(request):
     else:
         filtros_aplicados['busqueda'] = 'Ninguna'
 
+    # Aplicación final de los filtros acumulados (incluyendo el rango)
     recibos_filtrados = recibos_queryset.filter(filters)
     action = request.GET.get('action')
     
-    # Lógica de Exportación
+    # Lógica de Exportación (Excel / PDF)
     if action == 'excel':
         try:
             response = generar_reporte_excel(request.GET, recibos_filtrados, filtros_aplicados)
