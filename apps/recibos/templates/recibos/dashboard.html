@@ -106,29 +106,42 @@
             </h2>
 
             <form method="get" action="{% url 'recibos:dashboard' %}" id="filter-form" class="space-y-6">
-                <input type="hidden" name="search_triggered" value="true">
+            <input type="hidden" name="search_triggered" value="true">
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="lg:col-span-1">
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Desde (Fecha Registro)</label>
-                        <input type="date" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
-                    </div>
-                    <div class="lg:col-span-1">
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hasta (Fecha Registro)</label>
-                        <input type="date" name="fecha_fin" value="{{ request.GET.fecha_fin }}" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
-                    </div>
-                    <div class="sm:col-span-2 lg:col-span-2">
-                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado</label>
-                        <select name="estado" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
-                            <option value="">TODOS LOS ESTADOS</option>
-                            {% for estado in estados_db %}
-                                <option value="{{ estado }}" {% if request.GET.estado == estado %}selected{% endif %}>
-                                    {{ estado|upper }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {# --- FECHAS --- #}
+                <div class="lg:col-span-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Desde (Fecha Registro)</label>
+                    <input type="date" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
                 </div>
+                <div class="lg:col-span-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hasta (Fecha Registro)</label>
+                    <input type="date" name="fecha_fin" value="{{ request.GET.fecha_fin }}" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                </div>
+
+                {# --- NUEVO: RANGO DE NÚMEROS DE RECIBO --- #}
+                <div class="lg:col-span-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Recibo Desde (Nº)</label>
+                    <input type="number" name="numero_desde" value="{{ request.GET.numero_desde }}" placeholder="0" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                </div>
+                <div class="lg:col-span-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Recibo Hasta (Nº)</label>
+                    <input type="number" name="numero_hasta" value="{{ request.GET.numero_hasta }}" placeholder="99999" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                </div>
+
+                {# --- ESTADO (Ahora ocupa toda la fila en móvil o se ajusta en desktop) --- #}
+                <div class="sm:col-span-2 lg:col-span-4">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado</label>
+                    <select name="estado" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-intu-blue/10">
+                        <option value="">TODOS LOS ESTADOS</option>
+                        {% for estado in estados_db %}
+                            <option value="{{ estado }}" {% if request.GET.estado == estado %}selected{% endif %}>
+                                {{ estado|upper }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
 
                 <fieldset>
                     <legend class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Filtrar por Categorías</legend>
