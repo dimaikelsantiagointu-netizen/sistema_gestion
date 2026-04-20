@@ -30,7 +30,7 @@ class Usuario(AbstractUser):
     class Meta:
         permissions = [
             ("ver_gestor_recibos", "Acceso al Gestor de Recibos"),
-            ("ver_gestor_clientes", "Acceso al Gestor de Clientes"),
+            ("ver_gestor_clientes", "Acceso al Gestor de Atención Comunitaria"),
             ("ver_gestor_pagos", "Acceso al Sistema de Pagos"),
             ("ver_gestor_contratos", "Acceso al Gestor de Contratos"),
             ("ver_gestor_sellos", "Acceso al Gestor de Sellos"),

@@ -32,12 +32,13 @@ def lista_beneficiarios(request):
     estado_id = request.GET.get('estado', '')
     genero = request.GET.get('genero', '')
     discapacidad = request.GET.get('discapacidad', '')
+    f_inicio = request.GET.get('fecha_inicio', '')
+    f_fin = request.GET.get('fecha_fin', '')
 
-    ha_filtrado = any([query, estado_id, genero, discapacidad])
+    ha_filtrado = any([query, estado_id, genero, discapacidad, f_inicio, f_fin])
     hoy_local = timezone.localtime(timezone.now()).date()
 
     if ha_filtrado:
-        # select_related optimizado para incluir la nueva jerarquía territorial
         beneficiarios_list = Beneficiario.objects.select_related(
             'estado', 'municipio', 'parroquia', 'ciudad', 'comuna'
         ).all()
@@ -56,10 +57,15 @@ def lista_beneficiarios(request):
             
         if discapacidad:
             beneficiarios_list = beneficiarios_list.filter(discapacidad=(discapacidad == '1'))
+
+        if f_inicio:
+            beneficiarios_list = beneficiarios_list.filter(fecha_creacion__date__gte=f_inicio)
+        
+        if f_fin:
+            beneficiarios_list = beneficiarios_list.filter(fecha_creacion__date__lte=f_fin)
             
-        beneficiarios_list = beneficiarios_list.order_by('nombre_completo')
+        beneficiarios_list = beneficiarios_list.order_by('-fecha_creacion')
     else:
-        # Por rendimiento, no cargamos nada si no hay filtros activos
         beneficiarios_list = Beneficiario.objects.none()
 
     total_beneficiarios = Beneficiario.objects.count()
@@ -68,6 +74,8 @@ def lista_beneficiarios(request):
     context = {
         'beneficiarios': beneficiarios_list,
         'query': query,
+        'f_inicio': f_inicio,
+        'f_fin': f_fin,
         'estados': Estado.objects.all().order_by('nombre'),
         'total_beneficiarios': total_beneficiarios,
         'visitas_hoy_count': visitas_hoy_count,
@@ -216,26 +224,49 @@ def detalle_beneficiario(request, id):
 
 @user_passes_test(es_administrador)
 def beneficiarios_estadisticas(request):
-    total_beneficiarios = Beneficiario.objects.count()
-    total_visitas = Visita.objects.count()
+    # 1. Capturar parámetros de fecha
+    f_inicio = request.GET.get('fecha_inicio')
+    f_fin = request.GET.get('fecha_fin')
 
-    visitas_por_estado = Beneficiario.objects.values('estado__nombre')\
+    # 2. Preparar objetos Q para filtrado dinámico
+    filtros_beneficiario = Q()
+    filtros_visita = Q()
+
+    if f_inicio:
+        # En Beneficiario usamos fecha_creacion
+        filtros_beneficiario &= Q(fecha_creacion__date__gte=f_inicio)
+        # En Visita usamos fecha_registro
+        filtros_visita &= Q(fecha_registro__date__gte=f_inicio)
+    if f_fin:
+        filtros_beneficiario &= Q(fecha_creacion__date__lte=f_fin)
+        filtros_visita &= Q(fecha_registro__date__lte=f_fin)
+
+    # 3. Aplicar filtros a los QuerySets base
+    total_beneficiarios = Beneficiario.objects.filter(filtros_beneficiario).count()
+    total_visitas = Visita.objects.filter(filtros_visita).count()
+
+    # Estadísticas de Beneficiarios (Filtradas por fecha_creacion)
+    visitas_por_estado = Beneficiario.objects.filter(filtros_beneficiario)\
+        .values('estado__nombre')\
         .annotate(total=Count('id'))\
         .order_by('-total')
 
-    gestion_por_operador = Visita.objects.values(
+    genero_data = Beneficiario.objects.filter(filtros_beneficiario)\
+        .values('genero')\
+        .annotate(total=Count('id'))\
+        .order_by('-total')
+
+    # Estadísticas de Visitas (Filtradas por fecha_registro)
+    gestion_por_operador = Visita.objects.filter(filtros_visita).values(
         'registrado_por__username', 
         'registrado_por__first_name', 
         'registrado_por__last_name'
     ).annotate(total=Count('id')).order_by('-total')
 
-    genero_data = Beneficiario.objects.values('genero')\
-        .annotate(total=Count('id'))\
-        .order_by('-total')
-
-    visitas_por_tipo = Visita.objects.values('motivo')\
+    visitas_por_tipo = Visita.objects.filter(filtros_visita).values('motivo')\
         .annotate(total=Count('id')).order_by('-total')
 
+    # Totales destacados
     estado_top = visitas_por_estado.first() if visitas_por_estado else None
     tipo_top = visitas_por_tipo.first() if visitas_por_tipo else None
 
@@ -248,6 +279,8 @@ def beneficiarios_estadisticas(request):
         'visitas_por_tipo': visitas_por_tipo,
         'estado_top': estado_top,
         'tipo_top': tipo_top,
+        'f_inicio': f_inicio,
+        'f_fin': f_fin,
     }
     return render(request, 'beneficiarios/estadisticas_beneficiarios.html', context)
 

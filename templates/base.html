@@ -32,31 +32,54 @@
             }
         }
     </script>
-    <style>
-        body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
-        .sidebar-gradient { background: linear-gradient(180deg, #002855 0%, #001a38 100%); }
-        #support-content { max-height: 0; overflow: hidden; transition: all 0.3s ease-in-out; opacity: 0; }
-        #support-content.open { max-height: 100px; opacity: 1; }
-        nav::-webkit-scrollbar { width: 4px; }
-        nav::-webkit-scrollbar-track { background: transparent; }
-        nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        
-        #main-sidebar {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+<style>
+    body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+    
+    /* Gradiente y Fondo */
+    .sidebar-gradient { background: linear-gradient(180deg, #002855 0%, #001a38 100%); }
+    
+    /* Soporte Técnico - Acordeón */
+    #support-content { max-height: 0; overflow: hidden; transition: all 0.3s ease-in-out; opacity: 0; }
+    #support-content.open { max-height: 100px; opacity: 1; }
+    
+    /* Scrollbar Minimalista para el NAV */
+    /* Usamos selector de ID o clase para mayor especificidad */
+    #main-sidebar nav::-webkit-scrollbar { width: 4px; }
+    #main-sidebar nav::-webkit-scrollbar-track { background: transparent; }
+    #main-sidebar nav::-webkit-scrollbar-thumb { 
+        background: rgba(255, 255, 255, 0.1); 
+        border-radius: 10px; 
+    }
+    #main-sidebar nav::-webkit-scrollbar-thumb:hover { 
+        background: rgba(255, 255, 255, 0.2); 
+    }
 
+    /* Estructura del Sidebar */
+    #main-sidebar {
+        height: 100vh; /* Altura total de la ventana */
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 50;
+    }
+
+    /* Control de visibilidad */
+    .sidebar-hidden { transform: translateX(-100%); }
+    
+    /* Persistencia en escritorio */
+    @media (min-width: 1024px) {
+        .sidebar-hidden { margin-left: -18rem; } /* Coincide con w-72 (18rem) */
+    }
+
+    @media (max-width: 1023px) {
         .sidebar-hidden { transform: translateX(-100%); }
-        
-        /* Persistencia en escritorio */
-        @media (min-width: 1024px) {
-            .sidebar-hidden { margin-left: -18rem; }
-        }
+        .sidebar-visible { transform: translateX(0); }
+    }
 
-        @media (max-width: 1023px) {
-            .sidebar-hidden { transform: translateX(-100%); }
-            .sidebar-visible { transform: translateX(0); }
-        }
-    </style>
+    /* Fix para el contenido interno */
+    #main-sidebar nav {
+        scrollbar-width: thin; /* Firefox */
+        scrollbar-color: rgba(255, 255, 255, 0.1) transparent; /* Firefox */
+    }
+</style>
 </head>
 <body class="min-h-screen flex flex-row overflow-hidden relative">
 
@@ -81,8 +104,8 @@
     {# --- OVERLAY MÓVIL --- #}
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[40] hidden transition-opacity duration-300"></div>
 
-    {# --- SIDEBAR --- #}
-    <aside id="main-sidebar" class="w-72 sidebar-gradient text-white flex-shrink-0 flex flex-col fixed inset-y-0 left-0 z-[50] lg:relative shadow-2xl lg:shadow-none">
+    {# --- SIDEBAR --- #}   
+    <aside id="main-sidebar" class="w-72 h-screen sidebar-gradient text-white flex-shrink-0 flex flex-col fixed inset-y-0 left-0 z-[50] lg:relative shadow-2xl lg:shadow-none overflow-hidden">
         
         <script>
             /* Bloqueo de parpadeo inicial */
@@ -111,7 +134,7 @@
             </button>
         </div>
 
-        <nav class="flex-grow p-4 space-y-1 overflow-y-auto">
+        <nav class="flex-grow p-4 pb-10 space-y-1 overflow-y-auto custom-scrollbar">
             <p class="px-4 pt-4 pb-2 text-[11px] font-bold text-white/30 uppercase tracking-[0.15em]">Menú Principal</p>
 
             <a href="{% url 'home' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'home' %}bg-white/10 text-white{% else %}text-white/70 hover:bg-white/5{% endif %} rounded-xl text-[13px] font-semibold transition group">
