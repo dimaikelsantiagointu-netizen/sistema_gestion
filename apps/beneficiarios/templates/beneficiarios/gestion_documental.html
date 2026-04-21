@@ -23,7 +23,7 @@
         {# SELECTOR DE CATEGORÍA #}
         <div class="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-200/50">
             <a href="?tipo=beneficiario" class="px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all {% if not request.GET.tipo or request.GET.tipo == 'beneficiario' %}bg-white text-intu-blue shadow-sm border border-gray-100{% else %}text-gray-400 hover:text-gray-600{% endif %}">
-                <i class="fas fa-home mr-2"></i> Beneficiarios
+                <i class="fas fa-home mr-2"></i> Ciudadanos
             </a>
             <a href="?tipo=personal" class="px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all {% if request.GET.tipo == 'personal' %}bg-white text-intu-blue shadow-sm border border-gray-100{% else %}text-gray-400 hover:text-gray-600{% endif %}">
                 <i class="fas fa-user-tie mr-2"></i> Personal

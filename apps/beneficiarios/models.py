@@ -47,6 +47,9 @@ class Beneficiario(models.Model):
     comuna = models.ForeignKey(Comuna, on_delete=models.PROTECT, null=True, blank=True, related_name='beneficiarios')
     direccion_especifica = models.TextField(verbose_name="Dirección Específica")
 
+    # --- Auditoría y Filtros ---
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Registro")
+
     def save(self, *args, **kwargs):
         """Normalización de datos en mayúsculas"""
         self.nombre_completo = self.nombre_completo.upper()
@@ -59,7 +62,7 @@ class Beneficiario(models.Model):
 
 
 # ==============================================================================
-# SECCIÓN 2: GESTIÓN DE ATENCIÓN Y VISITAS (SIN CAMPOS EXTRA)
+# SECCIÓN 2: GESTIÓN DE ATENCIÓN Y VISITAS
 # ==============================================================================
 
 class Visita(models.Model):
@@ -77,7 +80,6 @@ class Visita(models.Model):
         related_name='visitas'
     )
     
-    # Quién registró la visita (Auditoría interna)
     registrado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
@@ -99,7 +101,7 @@ class Visita(models.Model):
 
 
 # ==============================================================================
-# SECCIÓN 3: MOTOR DE EXPEDIENTE DIGITAL (CONEXIÓN CON PERSONAL)
+# SECCIÓN 3: MOTOR DE EXPEDIENTE DIGITAL
 # ==============================================================================
 
 def ruta_expediente_universal(instance, filename):
@@ -124,8 +126,6 @@ class DocumentoExpediente(models.Model):
         related_name='documentos'
     )
     
-    # CRÍTICO: related_name debe ser 'documentos_institucionales' 
-    # para que Personal.estado_expediente funcione
     personal = models.ForeignKey(
         'personal.Personal', 
         on_delete=models.CASCADE, 

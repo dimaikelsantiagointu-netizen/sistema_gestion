@@ -70,61 +70,84 @@
    {# --- BUSCADOR Y FILTROS UNIFICADOS --- #}
     <div class="mb-8 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-gray-200 shadow-sm">
         <form method="GET" action="{% url 'beneficiarios:lista' %}" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                {# Buscador de Texto (Cédula/Nombre) #}
-                <div class="md:col-span-3">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Nombre o Cédula</label>
-                    <div class="relative">
-                        <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Buscar..." 
-                               class="w-full pl-11 pr-4 py-4 bg-gray-50 border-transparent rounded-2xl text-[14px] font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-intu-blue transition-all">
-                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i>
-                    </div>
-                </div>
-
-                {# Estado #}
-                <div class="md:col-span-2">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Ubicación</label>
-                    <select name="estado" class="w-full py-4 px-4 bg-gray-50 border-transparent rounded-2xl text-[13px] font-bold text-slate-500 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer appearance-none">
-                        <option value="">Estados (Todos)</option>
-                        {% for e in estados %}
-                        <option value="{{ e.id }}" {% if request.GET.estado == e.id|stringformat:"i" %}selected{% endif %}>{{ e.nombre }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                {# Género #}
-                <div class="md:col-span-2">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Género</label>
-                    <select name="genero" class="w-full py-4 px-4 bg-gray-50 border-transparent rounded-2xl text-[13px] font-bold text-slate-500 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer appearance-none">
-                        <option value="">Géneros (Todos)</option>
-                        <option value="M" {% if request.GET.genero == 'M' %}selected{% endif %}>Masculino</option>
-                        <option value="F" {% if request.GET.genero == 'F' %}selected{% endif %}>Femenino</option>
-                    </select>
-                </div>
-
-                {# Discapacidad (Corregido y Alineado) #}
-                <div class="md:col-span-2">
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Discapacidad</label>
-                    <select name="discapacidad" class="w-full py-4 px-4 bg-gray-50 border-transparent rounded-2xl text-[13px] font-bold text-slate-500 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer appearance-none">
-                        <option value="">Discapacidad (Cualquiera)</option>
-                        <option value="1" {% if request.GET.discapacidad == '1' %}selected{% endif %}>Con Discapacidad</option>
-                        <option value="0" {% if request.GET.discapacidad == '0' %}selected{% endif %}>Sin Discapacidad</option>
-                    </select>
-                </div>
-
-                {# Botón de Acción #}
-                <div class="md:col-span-3 self-end flex gap-2">
-                    <button type="submit" class="flex-1 py-4 bg-intu-blue text-white rounded-2xl font-black text-[12px] uppercase tracking-[0.15em] hover:bg-blue-800 transition-all shadow-lg shadow-blue-100">
-                        <i class="fas fa-filter mr-1"></i> Filtrar
-                    </button>
-                    {% if ha_filtrado %}
-                    <a href="{% url 'beneficiarios:lista' %}" class="w-14 h-14 flex items-center justify-center bg-gray-50 text-intu-red rounded-2xl hover:bg-red-50 transition-all" title="Limpiar Filtros">
-                        <i class="fas fa-trash-alt"></i>
-                    </a>
-                    {% endif %}
-                </div>
+    {# FILA 1: Búsqueda y Selectores Principales #}
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+        {# Buscador de Texto #}
+        <div class="md:col-span-4">
+            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Nombre o Cédula</label>
+            <div class="relative">
+                <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Buscar..." 
+                       class="w-full pl-11 pr-4 py-4 bg-gray-50 border-transparent rounded-2xl text-[14px] font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-intu-blue transition-all">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i>
             </div>
-        </form>
+        </div>
+
+        {# Estado #}
+        <div class="md:col-span-3">
+            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Ubicación</label>
+            <select name="estado" class="w-full py-4 px-4 bg-gray-50 border-transparent rounded-2xl text-[13px] font-bold text-slate-500 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer appearance-none">
+                <option value="">Estados (Todos)</option>
+                {% for e in estados %}
+                <option value="{{ e.id }}" {% if request.GET.estado == e.id|stringformat:"i" %}selected{% endif %}>{{ e.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# Género #}
+        <div class="md:col-span-2">
+            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Género</label>
+            <select name="genero" class="w-full py-4 px-4 bg-gray-50 border-transparent rounded-2xl text-[13px] font-bold text-slate-500 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer appearance-none">
+                <option value="">Géneros (Todos)</option>
+                <option value="M" {% if request.GET.genero == 'M' %}selected{% endif %}>Masculino</option>
+                <option value="F" {% if request.GET.genero == 'F' %}selected{% endif %}>Femenino</option>
+            </select>
+        </div>
+
+        {# Discapacidad #}
+        <div class="md:col-span-3">
+            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Discapacidad</label>
+            <select name="discapacidad" class="w-full py-4 px-4 bg-gray-50 border-transparent rounded-2xl text-[13px] font-bold text-slate-500 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer appearance-none">
+                <option value="">Discapacidad (Cualquiera)</option>
+                <option value="1" {% if request.GET.discapacidad == '1' %}selected{% endif %}>Con Discapacidad</option>
+                <option value="0" {% if request.GET.discapacidad == '0' %}selected{% endif %}>Sin Discapacidad</option>
+            </select>
+        </div>
+    </div>
+
+    {# FILA 2: Rangos de Fecha y Botones #}
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 pt-4 border-t border-gray-100">
+        {# Fecha Inicio #}
+        <div class="md:col-span-4">
+            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Fecha Registro (Desde)</label>
+            <div class="relative">
+                <input type="date" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}" 
+                       class="w-full px-4 py-4 bg-gray-50 border-transparent rounded-2xl text-[13px] font-bold text-slate-600 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
+            </div>
+        </div>
+
+        {# Fecha Fin #}
+        <div class="md:col-span-4">
+            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Fecha Registro (Hasta)</label>
+            <div class="relative">
+                <input type="date" name="fecha_fin" value="{{ request.GET.fecha_fin }}" 
+                       class="w-full px-4 py-4 bg-gray-50 border-transparent rounded-2xl text-[13px] font-bold text-slate-600 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
+            </div>
+        </div>
+
+        {# Botones de Acción #}
+        <div class="md:col-span-4 self-end flex gap-2">
+            <button type="submit" class="flex-1 py-4 bg-intu-blue text-white rounded-2xl font-black text-[12px] uppercase tracking-[0.15em] hover:bg-blue-800 transition-all shadow-lg shadow-blue-100">
+                <i class="fas fa-filter mr-1"></i> Aplicar Filtros
+            </button>
+            
+            {% if ha_filtrado or request.GET.fecha_inicio or request.GET.fecha_fin %}
+            <a href="{% url 'beneficiarios:lista' %}" class="w-14 h-14 flex items-center justify-center bg-gray-50 text-intu-red rounded-2xl hover:bg-red-50 transition-all" title="Limpiar Filtros">
+                <i class="fas fa-trash-alt"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</form>
     </div>
 
     {# --- TABLA RESPONSIVA --- #}

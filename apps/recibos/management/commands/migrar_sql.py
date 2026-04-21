@@ -1,138 +1,124 @@
-import os
 import re
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils.timezone import make_aware
+from django.db import transaction
 from apps.recibos.models import Recibo
 
 User = get_user_model()
 
 class Command(BaseCommand):
-    help = 'Versión Final Pro: Migración con bypass de duplicados y protección de desbordamiento'
+    help = 'Migración de Recibos: Normalización total y preservación de fechas originales'
 
     def add_arguments(self, parser):
         parser.add_argument('sql_file', type=str, help='Ruta al archivo .sql')
 
     def clean_decimal(self, value):
-        """Limpia y protege contra números que desbordan el campo numeric(19,4)"""
         if not value or value == '\\N' or value.strip() == '':
             return Decimal('0.00')
-        
         clean_val = value.replace(' ', '').replace('.', '').replace(',', '.')
-        
         try:
-            val_decimal = Decimal(clean_val)
-            if val_decimal.is_infinite() or val_decimal > Decimal('999999999999999.9999'):
-                return Decimal('0.00')
-            return val_decimal
+            val = Decimal(clean_val)
+            return val if val <= Decimal('999999999999999.99') else Decimal('0.00')
         except (InvalidOperation, ValueError):
             return Decimal('0.00')
 
-    def normalizar_estado(self, nombre_estado):
-        if not nombre_estado or nombre_estado == '\\N':
-            return "DESCONOCIDO"
-        estado = nombre_estado.strip().upper()
-        remplazos_acentos = {'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U'}
-        for original, reemplazo in remplazos_acentos.items():
-            estado = estado.replace(original, reemplazo)
-        if "DTO.CAPITAL" in estado or "DTTO.CAPITAL" in estado: return "DISTRITO CAPITAL"
-        if "ZULA" == estado: return "ZULIA"
-        if estado.startswith("S/D"): return None
-        return estado
+    def parse_datetime_custom(self, value):
+        if not value or value == '\\N':
+            return None
+        try:
+            dt_str = value.split('.')[0]
+            return make_aware(datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S'))
+        except:
+            return None
 
     def handle(self, *args, **options):
-        sql_file_path = options['sql_file']
         admin_user = User.objects.filter(is_superuser=True).first()
         if not admin_user:
-            admin_user, _ = User.objects.get_or_create(username='admin', defaults={'is_staff': True, 'is_superuser': True})
+            self.stdout.write(self.style.ERROR('Debe existir al menos un superusuario.'))
+            return
 
-        self.stdout.write(self.style.WARNING('Iniciando migración final...'))
+        self.stdout.write(self.style.WARNING('>>> Iniciando migración de alta precisión...'))
+        
         exitos = 0
-        errores = 0
-        en_bloque_datos = False
+        en_bloque = False
 
-        with open(sql_file_path, 'r', encoding='utf-8') as f:
+        with open(options['sql_file'], 'r', encoding='utf-8') as f:
             for linea in f:
                 if 'COPY public.recibos_pago' in linea:
-                    en_bloque_datos = True
+                    en_bloque = True
                     continue
-                if en_bloque_datos and linea.strip() == '\\.':
-                    en_bloque_datos = False
+                if en_bloque and linea.strip() == '\\.':
                     break
                 
-                if en_bloque_datos:
-                    columnas = linea.replace('\n', '').split('\t')
-                    if len(columnas) < 20: continue
+                if en_bloque:
+                    cols = linea.replace('\n', '').split('\t')
+                    if len(cols) < 20: continue
 
                     try:
-                        estado_limpio = self.normalizar_estado(columnas[2])
-                        if estado_limpio is None: continue
-
-                        # 1. Montos con protección de desbordamiento
-                        gastos = self.clean_decimal(columnas[17])
-                        tasa = self.clean_decimal(columnas[18])
-                        total = self.clean_decimal(columnas[19])
-                        num_recibo_int = int(columnas[1]) if columnas[1].isdigit() else None
-
-                        # 2. Control de Unicidad Transferencia
-                        raw_transf = columnas[20].strip()
-                        val_transf = re.sub(r'[^0-9]', '', raw_transf)
+                        # 1. Preparación de Identificadores
+                        num_recibo = int(cols[1]) if cols[1].isdigit() else None
                         
-                        if not val_transf or raw_transf.upper() in ['SI', 'NO', 'S/N', '\\N']:
-                            val_transf = None
-                        else:
-                            # Bypass de duplicados
-                            if Recibo.objects.filter(numero_transferencia=val_transf).exclude(numero_recibo=num_recibo_int).exists():
-                                val_transf = f"{val_transf}-{num_recibo_int}"
+                        # 2. Manejo de Fechas (EL PUNTO CRÍTICO)
+                        # cols[22] es la fecha del recibo (DateField)
+                        # cols[x] buscaremos la fecha de creación original si existe en el SQL
+                        # Si el SQL no tiene fecha_creacion, usaremos la misma del recibo para mantener coherencia
+                        fecha_recibo_raw = cols[22] if cols[22] != '\\N' else None
+                        dt_original = self.parse_datetime_custom(cols[22] + " 00:00:00") 
 
-                        # 3. Fechas
-                        fecha_anulacion = None
-                        if len(columnas) > 27 and columnas[27] != '\\N':
-                            try:
-                                dt_str = columnas[27].split('.')[0]
-                                dt = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
-                                fecha_anulacion = make_aware(dt)
-                            except: pass
+                        # 3. Limpieza de número de transferencia (Unicidad)
+                        transf_raw = cols[20].strip()
+                        num_transf = re.sub(r'[^0-9]', '', transf_raw)
+                        if not num_transf or transf_raw.upper() in ['SI', 'NO', '\\N']:
+                            num_transf = None
+                        elif Recibo.objects.filter(numero_transferencia=num_transf).exclude(numero_recibo=num_recibo).exists():
+                            num_transf = f"{num_transf}-{num_recibo}"
 
-                        # 4. Guardar o Actualizar
-                        Recibo.objects.update_or_create(
-                            numero_recibo=num_recibo_int,
-                            defaults={
-                                'estado': estado_limpio,
-                                'nombre': columnas[3].strip().upper() if columnas[3] != '\\N' else 'SIN NOMBRE',
-                                'rif_cedula_identidad': columnas[4].strip().upper() if columnas[4] != '\\N' else 'S/R',
-                                'direccion_inmueble': columnas[5] if columnas[5] != '\\N' else 'SIN DIRECCION',
-                                'ente_liquidado': columnas[6].strip().upper() if columnas[6] != '\\N' else 'N/A',
-                                'categoria1': columnas[7].lower() == 't',
-                                'categoria2': columnas[8].lower() == 't',
-                                'categoria3': columnas[9].lower() == 't',
-                                'categoria4': columnas[10].lower() == 't',
-                                'categoria5': columnas[11].lower() == 't',
-                                'categoria6': columnas[12].lower() == 't',
-                                'categoria7': columnas[13].lower() == 't',
-                                'categoria8': columnas[14].lower() == 't',
-                                'categoria9': columnas[15].lower() == 't',
-                                'categoria10': columnas[16].lower() == 't',
-                                'gastos_administrativos': gastos,
-                                'tasa_dia': tasa,
-                                'total_monto_bs': total,
-                                'numero_transferencia': val_transf,
-                                'conciliado': 'SI' in raw_transf.upper() or columnas[21].lower() in ['t', 'true', '1', 'si'],
-                                'fecha': columnas[22] if columnas[22] != '\\N' else None,
-                                'concepto': columnas[23] if columnas[23] != '\\N' else '',
-                                'usuario': admin_user,
-                                'anulado': columnas[26].lower() == 't',
-                                'fecha_anulacion': fecha_anulacion
-                            }
-                        )
+                        # 4. Creación/Actualización con Bypass de auto_now_add
+                        with transaction.atomic():
+                            obj, created = Recibo.objects.update_or_create(
+                                numero_recibo=num_recibo,
+                                defaults={
+                                    'estado': cols[2].strip().upper() if cols[2] != '\\N' else 'DESCONOCIDO',
+                                    'nombre': cols[3].strip().upper() if cols[3] != '\\N' else 'SIN NOMBRE',
+                                    'rif_cedula_identidad': cols[4].strip().upper() if cols[4] != '\\N' else 'S/R',
+                                    'direccion_inmueble': cols[5] if cols[5] != '\\N' else 'SIN DIRECCIÓN',
+                                    'ente_liquidado': cols[6].strip().upper() if cols[6] != '\\N' else 'N/A',
+                                    'categoria1': cols[7].lower() == 't',
+                                    'categoria2': cols[8].lower() == 't',
+                                    'categoria3': cols[9].lower() == 't',
+                                    'categoria4': cols[10].lower() == 't',
+                                    'categoria5': cols[11].lower() == 't',
+                                    'categoria6': cols[12].lower() == 't',
+                                    'categoria7': cols[13].lower() == 't',
+                                    'categoria8': cols[14].lower() == 't',
+                                    'categoria9': cols[15].lower() == 't',
+                                    'categoria10': cols[16].lower() == 't',
+                                    'gastos_administrativos': self.clean_decimal(cols[17]),
+                                    'tasa_dia': self.clean_decimal(cols[18]),
+                                    'total_monto_bs': self.clean_decimal(cols[19]),
+                                    'numero_transferencia': num_transf,
+                                    'conciliado': cols[21].lower() in ['t', 'true', '1'],
+                                    'fecha': fecha_recibo_raw,
+                                    'concepto': cols[23] if cols[23] != '\\N' else '',
+                                    'usuario': admin_user,
+                                    'anulado': cols[26].lower() == 't',
+                                    'fecha_anulacion': self.parse_datetime_custom(cols[27]) if len(cols) > 27 else None,
+                                }
+                            )
+
+                            # FORZADO DE FECHA DE AUDITORÍA:
+                            # Usamos .update() porque salta el auto_now_add de Django
+                            if dt_original:
+                                Recibo.objects.filter(pk=obj.pk).update(fecha_creacion=dt_original)
+
                         exitos += 1
                         if exitos % 500 == 0:
-                            self.stdout.write(self.style.SUCCESS(f'>>> {exitos} procesados...'))
-                            
-                    except Exception as e:
-                        errores += 1
-                        self.stdout.write(self.style.ERROR(f"Error Recibo {columnas[1]}: {str(e)}"))
+                            self.stdout.write(self.style.SUCCESS(f'>>> {exitos} registros migrados...'))
 
-        self.stdout.write(self.style.SUCCESS(f'\n {exitos} registros migrados.'))
+                    except Exception as e:
+                        self.stdout.write(self.style.ERROR(f"Error en Recibo {cols[1]}: {str(e)}"))
+
+        self.stdout.write(self.style.SUCCESS(f'\nProceso finalizado. {exitos} registros normalizados.'))
