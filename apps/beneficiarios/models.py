@@ -67,11 +67,15 @@ class Beneficiario(models.Model):
 
 class Visita(models.Model):
     MOTIVO_CHOICES = [
-        ('ASESORIA', 'Asesoría Jurídica'),
+        ('ASESORIA', 'Asesoría'),
         ('RECAUDOS', 'Entrega de Recaudos'),
-        ('RETIRO', 'Retiro de Documentos'),
+        ('RETIRO', 'Retiros de Documentos'),
         ('SOLICITUD', 'Nueva Solicitud'),
-        ('OTRO', 'Otro / Información General'),
+        ('REG_COMERCIAL', 'Regularización Comercial'),
+        ('CTU', 'Registro O Actualización de CTU'),
+        ('REG_TIERRAS', 'Regularización de Tierras o Vivienda'),
+        ('TECNICO', 'Servicios Técnicos'),
+        ('OTRO', 'Otros'),
     ]
 
     beneficiario = models.ForeignKey(
@@ -89,6 +93,30 @@ class Visita(models.Model):
 
     fecha_registro = models.DateTimeField(default=timezone.now)
     motivo = models.CharField(max_length=20, choices=MOTIVO_CHOICES)
+
+    # --- CAMPOS CONDICIONALES (ASESORÍA) ---
+    
+    # Campo para el nombre del funcionario
+    funcionario_atiende = models.CharField(
+        max_length=255, 
+        null=True, 
+        blank=True, 
+        verbose_name="Funcionario que lo atiende"
+    )
+
+    # CONEXIÓN GLOBAL: Unidad Administrativa
+    # Se deja comentada para futura integración con la app de territorios/globales
+    # unidad_administrativa = models.ForeignKey(
+    #     'territorio.UnidadAdministrativa', 
+    #     on_delete=models.PROTECT, 
+    #     null=True, 
+    #     blank=True,
+    #     related_name='visitas_atendidas'
+    # )
+    
+    # Mientras se habilita la relación, podrías usar un CharField temporal si necesitas probar,
+    # o simplemente dejar el espacio como hemos hecho aquí.
+
     descripcion = models.TextField(verbose_name="Observaciones de la visita")
 
     class Meta:
@@ -97,8 +125,7 @@ class Visita(models.Model):
         verbose_name_plural = "Visitas"
 
     def __str__(self):
-        return f"{self.beneficiario.nombre_completo} - {self.fecha_registro.date()}"
-
+        return f"{self.beneficiario.nombre_completo} - {self.get_motivo_display()}"
 
 # ==============================================================================
 # SECCIÓN 3: MOTOR DE EXPEDIENTE DIGITAL

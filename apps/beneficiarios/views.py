@@ -191,10 +191,20 @@ def registrar_visita(request):
             beneficiario = get_object_or_404(Beneficiario, id=b_id)
             fecha_post = request.POST.get('fecha_registro')
             
+            # Capturamos los nuevos campos del POST
+            funcionario = request.POST.get('funcionario_atiende')
+            unidad = request.POST.get('unidad_adscrita')
+            desc_original = request.POST.get('descripcion')
+
+            descripcion_final = desc_original
+            if unidad:
+                descripcion_final += f" | UNIDAD: {unidad}"
+
             Visita.objects.create(
                 beneficiario=beneficiario,
                 motivo=request.POST.get('motivo'),
-                descripcion=request.POST.get('descripcion'),
+                descripcion=descripcion_final,
+                funcionario_atiende=funcionario, # <--- Esto guarda el nombre del funcionario
                 registrado_por=request.user,
                 fecha_registro=fecha_post if fecha_post else timezone.now()
             )

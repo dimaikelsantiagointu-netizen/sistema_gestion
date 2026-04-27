@@ -62,7 +62,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div class="group">
                         <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Motivo de la visita</label>
-                        <select name="motivo" class="block w-full bg-gray-50 border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-intu-blue/5 p-5 cursor-pointer appearance-none">
+                        <select name="motivo" id="select_motivo" class="block w-full bg-gray-50 border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-intu-blue/5 p-5 cursor-pointer appearance-none">
                             {% for code, name in motivos %}
                                 <option value="{{ code }}">{{ name }}</option>
                             {% endfor %}
@@ -74,6 +74,28 @@
                         <input type="datetime-local" name="fecha_registro" 
                                value="{{ current_time|date:'Y-m-d\TH:i' }}"
                                class="block w-full bg-gray-50 border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-intu-blue/5 p-5">
+                    </div>
+                </div>
+
+                {# --- CAMPOS CONDICIONALES PARA ASESORÍA --- #}
+                <div id="campos_asesoria" class="hidden grid grid-cols-1 md:grid-cols-2 gap-10 p-8 bg-blue-50/50 rounded-[2.5rem] border-2 border-dashed border-blue-100 animate-fade-in">
+                    <div class="md:col-span-1">
+                        <label class="text-[12px] font-bold text-blue-600 ml-1 mb-2 block uppercase tracking-wider">Funcionario que lo atiende</label>
+                        <div class="relative flex items-center group">
+                            <i class="fas fa-user-tie absolute left-5 text-blue-300 group-focus-within:text-blue-500 transition-colors"></i>
+                            <input type="text" name="funcionario_atiende" placeholder="Nombre del abogado o asesor..."
+                                   class="block w-full bg-white border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-blue-500/10 p-5 pl-14 shadow-sm transition-all">
+                        </div>
+                    </div>
+
+                    {# Unidad Administrativa: Comentada/Preparada para futuro #}
+                    <div class="md:col-span-1 opacity-60">
+                        <label class="text-[12px] font-bold text-slate-400 ml-1 mb-2 block italic uppercase tracking-wider">Unidad Administrativa (Próximamente)</label>
+                        <div class="relative flex items-center">
+                            <i class="fas fa-building absolute left-5 text-slate-300"></i>
+                            <input type="text" disabled placeholder="Conexión en desarrollo..."
+                                   class="block w-full bg-gray-100 border-none rounded-2xl text-base font-bold p-5 pl-14 cursor-not-allowed">
+                        </div>
                     </div>
                 </div>
 
@@ -126,10 +148,22 @@
     const seccionDetalles = document.getElementById('seccion_detalles');
     const cardSeleccionado = document.getElementById('card_seleccionado');
     const checkOk = document.getElementById('check_ok');
+    const selectMotivo = document.getElementById('select_motivo');
+    const camposAsesoria = document.getElementById('campos_asesoria');
+
+    // Lógica para mostrar campos de asesoría
+    function verificarMotivo() {
+        if (selectMotivo.value === 'ASESORIA') {
+            camposAsesoria.classList.remove('hidden');
+        } else {
+            camposAsesoria.classList.add('hidden');
+        }
+    }
+
+    selectMotivo.addEventListener('change', verificarMotivo);
 
     inputBusqueda.addEventListener('input', function() {
         const query = this.value.trim();
-        
         if (query.length < 2) {
             contenedorResultados.classList.add('hidden');
             return;
@@ -168,15 +202,16 @@
         nombreConfirmado.value = b.nombre;
         nombreConfirmado.classList.replace('text-gray-400', 'text-intu-blue');
         
-        // Estética de selección
         cardSeleccionado.classList.replace('bg-gray-50', 'bg-blue-50');
         cardSeleccionado.classList.replace('border-gray-200', 'border-intu-blue/20');
         checkOk.classList.remove('hidden');
         
-        // Desbloquear formulario
         seccionDetalles.classList.remove('opacity-20', 'pointer-events-none', 'blur-[1px]');
         contenedorResultados.classList.add('hidden');
         inputBusqueda.value = '';
+        
+        // Verificar el motivo al momento de habilitar los campos
+        verificarMotivo();
     }
 
     document.addEventListener('click', (e) => {
