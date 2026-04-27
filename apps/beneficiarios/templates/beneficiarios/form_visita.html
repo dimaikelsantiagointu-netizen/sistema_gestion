@@ -29,7 +29,6 @@
                            class="block w-full bg-gray-50 border-2 border-transparent rounded-2xl text-base focus:bg-white focus:border-intu-blue/20 focus:ring-4 focus:ring-intu-blue/5 font-bold transition-all p-5 pl-14">
                 </div>
                 
-                {# Lista Desplegable de Resultados #}
                 <div id="contenedor_resultados" class="absolute z-50 w-full bg-white mt-3 rounded-2xl shadow-2xl border border-gray-100 hidden overflow-hidden transition-all">
                     <div id="lista_resultados" class="max-h-72 overflow-y-auto custom-scrollbar"></div>
                     <div class="bg-slate-50 p-4 border-t border-gray-100">
@@ -40,7 +39,7 @@
                 </div>
             </div>
 
-            {# --- BENEFICIARIO SELECCIONADO --- #}
+            {# --- SELECCIÓN ACTUAL --- #}
             <div>
                 <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Selección actual</label>
                 <div id="card_seleccionado" class="flex items-center p-5 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 min-h-[72px] transition-all">
@@ -55,7 +54,7 @@
                 </div>
             </div>
 
-            {# --- SECCIÓN DE DETALLES (Se desbloquea al seleccionar) --- #}
+            {# --- DETALLES --- #}
             <div id="seccion_detalles" class="md:col-span-2 space-y-10 opacity-20 pointer-events-none blur-[1px] transition-all duration-700">
                 <div class="h-px bg-gradient-to-r from-transparent via-gray-100 to-transparent"></div>
                 
@@ -77,13 +76,13 @@
                     </div>
                 </div>
 
-                {# --- CAMPOS CONDICIONALES PARA ASESORÍA --- #}
+                {# --- ASESORÍA (CORREGIDO) --- #}
                 <div id="campos_asesoria" class="hidden grid grid-cols-1 md:grid-cols-2 gap-10 p-8 bg-blue-50/50 rounded-[2.5rem] border-2 border-dashed border-blue-100 animate-fade-in">
                     <div class="md:col-span-1">
                         <label class="text-[12px] font-bold text-blue-600 ml-1 mb-2 block uppercase tracking-wider">Funcionario que lo atiende</label>
                         <div class="relative flex items-center group">
                             <i class="fas fa-user-tie absolute left-5 text-blue-300 group-focus-within:text-blue-500 transition-colors"></i>
-                            <input type="text" name="funcionario_atiende" placeholder="Nombre del abogado o asesor..."
+                            <input type="text" name="funcionario_atiende" id="input_funcionario" placeholder="Nombre del abogado o asesor..."
                                    class="block w-full bg-white border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-blue-500/10 p-5 pl-14 shadow-sm transition-all">
                         </div>
                     </div>
@@ -104,8 +103,8 @@
                 </div>
 
                 <div>
-                    <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Observaciones detalladas de la visita</label>
-                    <textarea name="descripcion" rows="4" placeholder="Escriba aquí los hallazgos o novedades de la visita..."
+                    <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Observaciones detalladas</label>
+                    <textarea name="descripcion" rows="4" placeholder="Escriba aquí los hallazgos..."
                               class="block w-full bg-gray-50 border-none rounded-2xl text-base font-medium p-5 focus:ring-4 focus:ring-intu-blue/5 transition-all"></textarea>
                 </div>
 
@@ -114,34 +113,12 @@
                         <span class="relative z-10 flex items-center justify-center gap-3">
                             <i class="fas fa-save text-lg"></i> Finalizar y guardar registro
                         </span>
-                        <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
                     </button>
                 </div>
             </div>
         </div>
     </form>
 </div>
-
-<style>
-    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-    
-    @keyframes fade-in {
-        from { opacity: 0; transform: translateY(15px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in {
-        animation: fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-    .animate-bounce-short {
-        animation: bounce 1s ease-in-out 1;
-    }
-    @keyframes bounce {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.2); }
-    }
-</style>
 
 <script>
     const inputBusqueda = document.getElementById('input_busqueda');
@@ -154,13 +131,22 @@
     const checkOk = document.getElementById('check_ok');
     const selectMotivo = document.getElementById('select_motivo');
     const camposAsesoria = document.getElementById('campos_asesoria');
+    
+    // Referencias a inputs internos para deshabilitarlos si no se usan
+    const inputFuncionario = document.getElementById('input_funcionario');
+    const selectUnidad = document.getElementById('select_unidad_adscrita');
 
-    // Lógica para mostrar campos de asesoría
     function verificarMotivo() {
         if (selectMotivo.value === 'ASESORIA') {
             camposAsesoria.classList.remove('hidden');
+            inputFuncionario.disabled = false;
+            selectUnidad.disabled = false;
         } else {
             camposAsesoria.classList.add('hidden');
+            // IMPORTANTE: Deshabilitamos para que no envíen valores vacíos
+            inputFuncionario.disabled = true;
+            selectUnidad.disabled = true;
+            selectUnidad.value = ""; // Limpiamos selección
         }
     }
 
@@ -198,30 +184,21 @@
                     listaResultados.innerHTML = '<div class="p-6 text-[12px] font-bold text-slate-400 uppercase text-center italic">No se encontraron resultados</div>';
                     contenedorResultados.classList.remove('hidden');
                 }
-            });
+            })
+            .catch(err => console.error("Error en búsqueda:", err)); // Cierre de fetch corregido
     });
 
     function seleccionar(b) {
         idOculto.value = b.id;
         nombreConfirmado.value = b.nombre;
         nombreConfirmado.classList.replace('text-gray-400', 'text-intu-blue');
-        
         cardSeleccionado.classList.replace('bg-gray-50', 'bg-blue-50');
         cardSeleccionado.classList.replace('border-gray-200', 'border-intu-blue/20');
         checkOk.classList.remove('hidden');
-        
         seccionDetalles.classList.remove('opacity-20', 'pointer-events-none', 'blur-[1px]');
         contenedorResultados.classList.add('hidden');
         inputBusqueda.value = '';
-        
-        // Verificar el motivo al momento de habilitar los campos
         verificarMotivo();
     }
-
-    document.addEventListener('click', (e) => {
-        if (!inputBusqueda.contains(e.target) && !contenedorResultados.contains(e.target)) {
-            contenedorResultados.classList.add('hidden');
-        }
-    });
 </script>
 {% endblock %}

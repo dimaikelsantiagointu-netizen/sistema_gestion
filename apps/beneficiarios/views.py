@@ -192,23 +192,23 @@ def registrar_visita(request):
             fecha_post = request.POST.get('fecha_registro')
             
             funcionario = request.POST.get('funcionario_atiende')
-            unidad_id = request.POST.get('unidad_adscrita')
+            # El name del HTML es 'unidad_adscrita'
+            unidad_id = request.POST.get('unidad_adscrita') 
             desc_original = request.POST.get('descripcion')
 
             unidad_obj = None
-            if unidad_id:
+            if unidad_id and unidad_id.isdigit():
                 unidad_obj = UnidadAdscrita.objects.filter(id=unidad_id).first()
 
-            descripcion_final = desc_original
-            if unidad_obj:
-                descripcion_final += f" | UNIDAD: {unidad_obj.nombre}"
-
+            # Aquí es donde estaba el choque de nombres
             Visita.objects.create(
                 beneficiario=beneficiario,
                 motivo=request.POST.get('motivo'),
-                descripcion=descripcion_final,
+                descripcion=desc_original,
                 funcionario_atiende=funcionario,
-                unidad_administrativa=unidad_obj,
+                # IZQUIERDA: Nombre en el Modelo (unidad_administrativa)
+                # DERECHA: El objeto que encontramos arriba
+                unidad_administrativa=unidad_obj, 
                 registrado_por=request.user,
                 fecha_registro=fecha_post if fecha_post else timezone.now()
             )
