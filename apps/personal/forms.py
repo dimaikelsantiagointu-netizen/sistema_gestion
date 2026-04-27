@@ -2,34 +2,8 @@ from django import forms
 from django.core.exceptions import ValidationError
 import re
 
-from .models import Personal, UnidadAdscrita, DocumentoPersonal
-from apps.territorio.models import Estado, Municipio, Parroquia, Comuna
-
-# ==============================================================================
-# 1. GESTIÓN DE UNIDADES ADSCRITAS
-# ==============================================================================
-class UnidadAdscritaForm(forms.ModelForm):
-    class Meta:
-        model = UnidadAdscrita
-        fields = ['nombre', 'descripcion']
-        widgets = {
-            'nombre': forms.TextInput(attrs={
-                'class': 'form-input', 
-                'placeholder': 'EJ: RECURSOS HUMANOS'
-            }),
-            'descripcion': forms.Textarea(attrs={
-                'class': 'form-input', 
-                'placeholder': 'BREVE DESCRIPCIÓN (OPCIONAL)',
-                'rows': 3
-            }),
-        }
-
-    def clean_nombre(self):
-        return self.cleaned_data.get('nombre', '').upper().strip()
-
-# ==============================================================================
-# 2. FORMULARIO DE PERSONAL (CON INTEGRACIÓN TERRITORIAL COMPLETA)
-# ==============================================================================
+from .models import Personal, DocumentoPersonal
+from apps.territorio.models import Estado, Municipio, Parroquia, Comuna, UnidadAdscrita
 class PersonalForm(forms.ModelForm):
     class Meta:
         model = Personal

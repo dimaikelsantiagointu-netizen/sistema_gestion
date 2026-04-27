@@ -22,10 +22,11 @@
         </div>
         
         <div class="flex flex-wrap gap-3">
-            <a href="{% url 'beneficiarios:exportar_excel' %}" 
-               class="flex-1 sm:flex-none px-6 py-4 text-[13px] font-black border-2 border-emerald-600 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all active:scale-95 tracking-wide flex items-center justify-center">
-                <i class="fas fa-file-excel mr-2 text-base"></i> Reporte
-            </a>
+{# --- BOTÓN DE REPORTE CORREGIDO --- #}
+<a href="{% url 'beneficiarios:exportar_excel' %}?fecha_inicio={{ request.GET.fecha_inicio }}&fecha_fin={{ request.GET.fecha_fin }}" 
+   class="flex-1 sm:flex-none px-6 py-4 text-[13px] font-black border-2 border-emerald-600 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all active:scale-95 tracking-wide flex items-center justify-center">
+    <i class="fas fa-file-excel mr-2 text-base"></i> Reporte
+</a>
             <a href="{% url 'beneficiarios:registrar_visita' %}" 
                class="flex-1 sm:flex-none px-6 py-4 text-[13px] font-black border-2 border-intu-blue text-intu-blue rounded-2xl hover:bg-intu-blue hover:text-white transition-all active:scale-95 tracking-wide flex items-center justify-center">
                 <i class="fas fa-walking mr-2 text-base"></i> Visita

@@ -32,6 +32,7 @@
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {# Tipo de Documento #}
                 <div>
                     <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Tipo de Documento</label>
                     <select name="tipo_documento" id="tipo_doc_selector" class="mt-3 block w-full bg-white border border-gray-200 rounded-2xl text-[14px] font-bold focus:ring-4 focus:ring-intu-blue/5 focus:border-intu-blue p-4 transition-all outline-none">
@@ -41,6 +42,7 @@
                     </select>
                 </div>
 
+                {# Número de Cédula / RIF #}
                 <div>
                     <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Número de Cédula / RIF</label>
                     <div class="relative flex items-center mt-3">
@@ -57,13 +59,18 @@
                     </p>
                 </div>
 
-                <div class="md:col-span-2">
-                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Nombres y Apellidos Completos</label>
-                    <input type="text" name="nombre_completo" required placeholder="EJ: JUAN ALBERTO PÉREZ"
-                           value="{{ beneficiario.nombre_completo|default:'' }}"
-                           class="mt-3 block w-full bg-white border border-gray-200 rounded-2xl text-[15px] focus:ring-4 focus:ring-intu-blue/5 focus:border-intu-blue uppercase font-black p-4 transition-all outline-none">
+                {# Fecha de Nacimiento #}
+                <div>
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Fecha de Nacimiento</label>
+                    <div class="relative flex items-center mt-3 group">
+                        <i class="fas fa-calendar-alt absolute left-5 text-gray-300 group-focus-within:text-intu-blue transition-colors"></i>
+                        <input type="date" name="fecha_nacimiento" 
+                               value="{{ beneficiario.fecha_nacimiento|date:'Y-m-d' }}"
+                               class="block w-full bg-white border border-gray-200 rounded-2xl text-[15px] focus:ring-4 focus:ring-intu-blue/5 focus:border-intu-blue font-black p-4 pl-14 transition-all outline-none">
+                    </div>
                 </div>
 
+                {# Género #}
                 <div>
                     <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Género</label>
                     <div class="flex gap-4 mt-3">
@@ -78,6 +85,15 @@
                     </div>
                 </div>
 
+                {# Nombres y Apellidos #}
+                <div class="md:col-span-2">
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Nombres y Apellidos Completos</label>
+                    <input type="text" name="nombre_completo" required placeholder="EJ: JUAN ALBERTO PÉREZ"
+                           value="{{ beneficiario.nombre_completo|default:'' }}"
+                           class="mt-3 block w-full bg-white border border-gray-200 rounded-2xl text-[15px] focus:ring-4 focus:ring-intu-blue/5 focus:border-intu-blue uppercase font-black p-4 transition-all outline-none">
+                </div>
+
+                {# Condición Especial #}
                 <div class="flex flex-col justify-center px-2">
                     <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-4">Condición Especial</label>
                     <label class="relative inline-flex items-center cursor-pointer">
@@ -157,7 +173,7 @@
                            class="mt-3 block w-full bg-white border border-gray-200 rounded-2xl text-[15px] font-black p-4 focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500 transition-all outline-none">
                 </div>
                 <div>
-                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Correo Electrónico</label>
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest ml-1">Correo Electrónico (Opcional)</label>
                     <input type="email" name="email" placeholder="ejemplo@correo.com" value="{{ beneficiario.email|default:'' }}"
                            class="mt-3 block w-full bg-white border border-gray-200 rounded-2xl text-[15px] font-black p-4 focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500 transition-all outline-none">
                 </div>
@@ -176,6 +192,20 @@
     @keyframes fade-in { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
     .animate-fade-in { animation: fade-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     input:focus, select:focus, textarea:focus { border-color: transparent !important; }
+    
+    /* Estilo para el input date para que sea clickable en toda el área */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        background: transparent;
+        bottom: 0;
+        color: transparent;
+        cursor: pointer;
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: auto;
+        height: auto;
+    }
 </style>
 
 <script>
@@ -196,12 +226,14 @@
     const API_TERRITORIO = '/configuracion-territorio/ajax';
     const API_CHECK_DOC = '/beneficiarios/api/check-documento/';
 
+    // Ajusta el prefijo (V-, J-, etc.) y el padding dinámicamente
     function updatePrefix() {
         const selectedValue = typeSelector.value;
         visualPrefix.innerText = selectedValue + '-';
         docInput.style.paddingLeft = (visualPrefix.offsetWidth + 16) + 'px';
     }
 
+    // Validación de duplicados en tiempo real
     let typingTimer;
     docInput.addEventListener('input', function() {
         this.value = this.value.replace(/[^0-9]/g, '');
@@ -230,6 +262,7 @@
     typeSelector.addEventListener('change', updatePrefix);
     window.addEventListener('DOMContentLoaded', updatePrefix);
 
+    // Lógica de Selects Dinámicos (Territorio)
     function resetSelect(field, message) {
         if (!field) return;
         field.innerHTML = `<option value="">${message}</option>`;

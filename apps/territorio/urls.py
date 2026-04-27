@@ -32,4 +32,10 @@ urlpatterns = [
     # Comunas
     path('ajax/comunas/', views.api_get_comunas, name='ajax_comunas_base'),
     path('ajax/comunas/<int:parroquia_id>/', views.api_get_comunas, name='ajax_load_comunas'),
+
+    # --- UNIDADES ADSCRITAS ---
+    path('unidades/', views.UnidadListView.as_view(), name='unidades_lista'),
+    path('unidades/nueva/', views.UnidadCreateView.as_view(), name='unidad_crear'),
+    path('unidades/editar/<int:pk>/', views.UnidadUpdateView.as_view(), name='unidad_editar'),
+    path('unidades/eliminar/<int:pk>/', views.eliminar_unidad, name='unidad_eliminar'),
 ]

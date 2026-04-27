@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Estado, Municipio, Ciudad, Parroquia, Comuna
+from .models import Estado, Municipio, Ciudad, Parroquia, Comuna, UnidadAdscrita
 
 @admin.register(Estado)
 class EstadoAdmin(admin.ModelAdmin):
@@ -44,4 +44,10 @@ class ComunaAdmin(admin.ModelAdmin):
     @admin.display(description='Municipio', ordering='parroquia__municipio')
     def get_municipio(self, obj):
         return obj.parroquia.municipio.nombre
+
+@admin.register(UnidadAdscrita)
+class UnidadAdscritaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nombre', 'descripcion', 'total_personal')
+    search_fields = ('nombre',)
+    ordering = ('nombre',)
 

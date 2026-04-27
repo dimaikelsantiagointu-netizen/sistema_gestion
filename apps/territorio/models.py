@@ -51,7 +51,7 @@ class Comuna(models.Model):
     class Meta:
         verbose_name = "Comuna"
         verbose_name_plural = "Comunas"
-        ordering = ['nombre'] 
+        ordering = ['nombre']
 
     def __str__(self):
         return self.nombre
@@ -59,3 +59,21 @@ class Comuna(models.Model):
     def save(self, *args, **kwargs):
         self.nombre = self.nombre.upper().strip()
         super(Comuna, self).save(*args, **kwargs)
+
+class UnidadAdscrita(models.Model):
+    nombre = models.CharField(max_length=150, unique=True)
+    descripcion = models.TextField(blank=True, null=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Unidad Adscrita"
+        verbose_name_plural = "Unidades Adscritas"
+        ordering = ['nombre']
+        db_table = 'personal_unidadadscrita'
+
+    def __str__(self):
+        return self.nombre
+
+    @property
+    def total_personal(self):
+        return self.personal_asignado.count()
