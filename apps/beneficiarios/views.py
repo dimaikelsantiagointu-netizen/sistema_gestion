@@ -13,7 +13,7 @@ from django.db import IntegrityError
 # Importación de modelos locales
 from .models import Beneficiario, DocumentoExpediente, Visita
 # Importación de modelos de territorio
-from apps.territorio.models import Estado, Municipio, Parroquia, Ciudad, Comuna
+from apps.territorio.models import Estado, Municipio, Parroquia, Ciudad, Comuna, UnidadAdscrita
 
 # Configuración del Logger vinculado a la configuración de settings.py
 logger_beneficiarios = logging.getLogger('CH_BENEFICIARIOS')
@@ -191,20 +191,24 @@ def registrar_visita(request):
             beneficiario = get_object_or_404(Beneficiario, id=b_id)
             fecha_post = request.POST.get('fecha_registro')
             
-            # Capturamos los nuevos campos del POST
             funcionario = request.POST.get('funcionario_atiende')
-            unidad = request.POST.get('unidad_adscrita')
+            unidad_id = request.POST.get('unidad_adscrita')
             desc_original = request.POST.get('descripcion')
 
+            unidad_obj = None
+            if unidad_id:
+                unidad_obj = UnidadAdscrita.objects.filter(id=unidad_id).first()
+
             descripcion_final = desc_original
-            if unidad:
-                descripcion_final += f" | UNIDAD: {unidad}"
+            if unidad_obj:
+                descripcion_final += f" | UNIDAD: {unidad_obj.nombre}"
 
             Visita.objects.create(
                 beneficiario=beneficiario,
                 motivo=request.POST.get('motivo'),
                 descripcion=descripcion_final,
-                funcionario_atiende=funcionario, # <--- Esto guarda el nombre del funcionario
+                funcionario_atiende=funcionario,
+                unidad_administrativa=unidad_obj,
                 registrado_por=request.user,
                 fecha_registro=fecha_post if fecha_post else timezone.now()
             )
@@ -214,7 +218,8 @@ def registrar_visita(request):
     
     return render(request, 'beneficiarios/form_visita.html', {
         'motivos': Visita.MOTIVO_CHOICES,
-        'current_time': timezone.now() 
+        'current_time': timezone.now(),
+        'unidades': UnidadAdscrita.objects.all().order_by('nombre')
     })
 
 @login_required

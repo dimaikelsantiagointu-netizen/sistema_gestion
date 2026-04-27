@@ -104,18 +104,14 @@ class Visita(models.Model):
         verbose_name="Funcionario que lo atiende"
     )
 
-    # CONEXIÓN GLOBAL: Unidad Administrativa
-    # Se deja comentada para futura integración con la app de territorios/globales
-    # unidad_administrativa = models.ForeignKey(
-    #     'territorio.UnidadAdministrativa', 
-    #     on_delete=models.PROTECT, 
-    #     null=True, 
-    #     blank=True,
-    #     related_name='visitas_atendidas'
-    # )
-    
-    # Mientras se habilita la relación, podrías usar un CharField temporal si necesitas probar,
-    # o simplemente dejar el espacio como hemos hecho aquí.
+    unidad_administrativa = models.ForeignKey(
+        'territorio.UnidadAdscrita',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='visitas_atendidas',
+        verbose_name='Unidad Administrativa'
+    )
 
     descripcion = models.TextField(verbose_name="Observaciones de la visita")
 

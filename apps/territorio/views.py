@@ -23,7 +23,7 @@ def infraestructura_geografica(request):
         'parroquias': Parroquia.objects.all().order_by('nombre'),
         'comunas': Comuna.objects.all().order_by('nombre'),
     }
-    return render(request, 'territorio/territorio_admin.html', context)
+    return render(request, 'territorio/unidades_adscritas.html', context)
 
 # --- VISTAS DE CREACIÓN (MANTENIENDO TU LÓGICA ORIGINAL) ---
 

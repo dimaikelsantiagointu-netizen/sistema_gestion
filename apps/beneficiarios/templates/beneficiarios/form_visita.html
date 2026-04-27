@@ -88,13 +88,17 @@
                         </div>
                     </div>
 
-                    {# Unidad Administrativa: Comentada/Preparada para futuro #}
-                    <div class="md:col-span-1 opacity-60">
-                        <label class="text-[12px] font-bold text-slate-400 ml-1 mb-2 block italic uppercase tracking-wider">Unidad Administrativa (Próximamente)</label>
-                        <div class="relative flex items-center">
-                            <i class="fas fa-building absolute left-5 text-slate-300"></i>
-                            <input type="text" disabled placeholder="Conexión en desarrollo..."
-                                   class="block w-full bg-gray-100 border-none rounded-2xl text-base font-bold p-5 pl-14 cursor-not-allowed">
+                    <div class="md:col-span-1">
+                        <label class="text-[12px] font-bold text-slate-600 ml-1 mb-2 block uppercase tracking-wider">Unidad Administrativa</label>
+                        <div class="relative flex items-center group">
+                            <i class="fas fa-building absolute left-5 text-blue-300 group-focus-within:text-blue-500 transition-colors"></i>
+                            <select name="unidad_adscrita" id="select_unidad_adscrita"
+                                    class="block w-full bg-white border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-blue-500/10 p-5 pl-14 shadow-sm transition-all">
+                                <option value="">Selecciona la unidad administrativa</option>
+                                {% for unidad in unidades %}
+                                    <option value="{{ unidad.id }}">{{ unidad.nombre }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
                 </div>

@@ -171,13 +171,21 @@
                                     </span>
                                 </div>
 
-                                {# Etiqueta Unidad #}
+                                {% if visita.unidad_administrativa %}
                                 <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-xl border border-slate-200">
                                     <i class="fas fa-building text-[10px] text-slate-500"></i>
                                     <span class="text-[10px] font-black text-slate-600 uppercase tracking-tighter">
-                                        Unidad Adscrita: Por definir
+                                        Unidad Administrativa: {{ visita.unidad_administrativa.nombre }}
                                     </span>
                                 </div>
+                                {% else %}
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-xl border border-slate-200">
+                                    <i class="fas fa-building text-[10px] text-slate-500"></i>
+                                    <span class="text-[10px] font-black text-slate-600 uppercase tracking-tighter">
+                                        Unidad Administrativa: No registrada
+                                    </span>
+                                </div>
+                                {% endif %}
                             </div>
                             {% endif %}
 
