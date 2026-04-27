@@ -358,7 +358,7 @@ def exportar_excel(request):
         # --- HOJA 1: RESUMEN Y FILTROS ---
         ws_resumen = wb.active
         ws_resumen.title = "Control de Reporte"
-        ws_resumen["A1"] = "SIG INTU - REPORTE FILTRADO"
+        ws_resumen["A1"] = "SICSI INTU - REPORTE FILTRADO"
         ws_resumen["A1"].font = Font(bold=True, size=14)
         ws_resumen.append([])
         ws_resumen.append(["RANGO DESDE:", f_inicio if f_inicio else "HISTÓRICO"])
