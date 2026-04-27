@@ -101,15 +101,27 @@ def crear_beneficiario(request):
             return render(request, 'beneficiarios/formulario.html', context)
 
         try:
+            # Capturamos la fecha de nacimiento y el email
+            fecha_nac = request.POST.get('fecha_nacimiento')
+            email_val = request.POST.get('email')
+
             beneficiario = Beneficiario(
                 tipo_documento=request.POST.get('tipo_documento'),
                 documento_identidad=doc_id,
                 nombre_completo=request.POST.get('nombre_completo'),
+                
+                # NUEVO: Asignación de fecha de nacimiento
+                fecha_nacimiento=fecha_nac if fecha_nac else None,
+                
                 genero=request.POST.get('genero'),
                 discapacidad=request.POST.get('discapacidad') == 'on',
                 telefono=request.POST.get('telefono'),
-                email=request.POST.get('email'),
+                
+                # Tratamos el email como opcional (si llega vacío se guarda None)
+                email=email_val if email_val else None,
+                
                 direccion_especifica=request.POST.get('direccion_especifica'),
+                
                 # Campos territoriales completos
                 estado_id=request.POST.get('estado') or None,
                 municipio_id=request.POST.get('municipio') or None,
@@ -118,6 +130,7 @@ def crear_beneficiario(request):
                 comuna_id=request.POST.get('comuna') or None,
             )
             beneficiario.save()
+            
             logger_beneficiarios.info(f"CIUDADANO REGISTRADO: {beneficiario.nombre_completo} (C.I: {doc_id}) por {request.user.username}")
             messages.success(request, f"Ciudadano {beneficiario.nombre_completo} registrado con éxito.")
             return redirect('beneficiarios:lista')
@@ -142,13 +155,23 @@ def editar_beneficiario(request, id):
     beneficiario = get_object_or_404(Beneficiario, id=id)
     if request.method == 'POST':
         try:
+            # Captura de datos básicos e identidad
             beneficiario.tipo_documento = request.POST.get('tipo_documento')
             beneficiario.documento_identidad = request.POST.get('documento_identidad')
             beneficiario.nombre_completo = request.POST.get('nombre_completo')
+            
+            # NUEVO: Actualización de fecha de nacimiento
+            fecha_nac = request.POST.get('fecha_nacimiento')
+            beneficiario.fecha_nacimiento = fecha_nac if fecha_nac else None
+            
             beneficiario.genero = request.POST.get('genero')
             beneficiario.discapacidad = request.POST.get('discapacidad') == 'on'
             beneficiario.telefono = request.POST.get('telefono')
-            beneficiario.email = request.POST.get('email')
+            
+            # Email opcional: tratar cadena vacía como None
+            email_val = request.POST.get('email')
+            beneficiario.email = email_val if email_val else None
+            
             beneficiario.direccion_especifica = request.POST.get('direccion_especifica')
             
             # Actualización de la jerarquía territorial
@@ -159,10 +182,13 @@ def editar_beneficiario(request, id):
             beneficiario.comuna_id = request.POST.get('comuna') or None
             
             beneficiario.save()
+            
             logger_beneficiarios.info(f"CIUDADANO ACTUALIZADO: {beneficiario.nombre_completo} por {request.user.username}")
             messages.success(request, "Datos actualizados correctamente.")
             return redirect('beneficiarios:lista')
+            
         except Exception as e:
+            logger_beneficiarios.error(f"Error al actualizar beneficiario {id}: {str(e)}")
             messages.error(request, f"Error al actualizar: {e}")
 
     return render(request, 'beneficiarios/formulario.html', {
@@ -224,13 +250,17 @@ def registrar_visita(request):
 
 @login_required
 def detalle_beneficiario(request, id): 
-    beneficiario = get_object_or_404(Beneficiario, id=id) 
+    # Optimizamos la consulta con select_related para traer los nombres de territorio de una vez
+    beneficiario = get_object_or_404(
+        Beneficiario.objects.select_related('estado', 'municipio', 'parroquia', 'ciudad', 'comuna'), 
+        id=id
+    ) 
     visitas = beneficiario.visitas.all().order_by('-fecha_registro')
     
     return render(request, 'beneficiarios/detalle.html', {
         'beneficiario': beneficiario,
         'visitas': visitas,
-        'titulo_pagina': 'Historial de Atención'
+        'titulo_pagina': 'Expediente del Ciudadano'
     })
 
 # ================================================================
@@ -299,63 +329,98 @@ def beneficiarios_estadisticas(request):
     }
     return render(request, 'beneficiarios/estadisticas_beneficiarios.html', context)
 
+from django.db.models import Q
+from django.utils.timezone import now
+
 @login_required
 def exportar_excel(request):
     try:
+        # 1. Capturar los parámetros con los nombres EXACTOS del HTML
+        f_inicio = request.GET.get('fecha_inicio', '').strip()
+        f_fin = request.GET.get('fecha_fin', '').strip()
+
+        # 2. Construir filtros dinámicos (Igual que en estadísticas)
+        filtros_visita = Q()
+        filtros_beneficiario = Q()
+
+        if f_inicio and f_inicio != 'None':
+            filtros_visita &= Q(fecha_registro__date__gte=f_inicio)
+            filtros_beneficiario &= Q(fecha_creacion__date__gte=f_inicio)
+        if f_fin and f_fin != 'None':
+            filtros_visita &= Q(fecha_registro__date__lte=f_fin)
+            filtros_beneficiario &= Q(fecha_creacion__date__lte=f_fin)
+
+        # 3. Crear el libro de Excel
         wb = openpyxl.Workbook()
         header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
         white_font = Font(color="FFFFFF", bold=True, size=11)
-        title_font = Font(bold=True, size=14, color="1E293B")
 
-        # Hoja 1: Resumen
-        ws_stats = wb.active
-        ws_stats.title = "Resumen Ejecutivo"
-        ws_stats["A1"] = "INFORME ESTRATÉGICO DE GESTIÓN - SIG INTU"
-        ws_stats["A1"].font = title_font
-        ws_stats.append([]) 
-        ws_stats.append(["INDICADOR", "VALOR ACTUAL"])
-        ws_stats.append(["Total Beneficiarios", Beneficiario.objects.count()])
-        ws_stats.append(["Total de Visitas", Visita.objects.count()])
+        # --- HOJA 1: RESUMEN Y FILTROS ---
+        ws_resumen = wb.active
+        ws_resumen.title = "Control de Reporte"
+        ws_resumen["A1"] = "SIG INTU - REPORTE FILTRADO"
+        ws_resumen["A1"].font = Font(bold=True, size=14)
+        ws_resumen.append([])
+        ws_resumen.append(["RANGO DESDE:", f_inicio if f_inicio else "HISTÓRICO"])
+        ws_resumen.append(["RANGO HASTA:", f_fin if f_fin else "HOY"])
+        ws_resumen.append([])
+        ws_resumen.append(["FECHA DE GENERACIÓN:", now().strftime("%d/%m/%Y %H:%M")])
 
-        # Hoja 2: Base de Datos Completa
-        ws_ben = wb.create_sheet(title="Base de Beneficiarios")
-        headers_ben = ['TIPO ID', 'DOCUMENTO', 'NOMBRE COMPLETO', 'TELÉFONO', 'ESTADO', 'MUNICIPIO', 'CIUDAD', 'PARROQUIA', 'COMUNA']
-        ws_ben.append(headers_ben)
+        # --- HOJA 2: VISITAS (EL DETALLE QUE NECESITAS) ---
+        ws_vis = wb.create_sheet(title="Detalle de Visitas")
+        ws_vis.append(['FECHA REGISTRO', 'CEDULA/RIF', 'NOMBRE COMPLETO', 'TRÁMITE / MOTIVO'])
         
-        beneficiarios = Beneficiario.objects.select_related('estado', 'municipio', 'ciudad', 'parroquia', 'comuna').all()
-        for b in beneficiarios:
-            ws_ben.append([
-                b.tipo_documento,
-                b.documento_identidad,
-                b.nombre_completo.upper() if b.nombre_completo else "SIN NOMBRE",
-                b.telefono or "N/A",
-                str(b.estado.nombre) if b.estado else "N/A",
-                str(b.municipio.nombre) if b.municipio else "N/A",
-                str(b.ciudad.nombre) if b.ciudad else "N/A",
-                str(b.parroquia.nombre) if b.parroquia else "N/A",
-                str(b.comuna.nombre) if b.comuna else "N/A"
+        # Filtramos visitas con la lógica de Q
+        visitas_qs = Visita.objects.filter(filtros_visita).select_related('beneficiario').order_by('-fecha_registro')
+        
+        for v in visitas_qs:
+            ws_vis.append([
+                v.fecha_registro.strftime('%d/%m/%Y %H:%M'),
+                f"{v.beneficiario.tipo_documento}-{v.beneficiario.documento_identidad}",
+                v.beneficiario.nombre_completo.upper(),
+                v.motivo.upper() if v.motivo else "N/A"
             ])
 
-        # Aplicar estilos a todas las hojas
+        # --- HOJA 3: BENEFICIARIOS ---
+        ws_ben = wb.create_sheet(title="Base de Ciudadanos")
+        ws_ben.append(['FECHA REGISTRO', 'IDENTIDAD', 'NOMBRE COMPLETO', 'TELÉFONO'])
+        
+        beneficiarios_qs = Beneficiario.objects.filter(filtros_beneficiario).order_by('-fecha_creacion')
+        for b in beneficiarios_qs:
+            ws_ben.append([
+                b.fecha_creacion.strftime('%d/%m/%Y') if b.fecha_creacion else "N/A",
+                f"{b.tipo_documento}-{b.documento_identidad}",
+                b.nombre_completo.upper(),
+                b.telefono or "N/A"
+            ])
+
+        # 4. Estilos y Ajuste de columnas
         for sheet in wb.worksheets:
             for row in sheet.iter_rows(min_row=1, max_row=1):
-                if sheet.title != "Resumen Ejecutivo" or row[0].row > 2:
+                if sheet.title != "Control de Reporte":
                     for cell in row:
                         cell.fill = header_fill
                         cell.font = white_font
             
-            for column_cells in sheet.columns:
-                length = max(len(str(cell.value)) for cell in column_cells)
-                sheet.column_dimensions[get_column_letter(column_cells[0].column)].width = length + 5
+            for col in sheet.columns:
+                max_length = 0
+                column = col[0].column_letter
+                for cell in col:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except: pass
+                sheet.column_dimensions[column].width = max_length + 4
 
-        logger_beneficiarios.info(f"REPORTE EXCEL GENERADO: por {request.user.username}")
+        # 5. Envío de respuesta
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename="Reporte_SIG_INTU_Beneficiarios.xlsx"'
+        response['Content-Disposition'] = f'attachment; filename="Reporte_INTU_{now().strftime("%d%m%Y")}.xlsx"'
         wb.save(response)
         return response
+
     except Exception as e:
-        logger_beneficiarios.error(f"Error al exportar Excel: {str(e)}")
-        messages.error(request, f"Error técnico al generar Excel: {str(e)}")
+        logger_beneficiarios.error(f"Error en Excel: {str(e)}")
+        messages.error(request, f"Error al generar Excel: {str(e)}")
         return redirect('beneficiarios:lista')
 
 # APIs TERRITORIALES PARA CARGA DINÁMICA (AJAX)

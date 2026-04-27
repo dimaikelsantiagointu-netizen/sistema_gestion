@@ -35,83 +35,109 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {# --- COLUMNA LATERAL: DATOS DEL CIUDADANO (SIN FOTO) --- #}
-        <div class="lg:col-span-4 space-y-6">
-            <div class="bg-white rounded-[2.5rem] shadow-sm border border-gray-200 p-8">
-                <div class="mb-8">
-                    <div class="flex items-center gap-3 mb-4">
-                        <span class="px-3 py-1 bg-slate-100 text-slate-500 text-[10px] font-black rounded-lg uppercase tracking-widest">
-                            {{ beneficiario.tipo_documento }}
-                        </span>
-                        <span class="text-[14px] font-black text-intu-red tracking-widest">
-                            {{ beneficiario.documento_identidad }}
-                        </span>
-                    </div>
-                    <h2 class="text-3xl font-black text-slate-900 leading-[1.1] tracking-tight">
-                        {{ beneficiario.nombre_completo }}
-                    </h2>
-                </div>
+<div class="lg:col-span-4 space-y-6">
+    <div class="bg-white rounded-[2.5rem] shadow-sm border border-gray-200 p-8">
+        
+        {# Encabezado Identidad #}
+        <div class="mb-8">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="px-3 py-1 bg-slate-100 text-slate-500 text-[10px] font-black rounded-lg uppercase tracking-widest">
+                    {{ beneficiario.tipo_documento }}
+                </span>
+                <span class="text-[14px] font-black text-intu-red tracking-widest">
+                    {{ beneficiario.documento_identidad }}
+                </span>
+            </div>
+            <h2 class="text-3xl font-black text-slate-900 leading-[1.1] tracking-tight uppercase">
+                {{ beneficiario.nombre_completo }}
+            </h2>
+        </div>
 
-                <div class="grid grid-cols-2 gap-4 py-6 border-y border-gray-50 mb-8">
-                    <div class="text-center">
-                        <span class="block text-3xl font-black text-intu-blue mb-1">{{ visitas.count }}</span>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Atenciones</span>
-                    </div>
-                    <div class="text-center border-l border-gray-100">
-                        <span class="block text-[12px] font-black text-emerald-500 uppercase mb-1">Activo</span>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Estatus</span>
-                    </div>
-                </div>
-
-                <div class="space-y-8">
-                    {# Bloque: Contacto #}
-                    <div class="flex items-start gap-4">
-                        <div class="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 text-intu-blue border border-blue-100/50">
-                            <i class="fas fa-phone-alt"></i>
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Teléfono y Correo</p>
-                            <p class="text-[15px] font-black text-slate-800">{{ beneficiario.telefono|default:"No registrado" }}</p>
-                            <p class="text-[13px] font-bold text-slate-400 lowercase">{{ beneficiario.email|default:"" }}</p>
-                        </div>
-                    </div>
-
-                    {# Bloque: Datos Sociales #}
-                    <div class="flex items-start gap-4">
-                        <div class="w-11 h-11 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 text-amber-500 border border-amber-100/50">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Perfil Social</p>
-                            <p class="text-[15px] font-black text-slate-800">{{ beneficiario.get_genero_display }}</p>
-                            {% if beneficiario.discapacidad %}
-                            <span class="inline-flex items-center gap-2 mt-2 px-3 py-1.5 bg-purple-50 text-purple-600 text-[10px] font-black rounded-xl uppercase border border-purple-100">
-                                <i class="fas fa-wheelchair text-[10px]"></i> Con Discapacidad
-                            </span>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    {# Bloque: Ubicación #}
-                    <div class="flex items-start gap-4">
-                        <div class="w-11 h-11 rounded-2xl bg-red-50 flex items-center justify-center shrink-0 text-intu-red border border-red-100/50">
-                            <i class="fas fa-map-marked-alt"></i>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Ubicación Territorial</p>
-                            <p class="text-[15px] font-black text-slate-800">{{ beneficiario.estado.nombre }}</p>
-                            <p class="text-[13px] font-bold text-slate-500 uppercase tracking-tight">{{ beneficiario.municipio.nombre }} / {{ beneficiario.parroquia.nombre }}</p>
-                            <div class="mt-3 p-4 bg-slate-50 rounded-2xl border border-gray-100">
-                                <p class="text-[12px] text-slate-500 leading-relaxed font-medium italic">"{{ beneficiario.direccion_especifica }}"</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <a href="{% url 'beneficiarios:editar' beneficiario.id %}" class="mt-10 w-full flex items-center justify-center gap-3 py-4 rounded-2xl border-2 border-dashed border-gray-200 text-[11px] font-black text-gray-600 hover:border-intu-blue hover:text-intu-blue hover:bg-blue-50/30 transition-all uppercase tracking-widest">
-                    <i class="fas fa-edit"></i> Actualizar Datos
-                </a>
+        {# Estadísticas rápidas #}
+        <div class="grid grid-cols-2 gap-4 py-6 border-y border-gray-50 mb-8">
+            <div class="text-center">
+                <span class="block text-3xl font-black text-intu-blue mb-1">{{ visitas.count }}</span>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Atenciones</span>
+            </div>
+            <div class="text-center border-l border-gray-100">
+                <span class="block text-[12px] font-black text-emerald-500 uppercase mb-1">Activo</span>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Estatus</span>
             </div>
         </div>
+
+        <div class="space-y-8">
+            {# NUEVO: Bloque Fecha de Nacimiento #}
+            <div class="flex items-start gap-4">
+                <div class="w-11 h-11 rounded-2xl bg-rose-50 flex items-center justify-center shrink-0 text-rose-500 border border-rose-100/50">
+                    <i class="fas fa-birthday-cake"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Fecha de Nacimiento</p>
+                    <p class="text-[15px] font-black text-slate-800">
+                        {{ beneficiario.fecha_nacimiento|date:"d \d\e F, Y"|default:"No registrada" }}
+                    </p>
+                    {% if beneficiario.fecha_nacimiento %}
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">
+                            Día de nacimiento registrado
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Bloque: Contacto #}
+            <div class="flex items-start gap-4">
+                <div class="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 text-intu-blue border border-blue-100/50">
+                    <i class="fas fa-phone-alt"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Teléfono y Correo</p>
+                    <p class="text-[15px] font-black text-slate-800">{{ beneficiario.telefono|default:"No registrado" }}</p>
+                    <p class="text-[13px] font-bold text-slate-400 lowercase">{{ beneficiario.email|default:"Sin correo electrónico" }}</p>
+                </div>
+            </div>
+
+            {# Bloque: Perfil Social #}
+            <div class="flex items-start gap-4">
+                <div class="w-11 h-11 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 text-amber-500 border border-amber-100/50">
+                    <i class="fas fa-user-tag"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Perfil Social</p>
+                    <p class="text-[15px] font-black text-slate-800">{{ beneficiario.get_genero_display }}</p>
+                    {% if beneficiario.discapacidad %}
+                    <span class="inline-flex items-center gap-2 mt-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-xl uppercase border border-emerald-100">
+                        <i class="fas fa-wheelchair text-[10px]"></i> Con Discapacidad
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Bloque: Ubicación #}
+            <div class="flex items-start gap-4">
+                <div class="w-11 h-11 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0 text-indigo-600 border border-indigo-100/50">
+                    <i class="fas fa-map-marked-alt"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Ubicación Territorial</p>
+                    <p class="text-[15px] font-black text-slate-800">{{ beneficiario.estado.nombre }}</p>
+                    <p class="text-[13px] font-bold text-slate-500 uppercase tracking-tight">
+                        {{ beneficiario.municipio.nombre }} / {{ beneficiario.parroquia.nombre }}
+                    </p>
+                    <div class="mt-3 p-4 bg-slate-50 rounded-2xl border border-gray-100">
+                        <p class="text-[12px] text-slate-500 leading-relaxed font-medium italic uppercase">
+                            "{{ beneficiario.direccion_especifica }}"
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Botón de acción #}
+        <a href="{% url 'beneficiarios:editar' beneficiario.id %}" class="mt-10 w-full flex items-center justify-center gap-3 py-4 rounded-2xl border-2 border-dashed border-gray-200 text-[11px] font-black text-gray-600 hover:border-intu-blue hover:text-intu-blue hover:bg-blue-50/30 transition-all uppercase tracking-widest">
+            <i class="fas fa-pen-nib"></i> Modificar Expediente
+        </a>
+    </div>
+</div>
 
 {# --- COLUMNA PRINCIPAL: HISTORIAL --- #}
 <div class="lg:col-span-8">

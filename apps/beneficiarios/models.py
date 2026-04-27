@@ -31,13 +31,17 @@ class Beneficiario(models.Model):
     documento_identidad = models.CharField(max_length=20, unique=True, verbose_name="Cédula o RIF")
     nombre_completo = models.CharField(max_length=255)
     
+    # NUEVO: Fecha de Nacimiento (Ubicado en Identidad)
+    fecha_nacimiento = models.DateField(null=True, blank=True, verbose_name="Fecha de Nacimiento")
+    
     # --- Perfil Social ---
     genero = models.CharField(max_length=1, choices=GENERO_CHOICES, verbose_name="Género")
     discapacidad = models.BooleanField(default=False, verbose_name="¿Posee alguna discapacidad?")
     
     # --- Contacto ---
     telefono = models.CharField(max_length=20, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
+    # Correo electrónico actualizado como opcional
+    email = models.EmailField(max_length=255, blank=True, null=True, verbose_name="Correo Electrónico")
     
     # --- Ubicación Territorial ---
     estado = models.ForeignKey(Estado, on_delete=models.PROTECT, related_name='beneficiarios')
@@ -52,9 +56,16 @@ class Beneficiario(models.Model):
 
     def save(self, *args, **kwargs):
         """Normalización de datos en mayúsculas"""
-        self.nombre_completo = self.nombre_completo.upper()
-        self.documento_identidad = self.documento_identidad.upper().strip()
-        self.direccion_especifica = self.direccion_especifica.upper() if self.direccion_especifica else ""
+        if self.nombre_completo:
+            self.nombre_completo = self.nombre_completo.upper()
+        if self.documento_identidad:
+            self.documento_identidad = self.documento_identidad.upper().strip()
+        if self.direccion_especifica:
+            self.direccion_especifica = self.direccion_especifica.upper()
+        
+        # El email no suele normalizarse a mayúsculas por estándar, 
+        # pero si lo deseas, puedes añadir self.email = self.email.lower()
+        
         super(Beneficiario, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -95,8 +106,6 @@ class Visita(models.Model):
     motivo = models.CharField(max_length=20, choices=MOTIVO_CHOICES)
 
     # --- CAMPOS CONDICIONALES (ASESORÍA) ---
-    
-    # Campo para el nombre del funcionario
     funcionario_atiende = models.CharField(
         max_length=255, 
         null=True, 
@@ -166,5 +175,5 @@ class DocumentoExpediente(models.Model):
         verbose_name_plural = "Expedientes Digitales"
 
     def __str__(self):
-        dueno = self.beneficiario.nombre_completo if self.beneficiario else f"PERSONAL: {self.personal.apellidos}"
+        dueno = self.beneficiario.nombre_completo if self.beneficiario else f"PERSONAL: {self.personal.apellidos if self.personal else 'S/N'}"
         return f"{self.get_categoria_display()} - {dueno}"
