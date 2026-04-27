@@ -1,23 +1,6 @@
 from django.db import models
 # Importamos los modelos de la app territorio
-from apps.territorio.models import Estado, Municipio, Parroquia, Comuna
-
-class UnidadAdscrita(models.Model):
-    nombre = models.CharField(max_length=150, unique=True)
-    descripcion = models.TextField(blank=True, null=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Unidad Adscrita"
-        verbose_name_plural = "Unidades Adscritas"
-        ordering = ['nombre']
-
-    def __str__(self):
-        return self.nombre
-
-    @property
-    def total_personal(self):
-        return self.personal_asignado.count()
+from apps.territorio.models import Estado, Municipio, Parroquia, Comuna, UnidadAdscrita
 
 class Personal(models.Model):
     cedula = models.CharField(max_length=20, unique=True)

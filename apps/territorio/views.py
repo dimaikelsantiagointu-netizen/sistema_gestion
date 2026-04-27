@@ -2,7 +2,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .models import Estado, Municipio, Ciudad, Parroquia, Comuna
+from django.views.generic import CreateView, ListView, UpdateView
+from django.urls import reverse_lazy
+from django.db.models import Count
+from django.contrib.auth.mixins import LoginRequiredMixin
+import logging
+
+from .models import Estado, Municipio, Ciudad, Parroquia, Comuna, UnidadAdscrita
+from .forms import UnidadAdscritaForm
+
+logger_territorio = logging.getLogger('CH_TERRITORIO')
 
 # --- VISTA PRINCIPAL DEL PANEL ---
 @login_required
@@ -111,3 +120,54 @@ def api_get_comunas(request, parroquia_id=None):
         
     data = Comuna.objects.filter(parroquia_id=parroquia_id).values('id', 'nombre').order_by('nombre')
     return JsonResponse(list(data), safe=False)
+
+# --- GESTIÓN DE UNIDADES ADSCRITAS ---
+
+class UnidadListView(LoginRequiredMixin, ListView):
+    model = UnidadAdscrita
+    template_name = 'territorio/unidades_list.html'
+    context_object_name = 'unidades'
+
+    def get_queryset(self):
+        return UnidadAdscrita.objects.annotate(
+            total_trabajadores=Count('personal_asignado')
+        ).order_by('nombre')
+
+class UnidadCreateView(LoginRequiredMixin, CreateView):
+    model = UnidadAdscrita
+    form_class = UnidadAdscritaForm
+    template_name = 'territorio/unidad_form.html'
+    success_url = reverse_lazy('territorio:unidades_lista')
+
+    def form_valid(self, form):
+        nombre = form.cleaned_data.get('nombre')
+        response = super().form_valid(form)
+        messages.success(self.request, "NUEVA UNIDAD REGISTRADA.")
+        logger_territorio.info(f"CREATE_UNIDAD: {nombre} | BY: {self.request.user}")
+        return response
+
+class UnidadUpdateView(LoginRequiredMixin, UpdateView):
+    model = UnidadAdscrita
+    form_class = UnidadAdscritaForm
+    template_name = 'territorio/unidad_form.html'
+    success_url = reverse_lazy('territorio:unidades_lista')
+
+    def form_valid(self, form):
+        nombre = form.cleaned_data.get('nombre')
+        response = super().form_valid(form)
+        messages.info(self.request, "UNIDAD ACTUALIZADA CORRECTAMENTE.")
+        logger_territorio.info(f"UPDATE_UNIDAD: {nombre} | BY: {self.request.user}")
+        return response
+
+@login_required
+def eliminar_unidad(request, pk):
+    unidad = get_object_or_404(UnidadAdscrita, pk=pk)
+    try:
+        nombre = unidad.nombre
+        unidad.delete()
+        messages.warning(request, f"UNIDAD {nombre} ELIMINADA.")
+        logger_territorio.info(f"DELETE_UNIDAD: {nombre} | BY: {request.user}")
+    except Exception as e:
+        logger_territorio.error(f"ERROR_DELETE_UNIDAD: {str(e)}")
+        messages.error(request, "NO SE PUEDE ELIMINAR: Esta unidad tiene personal asociado.")
+    return redirect('territorio:unidades_lista')

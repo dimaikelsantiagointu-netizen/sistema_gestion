@@ -6,9 +6,9 @@ from django.db.models import Q, Count
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin 
 
-from .models import Personal, DocumentoPersonal, UnidadAdscrita 
-from .forms import PersonalForm, UnidadAdscritaForm
-from apps.territorio.models import Estado
+from .models import Personal, DocumentoPersonal
+from .forms import PersonalForm
+from apps.territorio.models import Estado, UnidadAdscrita
 import logging
 
 logger_personal = logging.getLogger('CH_PERSONAL')
@@ -93,59 +93,6 @@ class PersonalDetailView(LoginRequiredMixin, DetailView):
             ('OTRO', 'Otros Soportes'),
         ]
         return context
-
-# ==============================================================================
-# 2. SUBMÓDULO DE UNIDADES ADSCRITAS
-# ==============================================================================
-
-class UnidadListView(LoginRequiredMixin, ListView):
-    model = UnidadAdscrita
-    template_name = 'personal/unidades_list.html'
-    context_object_name = 'unidades'
-
-    def get_queryset(self):
-        return UnidadAdscrita.objects.annotate(
-            total_trabajadores=Count('personal_asignado')
-        ).order_by('nombre')
-
-class UnidadCreateView(LoginRequiredMixin, CreateView):
-    model = UnidadAdscrita
-    form_class = UnidadAdscritaForm
-    template_name = 'personal/unidad_form.html'
-    success_url = reverse_lazy('personal:unidades_lista')
-
-    def form_valid(self, form):
-        nombre = form.cleaned_data.get('nombre')
-        response = super().form_valid(form)
-        messages.success(self.request, "NUEVA UNIDAD REGISTRADA.")
-        logger_personal.info(f"CREATE_UNIDAD: {nombre} | BY: {self.request.user}")
-        return response
-
-class UnidadUpdateView(LoginRequiredMixin, UpdateView):
-    model = UnidadAdscrita
-    form_class = UnidadAdscritaForm
-    template_name = 'personal/unidad_form.html'
-    success_url = reverse_lazy('personal:unidades_lista')
-
-    def form_valid(self, form):
-        nombre = form.cleaned_data.get('nombre')
-        response = super().form_valid(form)
-        messages.info(self.request, "UNIDAD ACTUALIZADA CORRECTAMENTE.")
-        logger_personal.info(f"UPDATE_UNIDAD: {nombre} | BY: {self.request.user}")
-        return response
-
-@login_required
-def eliminar_unidad(request, pk):
-    unidad = get_object_or_404(UnidadAdscrita, pk=pk)
-    try:
-        nombre = unidad.nombre
-        unidad.delete()
-        messages.warning(request, f"UNIDAD {nombre} ELIMINADA.")
-        logger_personal.info(f"DELETE_UNIDAD: {nombre} | BY: {request.user}")
-    except Exception as e:
-        logger_personal.error(f"ERROR_DELETE_UNIDAD: {str(e)}")
-        messages.error(request, "NO SE PUEDE ELIMINAR: Esta unidad tiene personal asociado.")
-    return redirect('personal:unidades_lista')
 
 # ==============================================================================
 # 3. GESTIÓN DE ARCHIVOS (SUBIDA Y ELIMINACIÓN)
