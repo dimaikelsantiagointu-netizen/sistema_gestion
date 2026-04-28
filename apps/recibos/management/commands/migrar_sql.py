@@ -4,61 +4,63 @@ from decimal import Decimal, InvalidOperation
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils.timezone import make_aware
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from apps.recibos.models import Recibo
 
 User = get_user_model()
 
 class Command(BaseCommand):
-    help = 'Migración de Recibos: Limpieza de montos sucios y sincronización de fechas'
+    help = 'Migración de Recibos: Integridad Total y Carga sin Pérdida'
 
     def add_arguments(self, parser):
         parser.add_argument('sql_file', type=str, help='Ruta al archivo .sql')
 
     def clean_decimal(self, value):
-        """
-        Limpia montos con formatos: '140', '30,00', '63.000,00' o 'X'
-        """
         if not value or value == '\\N' or value.strip() == '' or value.strip().upper() == 'X':
             return Decimal('0.00')
         
-        # Eliminamos espacios y puntos de miles, cambiamos coma por punto decimal
-        clean_val = value.replace(' ', '').replace('.', '').replace(',', '.')
-        
+        raw_val = value.strip().replace(' ', '')
+        # Si tiene punto y coma, es formato europeo/latino (1.234,56)
+        if ',' in raw_val and '.' in raw_val:
+            clean_val = raw_val.replace('.', '').replace(',', '.')
+        # Si solo tiene coma, es el decimal (73431,13)
+        elif ',' in raw_val:
+            clean_val = raw_val.replace(',', '.')
+        # Si tiene un punto y no es separador de miles (73431.13)
+        else:
+            clean_val = raw_val
+
         try:
-            # Si después de limpiar hay más de un punto (error de origen), tomamos el último
-            if clean_val.count('.') > 1:
-                parts = clean_val.split('.')
-                clean_val = "".join(parts[:-1]) + "." + parts[-1]
-            
-            val = Decimal(clean_val)
-            return val if val <= Decimal('999999999999999.99') else Decimal('0.00')
+            return Decimal(clean_val)
         except (InvalidOperation, ValueError):
             return Decimal('0.00')
 
     def parse_datetime_custom(self, value):
         if not value or value == '\\N' or value.strip() == '':
             return None
-        try:
-            # Maneja formatos con o sin microsegundos
-            dt_str = value.split('.')[0]
-            return make_aware(datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S'))
-        except:
+        value = value.strip()
+        
+        formatos = [
+            '%Y-%m-%d %H:%M:%S.%f', # Con microsegundos
+            '%Y-%m-%d %H:%M:%S',    # Estándar
+            '%Y-%m-%d',             # Solo fecha
+        ]
+        
+        for formato in formatos:
             try:
-                # Intento por si solo viene la fecha
-                return make_aware(datetime.strptime(value.strip(), '%Y-%m-%d'))
-            except:
-                return None
+                dt = datetime.strptime(value, formato)
+                return make_aware(dt)
+            except (ValueError, TypeError):
+                continue
+        return None
 
     def handle(self, *args, **options):
         admin_user = User.objects.filter(is_superuser=True).first()
-        if not admin_user:
-            self.stdout.write(self.style.ERROR('Debe existir al menos un superusuario.'))
-            return
-
-        self.stdout.write(self.style.WARNING('>>> Iniciando migración de alta precisión...'))
+        self.stdout.write(self.style.WARNING('>>> Iniciando carga de integridad total...'))
         
+        total_lineas = 0
         exitos = 0
+        errores = 0
         en_bloque = False
 
         with open(options['sql_file'], 'r', encoding='utf-8') as f:
@@ -66,74 +68,82 @@ class Command(BaseCommand):
                 if 'COPY public.recibos_pago' in linea:
                     en_bloque = True
                     continue
-                if en_bloque and linea.strip() == '\\.':
+                if en_bloque and (linea.strip() == '\\.' or linea.startswith('setval')):
+                    en_bloque = False
                     break
                 
                 if en_bloque:
+                    total_lineas += 1
                     cols = linea.replace('\n', '').split('\t')
-                    if len(cols) < 20: continue
+                    
+                    # Verificación de integridad de columnas (basado en tu dump)
+                    if len(cols) < 25:
+                        self.stdout.write(self.style.ERROR(f"Línea {total_lineas} incompleta (Columnas: {len(cols)})"))
+                        errores += 1
+                        continue
 
                     try:
-                        # 1. Identificadores
-                        num_recibo_raw = cols[1].strip()
-                        num_recibo = int(num_recibo_raw) if num_recibo_raw.isdigit() else None
+                        # --- EXTRACCIÓN DE DATOS ---
+                        num_recibo = cols[1].strip()
+                        if not num_recibo.isdigit():
+                            continue
                         
-                        # 2. Gestión de Fechas (CORREGIDO SEGÚN TU DATA)
-                        # cols[22] es la fecha del recibo (ej: 2025-09-03)
-                        # cols[25] es la fecha de creación en sistema (ej: 2025-11-06 14:49:07)
-                        fecha_recibo_raw = cols[22] if cols[22] != '\\N' else None
-                        
-                        # Intentamos capturar la fecha de creación real del sistema
-                        dt_creacion = None
-                        if len(cols) > 25:
-                            dt_creacion = self.parse_datetime_custom(cols[25])
-                        
-                        # Si no hay fecha de creación, usamos la del recibo
-                        if not dt_creacion and fecha_recibo_raw:
-                            dt_creacion = self.parse_datetime_custom(f"{fecha_recibo_raw} 00:00:00")
+                        # Fechas: La clave para no fusionarlas es tomarlas crudas primero
+                        fecha_raw = cols[22].strip() # fecha
+                        creacion_raw = cols[25].strip() # fecha_creacion
+                        anulacion_raw = cols[27].strip() if len(cols) > 27 else None
 
-                        # 3. Limpieza de Transferencia
-                        transf_raw = cols[20].strip()
-                        num_transf = re.sub(r'[^0-9]', '', transf_raw)
-                        if not num_transf or transf_raw.upper() in ['SI', 'NO', '\\N', 'S/N']:
+                        dt_fecha = self.parse_datetime_custom(fecha_raw)
+                        dt_creacion = self.parse_datetime_custom(creacion_raw)
+                        dt_anulacion = self.parse_datetime_custom(anulacion_raw)
+
+                        # Transferencia con sufijo para evitar colisiones de unicidad
+                        num_transf = re.sub(r'[^0-9]', '', cols[20])
+                        if num_transf:
+                            if Recibo.objects.filter(numero_transferencia=num_transf).exclude(numero_recibo=num_recibo).exists():
+                                num_transf = f"{num_transf}-{num_recibo}"
+                        else:
                             num_transf = None
 
-                        # 4. Procesamiento de Nombre y Estado
-                        # Evitamos que se mezclen si vienen en la misma columna
-                        nombre_raw = cols[3].strip().upper() if cols[3] != '\\N' else 'SIN NOMBRE'
+                        # --- GUARDADO ---
+                        # Usamos update_or_create para no duplicar si el script corre dos veces
+                        obj, created = Recibo.objects.update_or_create(
+                            numero_recibo=num_recibo,
+                            defaults={
+                                'estado': cols[2].strip().upper(),
+                                'nombre': cols[3].strip().upper()[:255],
+                                'rif_cedula_identidad': cols[4].strip().upper(),
+                                'direccion_inmueble': cols[5].strip(),
+                                'ente_liquidado': cols[6].strip().upper(),
+                                'gastos_administrativos': self.clean_decimal(cols[17]),
+                                'tasa_dia': self.clean_decimal(cols[18]),
+                                'total_monto_bs': self.clean_decimal(cols[19]),
+                                'numero_transferencia': num_transf,
+                                'conciliado': cols[21].lower() in ['t', 'true', '1'],
+                                'fecha': dt_fecha.date() if dt_fecha else None,
+                                'concepto': cols[23].strip(),
+                                'usuario': admin_user,
+                                'anulado': cols[26].lower() == 't',
+                                'fecha_anulacion': dt_anulacion,
+                            }
+                        )
 
-                        # 5. Guardado Atómico
-                        with transaction.atomic():
-                            obj, created = Recibo.objects.update_or_create(
-                                numero_recibo=num_recibo,
-                                defaults={
-                                    'estado': cols[2].strip().upper() if cols[2] != '\\N' else 'DESCONOCIDO',
-                                    'nombre': nombre_raw,
-                                    'rif_cedula_identidad': cols[4].strip().upper() if cols[4] != '\\N' else 'S/R',
-                                    'direccion_inmueble': cols[5] if cols[5] != '\\N' else 'SIN DIRECCIÓN',
-                                    'ente_liquidado': cols[6].strip().upper() if cols[6] != '\\N' else 'N/A',
-                                    'gastos_administrativos': self.clean_decimal(cols[17]),
-                                    'tasa_dia': self.clean_decimal(cols[18]),
-                                    'total_monto_bs': self.clean_decimal(cols[19]),
-                                    'numero_transferencia': num_transf,
-                                    'conciliado': cols[21].lower() in ['t', 'true', '1', 'si'],
-                                    'fecha': fecha_recibo_raw,
-                                    'concepto': cols[23] if cols[23] != '\\N' else '',
-                                    'usuario': admin_user,
-                                    'anulado': cols[26].lower() == 't',
-                                    'fecha_anulacion': self.parse_datetime_custom(cols[27]) if len(cols) > 27 else None,
-                                }
-                            )
-
-                            # Bypass de auto_now_add para preservar la historia
-                            if dt_creacion:
-                                Recibo.objects.filter(pk=obj.pk).update(fecha_creacion=dt_creacion)
-
+                        # Forzar fecha de creación histórica (evita que Django ponga 'hoy')
+                        if dt_creacion:
+                            Recibo.objects.filter(pk=obj.pk).update(fecha_creacion=dt_creacion)
+                        
                         exitos += 1
-                        if exitos % 500 == 0:
-                            self.stdout.write(self.style.SUCCESS(f'>>> {exitos} registros procesados...'))
 
                     except Exception as e:
-                        self.stdout.write(self.style.ERROR(f"Error en fila {exitos+1} (Recibo {cols[1]}): {str(e)}"))
+                        self.stdout.write(self.style.ERROR(f"Error en Recibo {cols[1]}: {str(e)}"))
+                        errores += 1
 
-        self.stdout.write(self.style.SUCCESS(f'\nNormalización terminada. {exitos} registros en base de datos.'))
+                    if total_lineas % 500 == 0:
+                        self.stdout.write(f">>> Procesadas {total_lineas} líneas...")
+
+        self.stdout.write(self.style.SUCCESS(
+            f'\nRESUMEN FINAL:\n'
+            f'- Líneas leídas: {total_lineas}\n'
+            f'- Éxitos: {exitos}\n'
+            f'- Errores: {errores}'
+        ))
