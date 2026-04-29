@@ -22,11 +22,18 @@
         </div>
         
         <div class="flex flex-wrap gap-3">
-{# --- BOTÓN DE REPORTE CORREGIDO --- #}
-<a href="{% url 'beneficiarios:exportar_excel' %}?fecha_inicio={{ request.GET.fecha_inicio }}&fecha_fin={{ request.GET.fecha_fin }}" 
+{# --- BOTÓN DE REPORTE PARCIAL --- #}
+<a href="{% url 'beneficiarios:exportar_excel' %}?tipo=parcial&fecha_inicio={{ request.GET.fecha_inicio }}&fecha_fin={{ request.GET.fecha_fin }}" 
    class="flex-1 sm:flex-none px-6 py-4 text-[13px] font-black border-2 border-emerald-600 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all active:scale-95 tracking-wide flex items-center justify-center">
-    <i class="fas fa-file-excel mr-2 text-base"></i> Reporte
+    <i class="fas fa-file-excel mr-2 text-base"></i> Reporte Parcial
 </a>
+{% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' %}
+{# --- BOTÓN DE REPORTE COMPLETO --- #}
+<a href="{% url 'beneficiarios:exportar_excel' %}?tipo=completo&fecha_inicio={{ request.GET.fecha_inicio }}&fecha_fin={{ request.GET.fecha_fin }}" 
+   class="flex-1 sm:flex-none px-6 py-4 text-[13px] font-black border-2 border-blue-600 text-blue-600 rounded-2xl hover:bg-blue-600 hover:text-white transition-all active:scale-95 tracking-wide flex items-center justify-center">
+    <i class="fas fa-database mr-2 text-base"></i> Reporte Completo
+</a>
+{% endif %}
             <a href="{% url 'beneficiarios:registrar_visita' %}" 
                class="flex-1 sm:flex-none px-6 py-4 text-[13px] font-black border-2 border-intu-blue text-intu-blue rounded-2xl hover:bg-intu-blue hover:text-white transition-all active:scale-95 tracking-wide flex items-center justify-center">
                 <i class="fas fa-walking mr-2 text-base"></i> Visita
