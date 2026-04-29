@@ -77,7 +77,7 @@ class Command(BaseCommand):
                     cols = linea.replace('\n', '').split('\t')
                     
                     # Verificación de integridad de columnas (basado en tu dump)
-                    if len(cols) < 25:
+                    if len(cols) < 29:
                         self.stdout.write(self.style.ERROR(f"Línea {total_lineas} incompleta (Columnas: {len(cols)})"))
                         errores += 1
                         continue
@@ -115,11 +115,21 @@ class Command(BaseCommand):
                                 'rif_cedula_identidad': cols[4].strip().upper(),
                                 'direccion_inmueble': cols[5].strip(),
                                 'ente_liquidado': cols[6].strip().upper(),
+                                'categoria1': cols[7].strip().lower() == 't',
+                                'categoria2': cols[8].strip().lower() == 't',
+                                'categoria3': cols[9].strip().lower() == 't',
+                                'categoria4': cols[10].strip().lower() == 't',
+                                'categoria5': cols[11].strip().lower() == 't',
+                                'categoria6': cols[12].strip().lower() == 't',
+                                'categoria7': cols[13].strip().lower() == 't',
+                                'categoria8': cols[14].strip().lower() == 't',
+                                'categoria9': cols[15].strip().lower() == 't',
+                                'categoria10': cols[16].strip().lower() == 't',
                                 'gastos_administrativos': self.clean_decimal(cols[17]),
                                 'tasa_dia': self.clean_decimal(cols[18]),
                                 'total_monto_bs': self.clean_decimal(cols[19]),
                                 'numero_transferencia': num_transf,
-                                'conciliado': cols[21].lower() in ['t', 'true', '1'],
+                                'conciliado': cols[21].strip().upper() == 'SI',
                                 'fecha': dt_fecha.date() if dt_fecha else None,
                                 'concepto': cols[23].strip(),
                                 'usuario': admin_user,

@@ -20,7 +20,7 @@ logger_beneficiarios = logging.getLogger('CH_BENEFICIARIOS')
 
 # Función de verificación para acceso administrativo
 def es_administrador(user):
-    return user.is_authenticated and (user.is_superuser or getattr(user, 'rol', '') == 'ADMINISTRADOR')
+    return user.is_authenticated and (user.is_superuser or getattr(user, 'rol', '') in ['admin', 'superadmin'])
 
 # ================================================================
 # 1. SECCIÓN: GESTIÓN INTEGRAL DE BENEFICIARIOS (CRUD Y LISTADOS)
@@ -338,6 +338,12 @@ def exportar_excel(request):
         # 1. Capturar los parámetros con los nombres EXACTOS del HTML
         f_inicio = request.GET.get('fecha_inicio', '').strip()
         f_fin = request.GET.get('fecha_fin', '').strip()
+        tipo = request.GET.get('tipo', 'parcial')
+
+        # Verificar permisos para reporte completo
+        if tipo == 'completo' and not es_administrador(request.user):
+            messages.error(request, "No tienes permisos para exportar el reporte completo de ciudadanos.")
+            return redirect('beneficiarios:lista')
 
         # 2. Construir filtros dinámicos (Igual que en estadísticas)
         filtros_visita = Q()
@@ -358,7 +364,7 @@ def exportar_excel(request):
         # --- HOJA 1: RESUMEN Y FILTROS ---
         ws_resumen = wb.active
         ws_resumen.title = "Control de Reporte"
-        ws_resumen["A1"] = "SICSI INTU - REPORTE FILTRADO"
+        ws_resumen["A1"] = f"SICSI INTU - REPORTE {'COMPLETO' if tipo == 'completo' else 'PARCIAL'}"
         ws_resumen["A1"].font = Font(bold=True, size=14)
         ws_resumen.append([])
         ws_resumen.append(["RANGO DESDE:", f_inicio if f_inicio else "HISTÓRICO"])
@@ -381,18 +387,19 @@ def exportar_excel(request):
                 v.motivo.upper() if v.motivo else "N/A"
             ])
 
-        # --- HOJA 3: BENEFICIARIOS ---
-        ws_ben = wb.create_sheet(title="Base de Ciudadanos")
-        ws_ben.append(['FECHA REGISTRO', 'IDENTIDAD', 'NOMBRE COMPLETO', 'TELÉFONO'])
-        
-        beneficiarios_qs = Beneficiario.objects.filter(filtros_beneficiario).order_by('-fecha_creacion')
-        for b in beneficiarios_qs:
-            ws_ben.append([
-                b.fecha_creacion.strftime('%d/%m/%Y') if b.fecha_creacion else "N/A",
-                f"{b.tipo_documento}-{b.documento_identidad}",
-                b.nombre_completo.upper(),
-                b.telefono or "N/A"
-            ])
+        # --- HOJA 3: BENEFICIARIOS (Solo para reporte completo) ---
+        if tipo == 'completo':
+            ws_ben = wb.create_sheet(title="Base de Ciudadanos")
+            ws_ben.append(['FECHA REGISTRO', 'IDENTIDAD', 'NOMBRE COMPLETO', 'TELÉFONO'])
+            
+            beneficiarios_qs = Beneficiario.objects.filter(filtros_beneficiario).order_by('-fecha_creacion')
+            for b in beneficiarios_qs:
+                ws_ben.append([
+                    b.fecha_creacion.strftime('%d/%m/%Y') if b.fecha_creacion else "N/A",
+                    f"{b.tipo_documento}-{b.documento_identidad}",
+                    b.nombre_completo.upper(),
+                    b.telefono or "N/A"
+                ])
 
         # 4. Estilos y Ajuste de columnas
         for sheet in wb.worksheets:
@@ -413,8 +420,9 @@ def exportar_excel(request):
                 sheet.column_dimensions[column].width = max_length + 4
 
         # 5. Envío de respuesta
+        tipo_str = "COMPLETO" if tipo == "completo" else "PARCIAL"
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="Reporte_INTU_{now().strftime("%d%m%Y")}.xlsx"'
+        response['Content-Disposition'] = f'attachment; filename="Reporte_INTU_{tipo_str}_{now().strftime("%d%m%Y")}.xlsx"'
         wb.save(response)
         return response
 
