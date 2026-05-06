@@ -116,6 +116,46 @@
 
     </div>
 
+    {# --- FILA 1B: NUEVOS INDICADORES SOCIALES --- #}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-user-check text-lg"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adultos (18+)</p>
+                <h3 class="text-2xl font-black text-slate-900 leading-none">{{ adultos_count|default:"0" }}</h3>
+            </div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-intu-blue flex items-center justify-center shrink-0">
+                <i class="fas fa-user-clock text-lg"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adultos mayores</p>
+                <h3 class="text-2xl font-black text-slate-900 leading-none">{{ mayores_count|default:"0" }}</h3>
+            </div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-wheelchair text-lg"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Con discapacidad</p>
+                <h3 class="text-2xl font-black text-slate-900 leading-none">{{ discapacidad_count|default:"0" }}</h3>
+            </div>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-slate-50 text-slate-800 flex items-center justify-center shrink-0">
+                <i class="fas fa-briefcase text-lg"></i>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Económicamente Activos</p>
+                <h3 class="text-2xl font-black text-slate-900 leading-none">{{ economico_activo_count|default:"0" }}</h3>
+            </div>
+        </div>
+    </div>
+
     {# --- FILA 2: DISTRIBUCIÓN TERRITORIAL Y PRODUCTIVIDAD --- #}
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
         

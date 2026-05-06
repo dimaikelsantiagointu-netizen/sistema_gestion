@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import IntegrityError
+from datetime import date
 
 # Importación de modelos locales
 from .models import Beneficiario, DocumentoExpediente, Visita
@@ -17,6 +18,15 @@ from apps.territorio.models import Estado, Municipio, Parroquia, Ciudad, Comuna,
 
 # Configuración del Logger vinculado a la configuración de settings.py
 logger_beneficiarios = logging.getLogger('CH_BENEFICIARIOS')
+
+# Funciones auxiliares de fecha para cálculos de edad
+def _fecha_hace_anios(anios):
+    hoy = timezone.localdate()
+    try:
+        return date(hoy.year - anios, hoy.month, hoy.day)
+    except ValueError:
+        # Ajuste para años bisiestos
+        return date(hoy.year - anios, hoy.month, 28)
 
 # Función de verificación para acceso administrativo
 def es_administrador(user):
@@ -70,6 +80,10 @@ def lista_beneficiarios(request):
 
     total_beneficiarios = Beneficiario.objects.count()
     visitas_hoy_count = Visita.objects.filter(fecha_registro__date=hoy_local).count()
+    adultos_count = Beneficiario.objects.filter(fecha_nacimiento__lte=_fecha_hace_anios(18)).count()
+    mayores_count = Beneficiario.objects.filter(fecha_nacimiento__lte=_fecha_hace_anios(60)).count()
+    discapacidad_count = Beneficiario.objects.filter(discapacidad=True).count()
+    economico_activo_count = Beneficiario.objects.filter(es_economicamente_activo=True).count()
 
     context = {
         'beneficiarios': beneficiarios_list,
@@ -79,6 +93,10 @@ def lista_beneficiarios(request):
         'estados': Estado.objects.all().order_by('nombre'),
         'total_beneficiarios': total_beneficiarios,
         'visitas_hoy_count': visitas_hoy_count,
+        'adultos_count': adultos_count,
+        'mayores_count': mayores_count,
+        'discapacidad_count': discapacidad_count,
+        'economico_activo_count': economico_activo_count,
         'ha_filtrado': ha_filtrado,
     }
     return render(request, 'beneficiarios/lista.html', context)
@@ -115,6 +133,7 @@ def crear_beneficiario(request):
                 
                 genero=request.POST.get('genero'),
                 discapacidad=request.POST.get('discapacidad') == 'on',
+                es_economicamente_activo=request.POST.get('es_economicamente_activo') == 'on',
                 telefono=request.POST.get('telefono'),
                 
                 # Tratamos el email como opcional (si llega vacío se guarda None)
@@ -166,6 +185,7 @@ def editar_beneficiario(request, id):
             
             beneficiario.genero = request.POST.get('genero')
             beneficiario.discapacidad = request.POST.get('discapacidad') == 'on'
+            beneficiario.es_economicamente_activo = request.POST.get('es_economicamente_activo') == 'on'
             beneficiario.telefono = request.POST.get('telefono')
             
             # Email opcional: tratar cadena vacía como None
@@ -245,7 +265,9 @@ def registrar_visita(request):
     return render(request, 'beneficiarios/form_visita.html', {
         'motivos': Visita.MOTIVO_CHOICES,
         'current_time': timezone.now(),
-        'unidades': UnidadAdscrita.objects.all().order_by('nombre')
+        'unidades': UnidadAdscrita.objects.all().order_by('nombre'),
+        'visita': None,
+        'is_editing': False,
     })
 
 @login_required
@@ -263,13 +285,48 @@ def detalle_beneficiario(request, id):
         'titulo_pagina': 'Expediente del Ciudadano'
     })
 
+@user_passes_test(es_administrador, login_url='beneficiarios:lista')
+def editar_visita(request, id):
+    visita = get_object_or_404(Visita, id=id)
+    if request.method == 'POST':
+        unidad_id = request.POST.get('unidad_adscrita')
+        unidad_obj = UnidadAdscrita.objects.filter(id=unidad_id).first() if unidad_id and unidad_id.isdigit() else None
+        visita.motivo = request.POST.get('motivo')
+        visita.descripcion = request.POST.get('descripcion')
+        visita.funcionario_atiende = request.POST.get('funcionario_atiende')
+        visita.unidad_administrativa = unidad_obj
+        fecha_post = request.POST.get('fecha_registro')
+        visita.fecha_registro = fecha_post if fecha_post else visita.fecha_registro
+        visita.save()
+        messages.success(request, "Registro de visita actualizado correctamente.")
+        return redirect('beneficiarios:detalle', id=visita.beneficiario.id)
+
+    return render(request, 'beneficiarios/form_visita.html', {
+        'titulo': 'Editar Visita',
+        'boton': 'Guardar Cambios',
+        'visita': visita,
+        'motivos': Visita.MOTIVO_CHOICES,
+        'current_time': visita.fecha_registro,
+        'unidades': UnidadAdscrita.objects.all().order_by('nombre'),
+        'is_editing': True,
+    })
+
+@user_passes_test(es_administrador, login_url='beneficiarios:lista')
+def eliminar_visita(request, id):
+    visita = get_object_or_404(Visita, id=id)
+    beneficiario_id = visita.beneficiario.id
+    visita.delete()
+    logger_beneficiarios.warning(f"VISITA ELIMINADA: {id} por {request.user.username}")
+    messages.warning(request, "Visita eliminada correctamente.")
+    return redirect('beneficiarios:detalle', id=beneficiario_id)
+
 # ================================================================
 # 2. SECCIÓN: ESTADÍSTICAS, EXPORTACIÓN Y CANALES API (AJAX)
 # ================================================================
 
-@user_passes_test(es_administrador)
+@login_required
 def beneficiarios_estadisticas(request):
-    # 1. Capturar parámetros de fecha
+    # Todas las personas autenticadas pueden ver las estadísticas de beneficiarios.
     f_inicio = request.GET.get('fecha_inicio')
     f_fin = request.GET.get('fecha_fin')
 
@@ -315,6 +372,11 @@ def beneficiarios_estadisticas(request):
     estado_top = visitas_por_estado.first() if visitas_por_estado else None
     tipo_top = visitas_por_tipo.first() if visitas_por_tipo else None
 
+    adultos_count = Beneficiario.objects.filter(filtros_beneficiario, fecha_nacimiento__lte=_fecha_hace_anios(18)).count()
+    mayores_count = Beneficiario.objects.filter(filtros_beneficiario, fecha_nacimiento__lte=_fecha_hace_anios(60)).count()
+    discapacidad_count = Beneficiario.objects.filter(filtros_beneficiario, discapacidad=True).count()
+    economico_activo_count = Beneficiario.objects.filter(filtros_beneficiario, es_economicamente_activo=True).count()
+
     context = {
         'total_beneficiarios': total_beneficiarios,
         'total_visitas': total_visitas,
@@ -324,6 +386,10 @@ def beneficiarios_estadisticas(request):
         'visitas_por_tipo': visitas_por_tipo,
         'estado_top': estado_top,
         'tipo_top': tipo_top,
+        'adultos_count': adultos_count,
+        'mayores_count': mayores_count,
+        'discapacidad_count': discapacidad_count,
+        'economico_activo_count': economico_activo_count,
         'f_inicio': f_inicio,
         'f_fin': f_fin,
     }
@@ -390,15 +456,26 @@ def exportar_excel(request):
         # --- HOJA 3: BENEFICIARIOS (Solo para reporte completo) ---
         if tipo == 'completo':
             ws_ben = wb.create_sheet(title="Base de Ciudadanos")
-            ws_ben.append(['FECHA REGISTRO', 'IDENTIDAD', 'NOMBRE COMPLETO', 'TELÉFONO'])
+            ws_ben.append(['FECHA REGISTRO', 'IDENTIDAD', 'NOMBRE COMPLETO', 'TELÉFONO', 'FECHA NACIMIENTO', 'EDAD', 'DISCAPACIDAD', 'ECONÓMICAMENTE ACTIVO'])
             
             beneficiarios_qs = Beneficiario.objects.filter(filtros_beneficiario).order_by('-fecha_creacion')
             for b in beneficiarios_qs:
+                edad = ''
+                if b.fecha_nacimiento:
+                    hoy = timezone.localdate()
+                    try:
+                        edad = hoy.year - b.fecha_nacimiento.year - ((hoy.month, hoy.day) < (b.fecha_nacimiento.month, b.fecha_nacimiento.day))
+                    except Exception:
+                        edad = ''
                 ws_ben.append([
                     b.fecha_creacion.strftime('%d/%m/%Y') if b.fecha_creacion else "N/A",
                     f"{b.tipo_documento}-{b.documento_identidad}",
                     b.nombre_completo.upper(),
-                    b.telefono or "N/A"
+                    b.telefono or "N/A",
+                    b.fecha_nacimiento.strftime('%d/%m/%Y') if b.fecha_nacimiento else "N/A",
+                    edad if edad != '' else "N/A",
+                    "Sí" if b.discapacidad else "No",
+                    "Sí" if b.es_economicamente_activo else "No"
                 ])
 
         # 4. Estilos y Ajuste de columnas

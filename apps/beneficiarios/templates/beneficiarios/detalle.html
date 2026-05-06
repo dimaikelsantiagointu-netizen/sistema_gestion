@@ -109,6 +109,15 @@
                         <i class="fas fa-wheelchair text-[10px]"></i> Con Discapacidad
                     </span>
                     {% endif %}
+                    {% if beneficiario.es_economicamente_activo %}
+                    <span class="inline-flex items-center gap-2 mt-2 px-3 py-1.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-xl uppercase border border-blue-100">
+                        <i class="fas fa-chart-line text-[10px]"></i> Económicamente activo
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-2 mt-2 px-3 py-1.5 bg-slate-50 text-slate-500 text-[10px] font-black rounded-xl uppercase border border-slate-200">
+                        <i class="fas fa-ban text-[10px]"></i> No Económicamente activo
+                    </span>
+                    {% endif %}
                 </div>
             </div>
 
@@ -212,6 +221,17 @@
                                     </span>
                                 </div>
                                 {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' %}
+                            <div class="mt-6 flex flex-wrap gap-3">
+                                <a href="{% url 'beneficiarios:editar_visita' visita.id %}" class="px-4 py-2 rounded-2xl bg-slate-50 text-slate-600 border border-slate-200 hover:bg-intu-blue hover:text-white transition-all text-[11px] font-black uppercase tracking-[0.2em]">
+                                    <i class="fas fa-pen mr-2"></i> Editar
+                                </a>
+                                <a href="{% url 'beneficiarios:eliminar_visita' visita.id %}" onclick="return confirm('¿Eliminar esta visita? Esta acción no se puede deshacer.')" class="px-4 py-2 rounded-2xl bg-red-50 text-red-600 border border-red-100 hover:bg-red-600 hover:text-white transition-all text-[11px] font-black uppercase tracking-[0.2em]">
+                                    <i class="fas fa-trash-alt mr-2"></i> Eliminar
+                                </a>
                             </div>
                             {% endif %}
 

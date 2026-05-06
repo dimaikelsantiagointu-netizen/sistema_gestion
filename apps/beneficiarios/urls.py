@@ -17,6 +17,8 @@ urlpatterns = [
 
     # --- Visitas (Historial) ---
     path('visitas/registrar/', views.registrar_visita, name='registrar_visita'),
+    path('visitas/editar/<int:id>/', views.editar_visita, name='editar_visita'),
+    path('visitas/eliminar/<int:id>/', views.eliminar_visita, name='eliminar_visita'),
     path('historial/<int:id>/', views.detalle_beneficiario, name='detalle'), 
 
     # --- Reportes y API ---
