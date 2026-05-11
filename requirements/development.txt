@@ -14,3 +14,4 @@ fontawesome
 unidecode
 python-docx
 qrcode
+pytz
