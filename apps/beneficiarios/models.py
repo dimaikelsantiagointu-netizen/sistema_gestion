@@ -37,6 +37,7 @@ class Beneficiario(models.Model):
     # --- Perfil Social ---
     genero = models.CharField(max_length=1, choices=GENERO_CHOICES, verbose_name="Género")
     discapacidad = models.BooleanField(default=False, verbose_name="¿Posee alguna discapacidad?")
+    es_economicamente_activo = models.BooleanField(default=False, verbose_name="Población Económicamente Activa")
     
     # --- Contacto ---
     telefono = models.CharField(max_length=20, blank=True, null=True)

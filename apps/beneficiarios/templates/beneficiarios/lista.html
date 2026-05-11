@@ -63,6 +63,35 @@
             </div>
         </div>
 
+        <div class="bg-white p-7 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-5">
+            <div class="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center text-2xl"><i class="fas fa-user-check"></i></div>
+            <div>
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Adultos (18+)</p>
+                <p class="text-3xl font-black text-intu-blue">{{ adultos_count|default:"0" }}</p>
+            </div>
+        </div>
+        <div class="bg-white p-7 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-5">
+            <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl"><i class="fas fa-user-clock"></i></div>
+            <div>
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Adultos mayores</p>
+                <p class="text-3xl font-black text-intu-blue">{{ mayores_count|default:"0" }}</p>
+            </div>
+        </div>
+        <div class="bg-white p-7 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-5">
+            <div class="w-14 h-14 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-2xl"><i class="fas fa-wheelchair"></i></div>
+            <div>
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Personas con discapacidad</p>
+                <p class="text-3xl font-black text-intu-blue">{{ discapacidad_count|default:"0" }}</p>
+            </div>
+        </div>
+        <div class="bg-white p-7 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-5">
+            <div class="w-14 h-14 bg-slate-50 text-slate-800 rounded-2xl flex items-center justify-center text-2xl"><i class="fas fa-briefcase"></i></div>
+            <div>
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Económicamente activos</p>
+                <p class="text-3xl font-black text-intu-blue">{{ economico_activo_count|default:"0" }}</p>
+            </div>
+        </div>
+
         <a href="{% url 'beneficiarios:estadisticas' %}" class="sm:col-span-2 lg:col-span-1 bg-white p-7 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between hover:border-emerald-500 transition-all group">
             <div class="flex items-center gap-5">
                 <div class="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center text-2xl"><i class="fas fa-chart-line"></i></div>

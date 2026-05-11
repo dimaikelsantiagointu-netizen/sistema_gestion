@@ -102,6 +102,15 @@
                         <span class="ml-4 text-[11px] font-bold text-slate-500 uppercase tracking-tight">Posee discapacidad</span>
                     </label>
                 </div>
+
+                <div class="flex flex-col justify-center px-2">
+                    <label class="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-4">Económicamente Activo</label>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="es_economicamente_activo" class="sr-only peer" {% if beneficiario.es_economicamente_activo %}checked{% endif %}>
+                        <div class="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                        <span class="ml-4 text-[11px] font-bold text-slate-500 uppercase tracking-tight">Población Activa</span>
+                    </label>
+                </div>
             </div>
         </div>
 

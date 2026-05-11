@@ -8,7 +8,7 @@
             <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform text-sm"></i> Volver al listado
         </a>
         <h1 class="text-4xl font-black text-intu-blue uppercase tracking-tighter mt-4 leading-none">
-            Registrar visita <span class="text-gray-300 italic">de control</span>
+            {{ titulo|default:'Registrar visita' }} <span class="text-gray-300 italic">de control</span>
         </h1>
         <div class="h-1.5 w-20 bg-intu-red mt-4 rounded-full"></div>
     </div>
@@ -45,17 +45,18 @@
                 <div id="card_seleccionado" class="flex items-center p-5 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 min-h-[72px] transition-all">
                     <div class="flex-1">
                         <input type="text" id="nombre_confirmado" readonly placeholder="Nadie seleccionado"
+                               value="{{ visita.beneficiario.nombre_completo|default:'' }}"
                                class="bg-transparent border-none p-0 w-full text-base font-black text-gray-400 placeholder-gray-300 focus:ring-0 uppercase tracking-tight">
-                        <input type="hidden" name="beneficiario_id" id="id_oculto">
+                        <input type="hidden" name="beneficiario_id" id="id_oculto" value="{{ visita.beneficiario.id|default:'' }}">
                     </div>
-                    <div id="check_ok" class="hidden text-emerald-500 animate-bounce-short">
+                    <div id="check_ok" class="{% if visita %}text-emerald-500 animate-bounce-short{% else %}hidden text-emerald-500 animate-bounce-short{% endif %}">
                         <i class="fas fa-check-circle text-2xl"></i>
                     </div>
                 </div>
             </div>
 
             {# --- DETALLES --- #}
-            <div id="seccion_detalles" class="md:col-span-2 space-y-10 opacity-20 pointer-events-none blur-[1px] transition-all duration-700">
+            <div id="seccion_detalles" class="md:col-span-2 space-y-10 {% if visita %}opacity-100 pointer-events-auto blur-0{% else %}opacity-20 pointer-events-none blur-[1px]{% endif %} transition-all duration-700">
                 <div class="h-px bg-gradient-to-r from-transparent via-gray-100 to-transparent"></div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -63,7 +64,7 @@
                         <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Motivo de la visita</label>
                         <select name="motivo" id="select_motivo" class="block w-full bg-gray-50 border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-intu-blue/5 p-5 cursor-pointer appearance-none">
                             {% for code, name in motivos %}
-                                <option value="{{ code }}">{{ name }}</option>
+                                <option value="{{ code }}" {% if visita and visita.motivo == code %}selected{% endif %}>{{ name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -71,7 +72,7 @@
                     <div>
                         <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Fecha y hora de registro</label>
                         <input type="datetime-local" name="fecha_registro" 
-                               value="{{ current_time|date:'Y-m-d\TH:i' }}"
+                               value="{% if visita %}{{ visita.fecha_registro|date:'Y-m-d\TH:i' }}{% else %}{{ current_time|date:'Y-m-d\TH:i' }}{% endif %}"
                                class="block w-full bg-gray-50 border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-intu-blue/5 p-5">
                     </div>
                 </div>
@@ -83,6 +84,7 @@
                         <div class="relative flex items-center group">
                             <i class="fas fa-user-tie absolute left-5 text-blue-300 group-focus-within:text-blue-500 transition-colors"></i>
                             <input type="text" name="funcionario_atiende" id="input_funcionario" placeholder="Nombre del abogado o asesor..."
+                                   value="{{ visita.funcionario_atiende|default:'' }}"
                                    class="block w-full bg-white border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-blue-500/10 p-5 pl-14 shadow-sm transition-all">
                         </div>
                     </div>
@@ -95,7 +97,7 @@
                                     class="block w-full bg-white border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-blue-500/10 p-5 pl-14 shadow-sm transition-all">
                                 <option value="">Selecciona la unidad administrativa</option>
                                 {% for unidad in unidades %}
-                                    <option value="{{ unidad.id }}">{{ unidad.nombre }}</option>
+                                    <option value="{{ unidad.id }}" {% if visita and visita.unidad_administrativa_id == unidad.id %}selected{% endif %}>{{ unidad.nombre }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -105,7 +107,7 @@
                 <div>
                     <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Observaciones detalladas</label>
                     <textarea name="descripcion" rows="4" placeholder="Escriba aquí los hallazgos..."
-                              class="block w-full bg-gray-50 border-none rounded-2xl text-base font-medium p-5 focus:ring-4 focus:ring-intu-blue/5 transition-all"></textarea>
+                              class="block w-full bg-gray-50 border-none rounded-2xl text-base font-medium p-5 focus:ring-4 focus:ring-intu-blue/5 transition-all">{% if visita %}{{ visita.descripcion }}{% endif %}</textarea>
                 </div>
 
                 <div class="pt-4">
@@ -187,6 +189,16 @@
             })
             .catch(err => console.error("Error en búsqueda:", err)); // Cierre de fetch corregido
     });
+
+    const estaEditando = {{ is_editing|yesno:"true,false" }};
+    if (estaEditando) {
+        seccionDetalles.classList.remove('opacity-20', 'pointer-events-none', 'blur-[1px]');
+        seccionDetalles.classList.add('opacity-100');
+        cardSeleccionado.classList.remove('bg-gray-50', 'border-gray-200');
+        cardSeleccionado.classList.add('bg-blue-50', 'border-intu-blue/20');
+        checkOk.classList.remove('hidden');
+        verificarMotivo();
+    }
 
     function seleccionar(b) {
         idOculto.value = b.id;
