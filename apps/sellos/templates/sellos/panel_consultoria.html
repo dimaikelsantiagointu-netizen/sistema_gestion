@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+
+{% block title %}Panel de Consultoría | Sellos Dorados{% endblock %}
+
+{% block content %}
+<style>
+    /* Ajuste para scroll horizontal suave en tablas móviles */
+    .table-responsive { -webkit-overflow-scrolling: touch; }
+</style>
+
+{# --- ENCABEZADO DE LA PÁGINA --- #}
+<div class="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+    <div class="flex items-start gap-4 md:gap-6">
+        <a href="{% url 'sellos:lista' %}" 
+           class="h-12 w-12 md:h-14 md:w-14 shrink-0 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
+            <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
+        </a>
+
+        <div>
+            <span class="text-[9px] md:text-[10px] font-black text-intu-red uppercase tracking-[0.3em]">Auditoría e Informes</span>
+            <h1 class="text-2xl md:text-3xl font-black text-intu-blue uppercase tracking-tighter leading-none">Panel de <span class="text-intu-red italic">Consultoría</span></h1>
+            <p class="text-gray-500 font-medium italic text-xs md:text-sm mt-1">Búsqueda avanzada, filtrado cruzado de estados y verificación analítica de protocolos.</p>
+            {# Badge mínimo para nuevos recibos aprobados #}
+            <div class="mt-2">
+                <a href="#" id="badge-nuevos" class="inline-flex items-center gap-2 bg-intu-red text-white px-3 py-1 rounded-full text-xs">
+                    Nuevos: <span id="badge-count">{{ nuevos_count }}</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+<div id="django-message-catcher" style="display:none;">
+    {% for message in messages %}
+    <div class="message-django" data-type="{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# --- CUERPO PRINCIPAL ASIMÉTRICO --- #}
+<div class="flex flex-col lg:flex-row gap-8">
+
+    {# --- PANEL LATERAL DE FILTROS --- #}
+    <aside class="w-full lg:w-1/3 xl:w-1/4 space-y-6 order-2 lg:order-1">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+            <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-4 flex items-center">
+                <i class="fas fa-filter mr-2 text-intu-red"></i> Filtros de Búsqueda
+            </h2>
+            
+            <form method="get" class="space-y-4">
+                {# --- ESTADO --- #}
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estatus del Protocolo</label>
+                    <select name="estado" class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-xs focus:ring-2 focus:ring-intu-blue/10 font-bold uppercase py-2.5 px-3 text-gray-600">
+                        <option value="">Todos los Estados</option>
+                        <option value="pendiente" {% if estado_filter == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                        <option value="aprobado" {% if estado_filter == 'aprobado' %}selected{% endif %}>Aprobado</option>
+                        <option value="asignado" {% if estado_filter == 'asignado' %}selected{% endif %}>Asignado</option>
+                        <option value="protocolizado" {% if estado_filter == 'protocolizado' %}selected{% endif %}>Protocolizado</option>
+                        <option value="rechazado" {% if estado_filter == 'rechazado' %}selected{% endif %}>Rechazado</option>
+                    </select>
+                </div>
+
+                {# --- REGIÓN --- #}
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Región / Jurisdicción</label>
+                    <input type="text" name="region" value="{{ region_filter|default:'' }}" placeholder="Ej: Capital"
+                           class="mt-1 block w-full bg-gray-50 border-none rounded-xl text-xs focus:ring-2 focus:ring-intu-blue/10 font-medium text-gray-700 p-2.5">
+                </div>
+
+                {# --- BOTÓN DE ACCIÓN --- #}
+                <button type="submit" class="w-full py-3 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-intu-dark transition shadow-lg flex justify-center items-center active:scale-95">
+                    <i class="fas fa-search mr-2"></i> Aplicar Filtros
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    {# --- CONTENIDO DE DATOS (TABLAS PRINCIPALES) --- #}
+    <section class="flex-grow space-y-8 order-1 lg:order-2">
+        
+        {# --- BLOQUE 1: RECIBOS APROBADOS --- #}
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 md:p-8 border-b border-gray-50">
+                <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest flex items-center">
+                    <i class="fas fa-check-double mr-2 text-intu-red"></i> Recibos Aprobados
+                </h2>
+            </div>
+
+            <div class="overflow-x-auto table-responsive">
+                <table class="w-full text-left border-collapse min-w-[600px]">
+                    <thead class="bg-gray-50/50">
+                        <tr>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nº Recibo</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Contribuyente</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Estado Recibo</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Sello Dorado</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        {% for recibo in recibos_aprobados %}
+                        <tr class="hover:bg-gray-50/50 transition duration-150">
+                            <td class="px-6 py-4">
+                                <span class="text-xs font-black text-intu-blue">
+                                    {{ recibo.numero_recibo|stringformat:"09d" }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-[11px] font-bold text-gray-700 uppercase break-words max-w-[250px] leading-tight">
+                                    {{ recibo.nombre }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-black rounded-full uppercase border border-emerald-100">
+                                    {{ recibo.estado }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-0.5 bg-amber-50 text-amber-600 text-[9px] font-black rounded-full uppercase border border-amber-100">
+                                    {{ recibo.estatus_sello_dorado|default:"Procesado" }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="p-12 text-center opacity-40">
+                                <p class="text-[10px] font-black uppercase tracking-widest text-intu-blue">Sin Registros</p>
+                                <p class="text-[10px] text-gray-400 font-medium mt-1">No se encontraron recibos aprobados con los criterios de filtrado actuales.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# --- BLOQUE 2: SELLOS ACTIVOS --- #}
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 md:p-8 border-b border-gray-50">
+                <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest flex items-center">
+                    <i class="fas fa-stamp mr-2 text-intu-red"></i> Protocolos / Sellos Activos
+                </h2>
+            </div>
+
+            <div class="overflow-x-auto table-responsive">
+                <table class="w-full text-left border-collapse min-w-[600px]">
+                    <thead class="bg-gray-50/50">
+                        <tr>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Código</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Identificador Protocolo</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Estado Sello</th>
+                            <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        {% for sello in sellos %}
+                        <tr class="hover:bg-gray-50/50 transition duration-150">
+                            <td class="px-6 py-4">
+                                <span class="text-xs font-black text-intu-blue bg-blue-50/50 border border-blue-100/50 px-2 py-0.5 rounded-md">
+                                    {{ sello.codigo_sello }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-[11px] font-bold text-gray-700 uppercase break-words max-w-[250px] leading-tight">
+                                    {{ sello.nombre }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black rounded-full uppercase border border-blue-100">
+                                    {{ sello.get_estado_display }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <a href="{% url 'sellos:detalle' pk=sello.pk %}" class="inline-flex h-7 w-7 bg-gray-50 text-gray-400 hover:bg-intu-red hover:text-white rounded-lg flex items-center justify-center transition-all">
+                                    <i class="fas fa-eye text-xs"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="p-12 text-center opacity-40">
+                                <p class="text-[10px] font-black uppercase tracking-widest text-intu-blue">Sin Protocolos</p>
+                                <p class="text-[10px] text-gray-400 font-medium mt-1">No hay sellos dorados disponibles bajo los parámetros de consulta.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const badge = document.getElementById('badge-nuevos');
+    if(!badge) return;
+    badge.addEventListener('click', function(e){
+        e.preventDefault();
+        fetch("{% url 'sellos:marcar_leidos' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('input[name=csrfmiddlewaretoken]') ? document.querySelector('input[name=csrfmiddlewaretoken]').value : '' ,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: ''
+        }).then(resp => resp.json()).then(data => {
+            if(data.success){
+                document.getElementById('badge-count').textContent = data.marked || 0;
+                // dejar en cero visualmente
+                document.getElementById('badge-count').textContent = 0;
+            } else {
+                console.warn('No se pudo marcar como leídos', data);
+            }
+        }).catch(err => console.error(err));
+    });
+});
+</script>
+{% endblock %}

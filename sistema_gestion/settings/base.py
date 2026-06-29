@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     # APPS LOCALES
     'apps.users',
     'apps.recibos.apps.RecibosConfig',
+    'apps.sellos',
     'apps.beneficiarios',
     'apps.personal',
     'apps.contratos', 
