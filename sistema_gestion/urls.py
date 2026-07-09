@@ -22,6 +22,7 @@ urlpatterns = [
     # 5. Gestión de Beneficiarios y Contratos
     path('beneficiarios/', include('apps.beneficiarios.urls', namespace='beneficiarios')),
     path('contratos/', include('apps.contratos.urls', namespace='contratos')),
+    path('sellos/', include('apps.sellos.urls', namespace='sellos')),
     
     # 6. Módulo de Seguridad y Auditoría (NUEVO)
     path('auditoria/', include('apps.auditoria.urls', namespace='auditoria')),

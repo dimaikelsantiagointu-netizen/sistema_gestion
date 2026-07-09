@@ -4,6 +4,14 @@ from .constants import CATEGORY_CHOICES, CATEGORY_CHOICES_MAP
 from django.conf import settings
 
 class Recibo(models.Model):
+    ESTATUS_SELLO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('aprobado', 'Aprobado por Administración'),
+        ('asignado', 'Asignado a Sello Dorado'),
+        ('protocolizado', 'Protocolizado'),
+        ('rechazado', 'Rechazado'),
+    ]
+
     # 1. CAMPOS DE CONTROL Y SEGUIMIENTO
     
     # Número único del recibo.
@@ -102,7 +110,25 @@ class Recibo(models.Model):
     # Descripción detallada del pago.
     concepto = models.TextField()
 
-    # 6. CONFIGURACIÓN DEL MODELO
+    # 6. INTEGRACIÓN CON EL MÓDULO DE SELLOS DORADOS
+    aprobado_sello_dorado = models.BooleanField(default=False)
+    estatus_sello_dorado = models.CharField(
+        max_length=20,
+        choices=ESTATUS_SELLO_CHOICES,
+        default='pendiente'
+    )
+    sello_dorado = models.ForeignKey(
+        'sellos.SelloDorado',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='recibos'
+    )
+    fecha_aprobacion_sello = models.DateTimeField(null=True, blank=True)
+    # Indicador para notificar a Consultoría sobre nuevos recibos aprobados
+    notificado_consultoria = models.BooleanField(default=False, db_index=True)
+
+    # 7. CONFIGURACIÓN DEL MODELO
     class Meta:
         db_table = 'recibos_pago'
         indexes = [

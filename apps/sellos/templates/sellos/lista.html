@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+
+{% block title %}Listado de Sellos Dorados | Gestión Institucional{% endblock %}
+
+{% block content %}
+<style>
+    /* Efecto hover suave para las tarjetas de sellos */
+    .seal-card-transition { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+</style>
+
+{# --- ENCABEZADO DE LA PÁGINA --- #}
+<div class="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+    <div class="flex items-start gap-4 md:gap-6">
+        <a href="{% url 'home' %}" 
+           class="h-12 w-12 md:h-14 md:w-14 shrink-0 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
+            <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
+        </a>
+
+        <div>
+            <span class="text-[9px] md:text-[10px] font-black text-intu-red uppercase tracking-[0.3em]">Inventario de Protocolos</span>
+            <h1 class="text-2xl md:text-3xl font-black text-intu-blue uppercase tracking-tighter leading-none">Sellos <span class="text-intu-red italic">Dorados</span></h1>
+            <p class="text-gray-500 font-medium italic text-xs md:text-sm mt-1">Catálogo general, control de estados y asignación de numeraciones únicas.</p>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+<div id="django-message-catcher" style="display:none;">
+    {% for message in messages %}
+    <div class="message-django" data-type="{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# --- CUERPO PRINCIPAL --- #}
+<div class="flex flex-col lg:flex-row gap-8">
+
+    {# --- PANEL LATERAL DE NAVEGACIÓN INTERNA --- #}
+    <aside class="w-full lg:w-1/3 xl:w-1/4 space-y-4 order-2 lg:order-1">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+            <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-4 flex items-center">
+                <i class="fas fa-layer-group mr-2 text-intu-red"></i> Paneles de Control
+            </h2>
+            <p class="text-[11px] text-gray-400 font-medium leading-relaxed mb-6">
+                Navegue de forma directa entre los submódulos operativos del ecosistema de sellos dorados institucionales.
+            </p>
+            
+            <div class="space-y-2">
+                <a href="{% url 'sellos:crear' %}" 
+                   class="w-full py-3 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-intu-dark transition-all shadow-md flex justify-center items-center active:scale-95">
+                    <i class="fas fa-plus mr-2"></i> Crear Nuevo Sello
+                </a>
+                
+                <a href="{% url 'sellos:administracion' %}" 
+                   class="w-full py-3 bg-gray-50 text-intu-blue text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-100 transition border border-gray-100/80 flex items-center justify-center">
+                    <i class="fas fa-sliders-h mr-2 text-intu-red"></i> Panel Administración
+                </a>
+                
+                <a href="{% url 'sellos:panel_consultoria' %}" 
+                   class="w-full py-3 bg-gray-50 text-intu-blue text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-100 transition border border-gray-100/80 flex items-center justify-center">
+                    <i class="fas fa-balance-scale mr-2 text-intu-red"></i> Panel Consultoría
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    {# --- CUADRÍCULA DE REGISTROS --- #}
+    <section class="flex-grow order-1 lg:order-2">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for sello in sellos %}
+                <a href="{% url 'sellos:detalle' pk=sello.pk %}" 
+                   class="seal-card-transition bg-white p-6 rounded-3xl border border-gray-100 hover:border-intu-blue/20 hover:shadow-lg flex items-center justify-between group">
+                    <div class="space-y-1">
+                        <span class="text-[10px] font-black tracking-wider text-intu-blue bg-blue-50/50 border border-blue-100/50 px-2 py-0.5 rounded-md">
+                            {{ sello.codigo_sello }}
+                        </span>
+                        <div class="text-sm font-bold text-gray-700 uppercase break-words max-w-[220px] leading-tight pt-1 group-hover:text-intu-blue transition-colors">
+                            {{ sello.nombre }}
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <span class="px-2 py-0.5 bg-gray-50 border border-gray-100 text-gray-600 text-[9px] font-black rounded-full uppercase tracking-wider">
+                            {{ sello.get_estado_display }}
+                        </span>
+                        <div class="h-8 w-8 rounded-xl bg-gray-50 text-gray-400 group-hover:bg-intu-red group-hover:text-white flex items-center justify-center transition-all duration-300">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </div>
+                    </div>
+                </a>
+            {% empty %}
+                <div class="col-span-1 md:col-span-2 bg-white rounded-3xl border border-gray-100 p-20 text-center opacity-40">
+                    <div class="flex flex-col items-center justify-center">
+                        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100 mb-4">
+                            <i class="fas fa-stamp text-gray-300 text-2xl"></i>
+                        </div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-intu-blue">Bandeja Vacía</p>
+                        <p class="text-[10px] text-gray-400 font-medium mt-1">No se encuentran sellos dorados registrados en el sistema.</p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+</div>
+{% endblock %}

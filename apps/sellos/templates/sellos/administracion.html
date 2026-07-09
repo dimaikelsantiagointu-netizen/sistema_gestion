@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+
+{% block title %}Dashboard | Administración de Sellos Dorados{% endblock %}
+
+{% block content %}
+<style>
+    /* Ajuste para scroll horizontal suave en tablas móviles */
+    .table-responsive { -webkit-overflow-scrolling: touch; }
+</style>
+
+{# --- ENCABEZADO DE LA PÁGINA --- #}
+<div class="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+    <div class="flex items-start gap-4 md:gap-6">
+        <a href="{% url 'home' %}" 
+           class="h-12 w-12 md:h-14 md:w-14 shrink-0 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
+            <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
+        </a>
+
+        <div>
+            <span class="text-[9px] md:text-[10px] font-black text-intu-red uppercase tracking-[0.3em]">Módulo de Protocolización</span>
+            <h1 class="text-2xl md:text-3xl font-black text-intu-blue uppercase tracking-tighter leading-none">Administración de <span class="text-intu-red italic">Sellos Dorados</span></h1>
+            <p class="text-gray-500 font-medium italic text-xs md:text-sm mt-1">Verificación, aprobación y control de recibos para asignación de sellos.</p>
+        </div>
+    </div>
+    
+    {# Botonera de estadísticas o accesos rápidos del módulo #}
+    <div class="flex flex-wrap gap-2">
+        {% if user.is_superuser or user.rol == 'admin' or user.rol == 'superadmin' %}
+        <a href="{% url 'recibos:estadisticas' %}" class="flex-1 md:flex-none px-4 py-2 text-[10px] font-black bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition uppercase tracking-wider flex items-center justify-center shadow-lg shadow-blue-200">
+            <i class="fas fa-chart-pie mr-2"></i> Estadísticas Globales
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+{% if messages %}
+<div id="django-message-catcher" class="space-y-2">
+    {% for message in messages %}
+    <div class="p-3 rounded-lg {% if message.tags == 'error' %}bg-red-50 border border-red-100 text-red-700{% else %}bg-green-50 border border-green-100 text-green-700{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# --- CUERPO PRINCIPAL --- #}
+<div class="flex flex-col lg:flex-row gap-8">
+
+    {# --- PANEL LATERAL DE ACCIONES RÁPIDAS --- #}
+    <aside class="w-full lg:w-1/3 xl:w-1/4 space-y-6 order-2 lg:order-1">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+            <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest mb-4 flex items-center">
+                <i class="fas fa-stamp mr-2 text-intu-red"></i> Acciones de Lote
+            </h2>
+            <p class="text-[11px] text-gray-400 font-medium leading-relaxed mb-4">
+                Selecciona los recibos pendientes en la tabla principal y utiliza el botón inferior para procesar la aprobación masiva del Sello Dorado.
+            </p>
+            
+            {% if recibos %}
+            <button type="button" id="trigger-approval-button"
+                    class="w-full py-3 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-intu-dark transition-all shadow-lg flex justify-center items-center active:scale-95">
+                <i class="fas fa-check-circle mr-2"></i> Aprobar Seleccionados
+            </button>
+            {% else %}
+            <button type="button" disabled
+                    class="w-full py-3 bg-gray-100 text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-xl flex justify-center items-center cursor-not-allowed">
+                <i class="fas fa-lock mr-2"></i> Sin Pendientes
+            </button>
+            {% endif %}
+        </div>
+    </aside>
+
+    {# --- SECCIÓN PRINCIPAL (TABLA DE PENDIENTES) --- #}
+    <section class="flex-grow space-y-6 order-1 lg:order-2">
+        <form method="post" action="{% url 'sellos:aprobar_recibos' %}" id="batch-approval-form">
+            {% csrf_token %}
+            
+            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 md:p-8 border-b border-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest flex items-center">
+                            <i class="fas fa-clock mr-2 text-intu-red"></i> Recibos pendientes de aprobación
+                        </h2>
+                    </div>
+                    
+                    {% if recibos %}
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="select-all-toggle" class="w-4 h-4 text-intu-red border-gray-300 rounded focus:ring-intu-red cursor-pointer">
+                        <label for="select-all-toggle" class="text-[10px] font-black text-gray-400 uppercase tracking-widest cursor-pointer">Seleccionar Todos</label>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="overflow-x-auto table-responsive">
+                    <table class="w-full text-left border-collapse min-w-[600px]">
+                        <thead class="bg-gray-50/50">
+                            <tr>
+                                <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center w-12">Sel.</th>
+                                <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Nº Recibo</th>
+                                <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Contribuyente</th>
+                                <th class="px-6 py-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            {% for recibo in recibos %}
+                            <tr class="hover:bg-gray-50/50 transition duration-150">
+                                <td class="px-6 py-4 text-center">
+                                    <input type="checkbox" name="recibo_ids" value="{{ recibo.pk }}" class="recibo-checkbox w-4 h-4 text-intu-red border-gray-300 rounded focus:ring-intu-red cursor-pointer">
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="text-xs font-black text-intu-blue">
+                                        {{ recibo.numero_recibo|stringformat:"09d" }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-[11px] font-bold text-gray-700 uppercase break-words max-w-[300px] leading-tight">
+                                        {{ recibo.nombre }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="px-2 py-0.5 bg-yellow-50 text-yellow-600 text-[9px] font-black rounded-full uppercase border border-yellow-100">
+                                        {{ recibo.estado|default:"Pendiente" }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="p-20 text-center opacity-40">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <div class="relative w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100 mb-4">
+                                            <i class="fas fa-check text-emerald-500 text-2xl"></i>
+                                        </div>
+                                        <p class="text-[10px] font-black uppercase tracking-widest text-intu-blue">Al día</p>
+                                        <p class="text-[10px] text-gray-400 font-medium mt-1">No hay recibos pendientes por aprobar sellos dorados.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </form>
+    </section>
+</div>
+
+{# --- LÓGICA DE CONTROL JAVASCRIPT --- #}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAllToggle = document.getElementById('select-all-toggle');
+        const checkboxes = document.querySelectorAll('.recibo-checkbox');
+        const submitBtn = document.getElementById('trigger-approval-button');
+        const form = document.getElementById('batch-approval-form');
+
+        // Seleccionar / Deseleccionar todos
+        if (selectAllToggle) {
+            selectAllToggle.addEventListener('change', function() {
+                checkboxes.forEach(cb => cb.checked = selectAllToggle.checked);
+            });
+        }
+
+        // Simular envío de formulario desde el panel lateral
+        if (submitBtn && form) {
+            submitBtn.addEventListener('click', function() {
+                const checkedCount = document.querySelectorAll('.recibo-checkbox:checked').length;
+                if (checkedCount === 0) {
+                    alert('Por favor, selecciona al menos un recibo para aprobar.');
+                    return;
+                }
+                form.submit();
+            });
+        }
+    });
+</script>
+{% endblock %}
