@@ -9,6 +9,9 @@ CATEGORY_CHOICES = (
     ('categoria8', '8.Estudio Técnico'),
     ('categoria9', '9.Locales Comerciales'),
     ('categoria10', '10.Arrendamiento Terrenos'),
+    ('categoria11', '11.Aclaratoria de Documentos INAVI'),
+    ('categoria12', '12.Aclaratorias de Documentos de Títulos de Tierra Urbana (TTU)'),
+    ('categoria13', '13.Liberaciones Relacionadas con INAVI y con Títulos de Tierra Urbana (Ley Especial)'),
 )
 CATEGORY_CHOICES_MAP = dict(CATEGORY_CHOICES)
 

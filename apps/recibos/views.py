@@ -445,6 +445,9 @@ def estadisticas_view(request):
         ('categoria5', 'Tierra INAVI'), ('categoria6', 'Excedentes Título'),
         ('categoria7', 'Excedentes INAVI'), ('categoria8', 'Estudio Técnico'),
         ('categoria9', 'Locales Comerciales'), ('categoria10', 'Arrendamiento Terrenos'),
+        ('categoria11', 'Aclaratoria de Documentos INAVI'),
+        ('categoria12', 'Aclaratorias de Documentos de Títulos de Tierra Urbana (TTU)'),
+        ('categoria13', 'Liberaciones Relacionadas con INAVI y con Títulos de Tierra Urbana (Ley Especial)'),
     ]
     estadisticas_categorias = []
     for campo, nombre_real in categorias_config:
