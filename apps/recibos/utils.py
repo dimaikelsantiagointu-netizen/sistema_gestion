@@ -370,12 +370,12 @@ def _draw_categorias_section(c, recibo_obj, y_start, X1_TITLE):
 
         CATEGORY_DESCRIPTIONS = {
             'categoria1': ("TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION EN PROPIEDAD", "Una milésima de Bolívar, Art. 58 de la Ley Especial de Regularización"),
-            'categoria2': ("TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION MAS VIVIENDA", "Una milésima de Bolívar, más gastos administrativos (140 unidades BCV)"),
-            'categoria3': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Municipal", "Precio: Gastos Administrativos (140 unidades BCV)"),
-            'categoria4': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Tierra Privada", "Precio: Gastos Administrativos (140 unidades BCV)"),
-            'categoria5': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Tierra INAVI/INTU", "Precio: Gastos Administrativos (140 unidades BCV)"),
+            'categoria2': ("TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION MAS VIVIENDA", "Una milésima de Bolívar, más gastos administrativos"),
+            'categoria3': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Municipal", "Precio: Gastos Administrativos"),
+            'categoria4': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Tierra Privada", "Precio: Gastos Administrativos"),
+            'categoria5': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Tierra INAVI/INTU", "Precio: Gastos Administrativos"),
             'categoria6': ("EXCEDENTES: Tierra Urbana hasta 400 mt2", "Según el Art 33 de la Ley Especial de Regularización"),
-            'categoria7': ("Con Título INAVI (Gastos Administrativos):", "140 unidades ancladas a la moneda de mayor valor BCV"),
+            'categoria7': ("Con Título INAVI (Gastos Administrativos):", "unidades ancladas a la moneda de mayor valor BCV"),
             'categoria8': ("ESTUDIOS TÉCNICOS:", "Medición detallada de la parcela para plano"),
             'categoria9': ("ARRENDAMIENTOS DE LOCALES COMERCIALES:", "Unidades establecidas en contrato (BCV)"),
             'categoria10': ("ARRENDAMIENTOS DE TERRENOS", "Unidades establecidas en contrato (BCV)"),
