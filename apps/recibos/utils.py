@@ -2,7 +2,7 @@ import pandas as pd
 from django.db import transaction
 from django.db.models import Max, Sum
 from decimal import Decimal, InvalidOperation
-from datetime import date
+from datetime import date, datetime
 import logging
 import re
 import io
@@ -72,102 +72,195 @@ def format_currency(amount):
     except Exception:
         return "0,00"
 
-# II. FUNCIÓN CLAVE: IMPORTACIÓN DE EXCEL
-def importar_recibos_desde_excel(archivo_excel, usuario):
-    """Procesa carga masiva desde Excel con validación de integridad."""
-    log_rec = logging.getLogger('CH_RECIBOS')
-    RIF_COL = 'rif_cedula_identidad'
-    recibos_creados_pks = []
-    
-    COLUMNAS_CANONICAS = [
-        'estado', 'nombre', RIF_COL, 'direccion_inmueble', 'ente_liquidado',
-        'categoria1', 'categoria2', 'categoria3', 'categoria4', 'categoria5',
-        'categoria6', 'categoria7', 'categoria8', 'categoria9', 'categoria10',
-        'gastos_administrativos', 'tasa_dia', 'total_monto_bs',
-        'numero_transferencia', 'conciliado', 'fecha', 'concepto'
-    ]
+
+def _normalizar_texto(value):
+    return unidecode(str(value).strip().lower()) if value is not None else ''
+
+
+def _parsear_fecha(value):
+    if pd.isna(value) or value is None:
+        return pd.NaT
+
+    text_value = str(value).strip()
+    if not text_value or text_value.lower() in ['nan', 'none', 'n/a', 'no aplica', '-']:
+        return pd.NaT
+
+    for fmt in ('%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d', '%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y'):
+        try:
+            return datetime.strptime(text_value, fmt).date()
+        except ValueError:
+            continue
 
     try:
-        # 1. Lectura de hoja específica
+        return pd.to_datetime(text_value, dayfirst=True, errors='coerce').date()
+    except Exception:
+        return pd.NaT
+
+# II. FUNCIÓN CLAVE: IMPORTACIÓN DE EXCEL
+def _normalizar_nombre_columna(nombre):
+    if nombre is None:
+        return ''
+    texto = unidecode(str(nombre)).strip().lower()
+    return re.sub(r'\s+', '_', texto)
+
+
+def _buscar_valor_columna(fila_datos, aliases, fallback_index=None):
+    if hasattr(fila_datos, 'index'):
+        for alias in aliases:
+            if alias in fila_datos.index:
+                valor = fila_datos.get(alias, '')
+                if valor is not None and str(valor).strip() != '':
+                    return valor
+
+    if fallback_index is not None and fallback_index < len(fila_datos):
+        valor = fila_datos.iloc[fallback_index]
+        if valor is not None and str(valor).strip() != '':
+            return valor
+
+    return ''
+
+
+def importar_recibos_desde_excel(archivo_excel, usuario):
+    """Procesa carga masiva leyendo el Excel por encabezado y soporta cambios de orden de columnas."""
+    log_rec = logging.getLogger('CH_RECIBOS')
+    recibos_creados_pks = []
+
+    try:
+        if hasattr(archivo_excel, 'seek'):
+            archivo_excel.seek(0)
+
         try:
-            df = pd.read_excel(
-                archivo_excel,
-                sheet_name='Hoja2',
-                header=3,
-                dtype={'fecha': str, RIF_COL: str, 'numero_transferencia': str} 
-            )
-        except ValueError:
-            return False, "Error de archivo: Asegúrate de que existe la hoja 'Hoja2'.", None
+            excel_file = pd.ExcelFile(archivo_excel)
+            sheet_names = excel_file.sheet_names
+        except Exception:
+            return False, "Error de archivo: No se pudo leer el libro Excel.", None
 
-        df.dropna(how='all', inplace=True)
-        if df.empty: return False, "El archivo Excel está vacío.", None
+        sheet_name = 'Hoja2' if 'Hoja2' in sheet_names else sheet_names[0]
 
-        df = df.iloc[:, :len(COLUMNAS_CANONICAS)]
-        df.columns = COLUMNAS_CANONICAS
-        
-        # 2. Pre-procesamiento de datos
-        df['fecha_procesada'] = pd.to_datetime(df['fecha'], errors='coerce', dayfirst=True).dt.date
-        df = df.dropna(subset=['fecha_procesada']) 
+        try:
+            workbook_df = excel_file.parse(sheet_name=sheet_name, header=None)
+        except Exception:
+            return False, f"Error de archivo: No se pudo leer la hoja '{sheet_name}'.", None
 
-        df['gastos_admin_proc'] = df['gastos_administrativos'].apply(limpiar_y_convertir_decimal)
-        df['tasa_dia_proc'] = df['tasa_dia'].apply(limpiar_y_convertir_decimal)
-        df['total_monto_proc'] = df['total_monto_bs'].apply(limpiar_y_convertir_decimal)
-        
-        for i in range(1, 11):
-            df[f'categoria{i}'] = df[f'categoria{i}'].apply(to_boolean)
-        df['conciliado'] = df['conciliado'].apply(to_boolean)
-        
-        # 3. Transacción Atómica
+        workbook_df = workbook_df.dropna(how='all')
+        if workbook_df.empty:
+            return False, "El archivo Excel está vacío.", None
+
+        header_row_idx = None
+        keywords = ['estado', 'nombre', 'rif', 'cedula', 'total', 'gastos', 'tasa', 'transferencia', 'conciliado', 'fecha', 'concepto', 'categoria']
+        for idx in workbook_df.index:
+            row_list = [_normalizar_nombre_columna(val) for val in workbook_df.loc[idx].tolist()]
+            if any(keyword in ' '.join(row_list) for keyword in keywords):
+                header_row_idx = idx
+                break
+
+        if header_row_idx is None:
+            return False, "No se encontró una fila de encabezado válida en el archivo Excel.", None
+
+        if hasattr(archivo_excel, 'seek'):
+            archivo_excel.seek(0)
+
+        df = pd.read_excel(
+            archivo_excel,
+            sheet_name=sheet_name,
+            header=header_row_idx,
+            dtype=str
+        )
+
+        df = df.fillna('')
+        df = df.dropna(how='all')
+        if df.empty:
+            return False, "El archivo Excel no contiene datos útiles para procesar.", None
+
+        df.columns = [_normalizar_nombre_columna(col) for col in df.columns]
+
+        column_aliases = {
+            'estado': ['estado'],
+            'nombre': ['nombre'],
+            'rif_cedula_identidad': ['rif_cedula_identidad', 'rif', 'cedula', 'rif_cedula'],
+            'direccion_inmueble': ['direccion_inmueble', 'direccion'],
+            'ente_liquidado': ['ente_liquidado', 'ente'],
+            'gastos_administrativos': ['gastos_administrativos', 'gastos_admin', 'gastos'],
+            'tasa_dia': ['tasa_dia', 'tasa'],
+            'total_monto_bs': ['total_monto_bs', 'total', 'total_bs'],
+            'numero_transferencia': ['numero_transferencia', 'transferencia', 'n_transferencia'],
+            'conciliado': ['conciliado'],
+            'fecha': ['fecha'],
+            'concepto': ['concepto'],
+        }
+
+        for i in range(1, 14):
+            column_aliases[f'categoria{i}'] = [f'categoria{i}']
+
         with transaction.atomic():
             ultimo_recibo = Recibo.objects.aggregate(Max('numero_recibo'))['numero_recibo__max']
             consecutivo_actual = (ultimo_recibo or 0) + 1
 
             for index, fila_datos in df.iterrows():
-                fila_numero = index + 5
-                rif_cedula_raw = str(fila_datos.get(RIF_COL, '')).strip()
-                nombre_raw = str(fila_datos.get('nombre', '')).strip()
-                num_transf_raw = str(fila_datos.get('numero_transferencia', '')).strip().upper()
-                
-                # Validación de duplicados
-                if num_transf_raw and num_transf_raw not in ['N/A', 'NAN', '']:
-                    if Recibo.objects.filter(numero_transferencia=num_transf_raw).exists():
-                        raise ValueError(f"Fila {fila_numero}: Transferencia '{num_transf_raw}' ya registrada.")
+                fila_numero = index + header_row_idx + 2
 
-                if not rif_cedula_raw and not nombre_raw: continue
-                if not rif_cedula_raw: raise ValueError(f"Fila {fila_numero}: RIF/Cédula es obligatorio.")
-                
+                estado_raw = str(_buscar_valor_columna(fila_datos, column_aliases['estado'], fallback_index=0)).strip()
+                nombre_raw = str(_buscar_valor_columna(fila_datos, column_aliases['nombre'], fallback_index=1)).strip()
+                rif_cedula_raw = str(_buscar_valor_columna(fila_datos, column_aliases['rif_cedula_identidad'], fallback_index=2)).strip()
+                direccion_raw = str(_buscar_valor_columna(fila_datos, column_aliases['direccion_inmueble'], fallback_index=3)).strip()
+                ente_raw = str(_buscar_valor_columna(fila_datos, column_aliases['ente_liquidado'], fallback_index=4)).strip()
+                gastos_admin_raw = _buscar_valor_columna(fila_datos, column_aliases['gastos_administrativos'], fallback_index=18)
+                tasa_dia_raw = _buscar_valor_columna(fila_datos, column_aliases['tasa_dia'], fallback_index=19)
+                total_monto_raw = _buscar_valor_columna(fila_datos, column_aliases['total_monto_bs'], fallback_index=20)
+                num_transf_raw = str(_buscar_valor_columna(fila_datos, column_aliases['numero_transferencia'], fallback_index=21)).strip().upper()
+                conciliado_raw = _buscar_valor_columna(fila_datos, column_aliases['conciliado'], fallback_index=22)
+                fecha_raw = _buscar_valor_columna(fila_datos, column_aliases['fecha'], fallback_index=23)
+                concepto_raw = str(_buscar_valor_columna(fila_datos, column_aliases['concepto'], fallback_index=24)).strip()
+
+                if not rif_cedula_raw and not nombre_raw and not num_transf_raw:
+                    continue
+
+                if not rif_cedula_raw:
+                    raise ValueError(f"Fila {fila_numero}: El RIF/Cédula es obligatorio en la Columna C.")
+
+                if num_transf_raw and num_transf_raw not in ['N/A', 'NAN', '', 'NONE']:
+                    if Recibo.objects.filter(numero_transferencia=num_transf_raw).exists():
+                        raise ValueError(f"Fila {fila_numero}: La transferencia '{num_transf_raw}' (Columna V) ya está registrada en el sistema.")
+
+                fecha_final = _parsear_fecha(fecha_raw)
+                if pd.isna(fecha_final):
+                    fecha_final = timezone.now().date()
+
                 data_a_insertar = {
                     'numero_recibo': consecutivo_actual,
-                    'estado': unidecode(str(fila_datos.get('estado', '')).strip()).upper(),
-                    'nombre': str(nombre_raw).title(),
-                    'rif_cedula_identidad': str(rif_cedula_raw).strip().replace('.', '').replace('-', '').replace(' ', '').upper(),
-                    'direccion_inmueble': str(fila_datos.get('direccion_inmueble', 'DIRECCION NO ESPECIFICADA')).strip().title(),
-                    'ente_liquidado': str(fila_datos.get('ente_liquidado', 'ENTE NO ESPECIFICADO')).strip().title(),
-                    'numero_transferencia': num_transf_raw if num_transf_raw not in ['NAN', ''] else None,
-                    'concepto': str(fila_datos.get('concepto', '')).strip().title(),
-                    'gastos_administrativos': fila_datos['gastos_admin_proc'],
-                    'tasa_dia': fila_datos['tasa_dia_proc'],
-                    'total_monto_bs': fila_datos['total_monto_proc'],
-                    'fecha': fila_datos['fecha_procesada'],
-                    'conciliado': fila_datos['conciliado'],
+                    'estado': unidecode(estado_raw).upper(),
+                    'nombre': nombre_raw.title(),
+                    'rif_cedula_identidad': rif_cedula_raw.replace('.', '').replace('-', '').replace(' ', '').upper(),
+                    'direccion_inmueble': direccion_raw.title() if direccion_raw else 'DIRECCION NO ESPECIFICADA',
+                    'ente_liquidado': ente_raw.title() if ente_raw else 'ENTE NO ESPECIFICADO',
+                    'numero_transferencia': num_transf_raw if num_transf_raw not in ['NAN', '', 'NONE'] else None,
+                    'concepto': concepto_raw.title(),
+                    'gastos_administrativos': limpiar_y_convertir_decimal(gastos_admin_raw),
+                    'tasa_dia': limpiar_y_convertir_decimal(tasa_dia_raw),
+                    'total_monto_bs': limpiar_y_convertir_decimal(total_monto_raw),
+                    'fecha': fecha_final,
+                    'conciliado': to_boolean(conciliado_raw),
                     'usuario': usuario
                 }
-                
-                for i in range(1, 11):
-                    data_a_insertar[f'categoria{i}'] = fila_datos[f'categoria{i}']
-                
+
+                for i in range(1, 14):
+                    valor_cat = _buscar_valor_columna(fila_datos, column_aliases[f'categoria{i}'], fallback_index=4 + i)
+                    data_a_insertar[f'categoria{i}'] = to_boolean(valor_cat)
+
                 recibo_creado = Recibo.objects.create(**data_a_insertar)
                 recibos_creados_pks.append(recibo_creado.pk)
                 consecutivo_actual += 1
 
-            return True, f"Importación masiva exitosa. Se generaron {len(recibos_creados_pks)} recibos.", recibos_creados_pks
+            if not recibos_creados_pks:
+                return False, "No se pudieron procesar recibos válidos en este lote.", None
+
+            return True, f"Importación masiva exitosa. Se generaron {len(recibos_creados_pks)} recibos en el sistema.", recibos_creados_pks
 
     except ValueError as ve:
         return False, str(ve), None
     except Exception as e:
-        log_rec.error(f"FALLO FATAL: {e}", exc_info=True)
-        return False, "Fallo en la carga: Error desconocido en el procesamiento.", None
-
+        log_rec.error(f"FALLO FATAL EN IMPORTACIÓN: {e}", exc_info=True)
+        return False, "Fallo en la carga: Error estructural o de conversión en las columnas.", None
 
 # III. GENERACIÓN DE REPORTES (Excel y PDF)
 
@@ -185,7 +278,7 @@ def generar_reporte_excel(request_filters, queryset, filtros_aplicados):
     for recibo in queryset:
         categoria_detalle_nombres = [
             CATEGORY_CHOICES_MAP.get(f'categoria{i}', f'Categoría {i}')
-            for i in range(1, 11) if getattr(recibo, f'categoria{i}')
+            for i in range(1, 14) if getattr(recibo, f'categoria{i}')
         ]
         categorias_concatenadas = ','.join(categoria_detalle_nombres)
 
@@ -360,7 +453,7 @@ def _draw_categorias_section(c, recibo_obj, y_start, X1_TITLE):
     style_titulo_cat = ParagraphStyle('CatTitulo', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, leading=9)
     style_detalle_cat = ParagraphStyle('CatDetalle', parent=styles['Normal'], fontName='Helvetica', fontSize=7, leading=9, leftIndent=10)
 
-    categorias = {f'categoria{i}': getattr(recibo_obj, f'categoria{i}') for i in range(1, 11)}
+    categorias = {f'categoria{i}': getattr(recibo_obj, f'categoria{i}') for i in range(1, 14)}
     current_y = y_start
 
     if any(categorias.values()):
@@ -370,42 +463,48 @@ def _draw_categorias_section(c, recibo_obj, y_start, X1_TITLE):
 
         CATEGORY_DESCRIPTIONS = {
             'categoria1': ("TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION EN PROPIEDAD", "Una milésima de Bolívar, Art. 58 de la Ley Especial de Regularización"),
-            'categoria2': ("TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION MAS VIVIENDA", "Una milésima de Bolívar, más gastos administrativos (140 unidades BCV)"),
-            'categoria3': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Municipal", "Precio: Gastos Administrativos (140 unidades BCV)"),
-            'categoria4': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Tierra Privada", "Precio: Gastos Administrativos (140 unidades BCV)"),
-            'categoria5': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Tierra INAVI/INTU", "Precio: Gastos Administrativos (140 unidades BCV)"),
+            'categoria2': ("TITULO DE TIERRA URBANA - TITULO DE ADJUDICACION MAS VIVIENDA", "Una milésima de Bolívar, más gastos administrativos"),
+            'categoria3': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Municipal", "Precio: Gastos Administrativos"),
+            'categoria4': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Tierra Privada", "Precio: Gastos Administrativos"),
+            'categoria5': ("VIVIENDA UNIFAMILIAR Y MULTIFAMILIAR (EDIFICIOS) TIERRA: Tierra INAVI/INTU", "Precio: Gastos Administrativos"),
             'categoria6': ("EXCEDENTES: Tierra Urbana hasta 400 mt2", "Según el Art 33 de la Ley Especial de Regularización"),
-            'categoria7': ("Con Título INAVI (Gastos Administrativos):", "140 unidades ancladas a la moneda de mayor valor BCV"),
+            'categoria7': ("Con Título INAVI (Gastos Administrativos):", "unidades ancladas a la moneda de mayor valor BCV"),
             'categoria8': ("ESTUDIOS TÉCNICOS:", "Medición detallada de la parcela para plano"),
             'categoria9': ("ARRENDAMIENTOS DE LOCALES COMERCIALES:", "Unidades establecidas en contrato (BCV)"),
             'categoria10': ("ARRENDAMIENTOS DE TERRENOS", "Unidades establecidas en contrato (BCV)"),
+            'categoria11': ("ACLARATORIA DE DOCUMENTOS INAVI", "Trámite de aclaratoria documental asociado a INAVI."),
+            'categoria12': ("ACLARATORIA DE DOCUMENTOS DE TÍTULOS DE TIERRA URBANA (TTU)", "Trámite de aclaratoria documental asociado a títulos de tierra urbana."),
+            'categoria13': ("LIBERACIONES RELACIONADAS CON INAVI Y TTU", "Trámite de liberación relacionado con INAVI y títulos de tierra urbana."),
         }
         
         ancho_disponible = 450 
 
-        for key, (title, detail) in CATEGORY_DESCRIPTIONS.items():
-            if categorias.get(key, False):
-                p_title = Paragraph(title.replace(":", ":<br/>"), style_titulo_cat)
-                w_t, h_t = p_title.wrap(ancho_disponible, 100)
-                
-                if current_y - h_t < 100:
-                    c.showPage()
-                    current_y = 750 
+        for key in [k for k in categorias.keys() if categorias.get(k, False)]:
+            title, detail = CATEGORY_DESCRIPTIONS.get(
+                key,
+                ("REGULARIZACIÓN", "Descripción básica del trámite de regularización asociado.")
+            )
+            p_title = Paragraph(title.replace(":", ":<br/>"), style_titulo_cat)
+            w_t, h_t = p_title.wrap(ancho_disponible, 100)
+            
+            if current_y - h_t < 100:
+                c.showPage()
+                current_y = 750 
 
-                p_title.drawOn(c, X1_TITLE, current_y - h_t)
-                c.setFont("Helvetica-Bold", 10)
-                c.drawString(520, current_y - 8, "X")
-                current_y -= (h_t + 2)
+            p_title.drawOn(c, X1_TITLE, current_y - h_t)
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(520, current_y - 8, "X")
+            current_y -= (h_t + 2)
 
-                p_detail = Paragraph(detail, style_detalle_cat)
-                w_d, h_d = p_detail.wrap(ancho_disponible - 10, 100)
-                
-                if current_y - h_d < 50:
-                    c.showPage()
-                    current_y = 750
+            p_detail = Paragraph(detail, style_detalle_cat)
+            w_d, h_d = p_detail.wrap(ancho_disponible - 10, 100)
+            
+            if current_y - h_d < 50:
+                c.showPage()
+                current_y = 750
 
-                p_detail.drawOn(c, X1_TITLE, current_y - h_d)
-                current_y -= (h_d + 10)
+            p_detail.drawOn(c, X1_TITLE, current_y - h_d)
+            current_y -= (h_d + 10)
 
     return current_y - 70
 

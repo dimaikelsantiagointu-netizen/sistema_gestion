@@ -440,25 +440,28 @@ def exportar_excel(request):
 
         # --- HOJA 2: VISITAS (EL DETALLE QUE NECESITAS) ---
         ws_vis = wb.create_sheet(title="Detalle de Visitas")
-        ws_vis.append(['FECHA REGISTRO', 'CEDULA/RIF', 'NOMBRE COMPLETO', 'TRÁMITE / MOTIVO'])
+        ws_vis.append(['FECHA REGISTRO', 'CEDULA/RIF', 'NOMBRE COMPLETO', 'TRÁMITE / MOTIVO', 'ESTADO', 'MUNICIPIO', 'PARROQUIA'])
         
         # Filtramos visitas con la lógica de Q
-        visitas_qs = Visita.objects.filter(filtros_visita).select_related('beneficiario').order_by('-fecha_registro')
+        visitas_qs = Visita.objects.filter(filtros_visita).select_related('beneficiario__estado', 'beneficiario__municipio', 'beneficiario__parroquia').order_by('-fecha_registro')
         
         for v in visitas_qs:
             ws_vis.append([
                 v.fecha_registro.strftime('%d/%m/%Y %H:%M'),
                 f"{v.beneficiario.tipo_documento}-{v.beneficiario.documento_identidad}",
                 v.beneficiario.nombre_completo.upper(),
-                v.motivo.upper() if v.motivo else "N/A"
+                v.motivo.upper() if v.motivo else "N/A",
+                v.beneficiario.estado.nombre if getattr(v.beneficiario, 'estado', None) else 'N/A',
+                v.beneficiario.municipio.nombre if getattr(v.beneficiario, 'municipio', None) else 'N/A',
+                v.beneficiario.parroquia.nombre if getattr(v.beneficiario, 'parroquia', None) else 'N/A'
             ])
 
         # --- HOJA 3: BENEFICIARIOS (Solo para reporte completo) ---
         if tipo == 'completo':
             ws_ben = wb.create_sheet(title="Base de Ciudadanos")
-            ws_ben.append(['FECHA REGISTRO', 'IDENTIDAD', 'NOMBRE COMPLETO', 'TELÉFONO', 'FECHA NACIMIENTO', 'EDAD', 'DISCAPACIDAD', 'ECONÓMICAMENTE ACTIVO'])
+            ws_ben.append(['FECHA REGISTRO', 'IDENTIDAD', 'NOMBRE COMPLETO', 'TELÉFONO', 'FECHA NACIMIENTO', 'EDAD', 'DISCAPACIDAD', 'ECONÓMICAMENTE ACTIVO', 'ESTADO', 'MUNICIPIO', 'PARROQUIA'])
             
-            beneficiarios_qs = Beneficiario.objects.filter(filtros_beneficiario).order_by('-fecha_creacion')
+            beneficiarios_qs = Beneficiario.objects.filter(filtros_beneficiario).select_related('estado', 'municipio', 'parroquia').order_by('-fecha_creacion')
             for b in beneficiarios_qs:
                 edad = ''
                 if b.fecha_nacimiento:
@@ -475,7 +478,10 @@ def exportar_excel(request):
                     b.fecha_nacimiento.strftime('%d/%m/%Y') if b.fecha_nacimiento else "N/A",
                     edad if edad != '' else "N/A",
                     "Sí" if b.discapacidad else "No",
-                    "Sí" if b.es_economicamente_activo else "No"
+                    "Sí" if b.es_economicamente_activo else "No",
+                    b.estado.nombre if getattr(b, 'estado', None) else 'N/A',
+                    b.municipio.nombre if getattr(b, 'municipio', None) else 'N/A',
+                    b.parroquia.nombre if getattr(b, 'parroquia', None) else 'N/A'
                 ])
 
         # 4. Estilos y Ajuste de columnas

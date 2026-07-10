@@ -79,6 +79,9 @@ class Recibo(models.Model):
     categoria8 = models.BooleanField(default=False)
     categoria9 = models.BooleanField(default=False)
     categoria10 = models.BooleanField(default=False)
+    categoria11 = models.BooleanField(default=False)
+    categoria12 = models.BooleanField(default=False)
+    categoria13 = models.BooleanField(default=False)
 
     # 4. MONTOS Y FINANZAS
     gastos_administrativos = models.DecimalField(max_digits=19, decimal_places=2)
@@ -142,7 +145,7 @@ class Recibo(models.Model):
 
     def tiene_categorias(self):
         """Verifica si al menos una categoría está marcada como True."""
-        for i in range(1, 11):
+        for i in range(1, 14):
             if getattr(self, f'categoria{i}'):
                 return True
         return False
