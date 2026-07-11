@@ -8,6 +8,11 @@ TAILWIND_CLASS = 'form-input w-full rounded-xl border border-gray-200 shadow-sm 
 DATE_INPUT_CLASS = TAILWIND_CLASS
 
 class ReciboForm(forms.ModelForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['numero_recibo'].required = False
+        self.fields['numero_recibo'].disabled = True
     
     # 1. NORMALIZACIÓN DE DATOS 
 
@@ -30,9 +35,21 @@ class ReciboForm(forms.ModelForm):
             return data_sin_acentos.upper()
         return data
     
+    def clean_numero_recibo(self):
+        if self.instance and self.instance.pk and self.instance.numero_recibo is not None:
+            return self.instance.numero_recibo
+
+        data = self.cleaned_data.get('numero_recibo')
+        if data in (None, ''):
+            return None
+        return data
+
     def clean_numero_transferencia(self):
-        data = self.cleaned_data.get('numero_transferencia', '').strip().upper()
-        
+        data = self.cleaned_data.get('numero_transferencia')
+        if data is None:
+            return None
+
+        data = str(data).strip().upper()
         if not data:
             return None
 

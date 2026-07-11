@@ -1,10 +1,14 @@
 import io
+from datetime import date
+from decimal import Decimal
+
 import pandas as pd
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 from apps.recibos.constants import CATEGORY_CHOICES
+from apps.recibos.forms import ReciboForm
 from apps.recibos.models import Recibo
 from apps.recibos.utils import importar_recibos_desde_excel
 
@@ -12,6 +16,44 @@ from apps.recibos.utils import importar_recibos_desde_excel
 class ReciboCategoryImportTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username='tester', password='testpass123')
+
+    def test_editing_recibo_preserves_existing_receipt_number_when_not_submitted(self):
+        recibo = Recibo.objects.create(
+            numero_recibo=12345,
+            estado='MIRANDA',
+            nombre='Juan Pérez',
+            rif_cedula_identidad='V12345678',
+            direccion_inmueble='Calle 1',
+            ente_liquidado='INTU',
+            gastos_administrativos=Decimal('10.00'),
+            tasa_dia=Decimal('0.5000'),
+            total_monto_bs=Decimal('10.00'),
+            fecha=date(2025, 1, 1),
+            concepto='Concepto inicial',
+        )
+
+        form = ReciboForm(
+            data={
+                'estado': 'MIRANDA',
+                'nombre': 'Juan Pérez',
+                'rif_cedula_identidad': 'V12345678',
+                'direccion_inmueble': 'Calle 1',
+                'ente_liquidado': 'INTU',
+                'gastos_administrativos': '10.00',
+                'tasa_dia': '0.5000',
+                'total_monto_bs': '10.00',
+                'numero_transferencia': '',
+                'fecha': '2025-01-01',
+                'concepto': 'Concepto actualizado',
+            },
+            instance=recibo,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        saved_recibo = form.save()
+
+        self.assertEqual(saved_recibo.numero_recibo, 12345)
+        self.assertEqual(saved_recibo.concepto, 'Concepto actualizado')
 
     def test_new_categories_are_available_in_catalog(self):
         category_keys = [key for key, _ in CATEGORY_CHOICES]
