@@ -2,7 +2,7 @@
 {% load custom_filters %}
 {% load static %}
 
-{% block title %}Detalle Sello | {{ sello.codigo_sello }}{% endblock %}
+{% block title %}Detalle de Autenticación | {{ sello.codigo_sello }}{% endblock %}
 
 {% block content %}
 <style>
@@ -13,18 +13,32 @@
 {# --- ENCABEZADO DE LA PÁGINA --- #}
 <div class="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
     <div class="flex items-start gap-4 md:gap-6">
-        <a href="{% url 'sellos:lista' %}" 
+        {% if request.META.HTTP_REFERER %}
+        <a href="{{ request.META.HTTP_REFERER }}"
            class="h-12 w-12 md:h-14 md:w-14 shrink-0 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
             <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
         </a>
+        {% else %}
+        <a href="{% url 'sellos:lista' %}"
+           class="h-12 w-12 md:h-14 md:w-14 shrink-0 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
+            <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
+        </a>
+        {% endif %}
 
         <div>
             <span class="text-[9px] md:text-[10px] font-black text-intu-red uppercase tracking-[0.3em]">Auditoría y Seguimiento</span>
             <h1 class="text-2xl md:text-3xl font-black text-intu-blue uppercase tracking-tighter leading-none">
                 {{ sello.codigo_sello }} - <span class="text-intu-red italic">{{ sello.nombre }}</span>
             </h1>
-            <p class="text-gray-500 font-medium italic text-xs md:text-sm mt-1">Ficha detallada del protocolo, flujo de estatus y recibos vinculados.</p>
+            <p class="text-gray-500 font-medium italic text-xs md:text-sm mt-1">Ficha detallada de la autenticación, flujo de estatus y recibos vinculados.</p>
         </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+        <a href="{% url 'sellos:imprimir' pk=sello.pk %}"
+           class="inline-flex items-center px-4 py-2 bg-intu-red text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-700 transition shadow-md">
+            <i class="fas fa-file-pdf mr-2"></i> Descargar PDF
+        </a>
     </div>
 </div>
 
@@ -70,24 +84,15 @@
             </div>
         </div>
 
-        {# Diagnóstico rápido de aprobaciones #}
+        {# Diagnóstico rápido de asignaciones #}
         <div class="bg-white p-4 rounded-2xl border border-gray-100 text-sm text-gray-600">
             <strong>Diagnóstico:</strong>
-            <div class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="mt-2 grid grid-cols-1 gap-4">
                 <div>
-                    <div class="text-xs text-gray-500">Total recibos aprobados</div>
-                    <div class="font-black text-intu-blue">{{ diagnostico.total_aprobados }}</div>
-                </div>
-                <div>
-                    <div class="text-xs text-gray-500">Aprobados sin sello</div>
-                    <div class="font-black text-intu-blue">{{ diagnostico.aprobados_sin_sello }}</div>
-                </div>
-                <div>
-                    <div class="text-xs text-gray-500">Aprobados ya asignados</div>
-                    <div class="font-black text-intu-blue">{{ diagnostico.aprobados_asignados }}</div>
+                    <div class="text-xs text-gray-500">Total de recibos asignados por sello</div>
+                    <div class="font-black text-intu-blue">{{ diagnostico.total_asignados }}</div>
                 </div>
             </div>
-            <p class="text-xs text-gray-400 mt-2">Si "Aprobados sin sello" es 0 pero "Total recibos aprobados" es mayor que 0, los aprobados están ya vinculados a sellos.</p>
         </div>
 
         {# --- TABLA DE RECIBOS ASIGNADOS --- #}

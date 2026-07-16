@@ -1,6 +1,9 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.paginator import Paginator
+from django.db.models import CharField
+from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 import re
@@ -11,6 +14,12 @@ from .services import aprobar_recibos_para_sello, asignar_recibos_a_sello, regis
 from django.http import JsonResponse
 from django.conf import settings
 from django.http import HttpResponse
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from urllib.parse import urlparse
 import csv
 
 
@@ -72,29 +81,147 @@ class SelloDoradoDetailView(LoginRequiredMixin, View):
         qs_disponibles = Recibo.objects.filter(aprobado_sello_dorado=True, anulado=False, sello_dorado__isnull=True).order_by('-fecha_aprobacion_sello')
         recibos_disponibles = qs_disponibles[:500]
 
-        # diagnósticos: contadores para ayudar a identificar por qué no aparecen recibos
-        total_aprobados = Recibo.objects.filter(aprobado_sello_dorado=True).count()
-        aprobados_sin_sello = qs_disponibles.count()
-        aprobados_asignados = Recibo.objects.filter(aprobado_sello_dorado=True, sello_dorado__isnull=False).count()
+        # diagnóstico simple: total de recibos asignados a este sello
+        total_asignados = recibos.count()
 
         return render(request, 'sellos/detalle.html', {
             'sello': sello,
             'recibos': recibos,
             'recibos_disponibles': recibos_disponibles,
             'diagnostico': {
-                'total_aprobados': total_aprobados,
-                'aprobados_sin_sello': aprobados_sin_sello,
-                'aprobados_asignados': aprobados_asignados,
+                'total_asignados': total_asignados,
             }
         })
+
+
+@login_required
+def imprimir_sello_view(request, pk):
+    if not _es_consultoria(request.user):
+        return redirect('home')
+
+    sello = get_object_or_404(SelloDorado, pk=pk)
+    recibos = Recibo.objects.filter(sello_dorado=sello).order_by('-fecha_creacion')
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="sello_{sello.codigo_sello}.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=letter, rightMargin=0.6 * inch, leftMargin=0.6 * inch, topMargin=0.6 * inch, bottomMargin=0.6 * inch)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Title'], fontName='Helvetica-Bold', fontSize=16, textColor=colors.HexColor('#1f4e79'), leading=20)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor('#d12d2d'), leading=14)
+    normal_style = ParagraphStyle('Normal', parent=styles['BodyText'], fontName='Helvetica', fontSize=10, leading=12)
+    small_style = ParagraphStyle('Small', parent=styles['BodyText'], fontName='Helvetica', fontSize=9, leading=11, textColor=colors.HexColor('#6b7280'))
+    bold_style = ParagraphStyle('Bold', parent=styles['BodyText'], fontName='Helvetica-Bold', fontSize=10, leading=12)
+
+    elements = []
+    elements.append(Paragraph(sello.codigo_sello, title_style))
+    elements.append(Paragraph(sello.nombre, subtitle_style))
+    elements.append(Paragraph('Documento de exportación del sello dorado y sus recibos vinculados.', small_style))
+    elements.append(Spacer(1, 0.15 * inch))
+
+    data = [
+        ['Región / Jurisdicción', sello.region or 'No especificada'],
+        ['Estado', sello.get_estado_display()],
+        ['Fecha de generación', sello.fecha_creacion.strftime('%d/%m/%Y %H:%M')],
+        ['Última actualización', sello.fecha_actualizacion.strftime('%d/%m/%Y %H:%M')],
+    ]
+    table = Table(data, colWidths=[2.2 * inch, 4.3 * inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.whitesmoke),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#6b7280')),
+        ('TEXTCOLOR', (1, 0), (1, -1), colors.black),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+        ('PADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(table)
+    elements.append(Spacer(1, 0.15 * inch))
+
+    elements.append(Paragraph('Observaciones', bold_style))
+    elements.append(Paragraph(sello.observaciones or 'Sin observaciones registradas.', normal_style))
+    elements.append(Spacer(1, 0.2 * inch))
+
+    elements.append(Paragraph('Recibos asociados', bold_style))
+    table_data = [['Nº Recibo', 'Contribuyente', 'Estado', 'Estatus Sello']]
+    for recibo in recibos:
+        table_data.append([
+            f"{recibo.numero_recibo:09d}",
+            recibo.nombre or '-',
+            recibo.estado or 'Sin estado',
+            recibo.get_estatus_sello_dorado_display() or '-',
+        ])
+    if not recibos:
+        table_data.append(['-', '-', 'No hay recibos vinculados a este sello.', '-'])
+
+    table_recibos = Table(table_data, repeatRows=1, colWidths=[1.1 * inch, 2.2 * inch, 1.3 * inch, 1.5 * inch])
+    table_recibos.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#374151')),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (1, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+        ('PADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(table_recibos)
+
+    doc.build(elements)
+    return response
 
 
 class AdministracionRecibosView(LoginRequiredMixin, View):
     def get(self, request):
         if not _es_admin(request.user):
             return redirect('home')
-        recibos = Recibo.objects.filter(anulado=False, aprobado_sello_dorado=False).order_by('-fecha_creacion')
-        return render(request, 'sellos/administracion.html', {'recibos': recibos})
+
+        numero_filter = request.GET.get('numero_recibo', '').strip()
+        contribuyente_filter = request.GET.get('contribuyente', '').strip()
+        estado_filter = request.GET.get('estado', '').strip()
+
+        qs_base = Recibo.objects.filter(anulado=False, aprobado_sello_dorado=False)
+        estados_disponibles = list(
+            qs_base.exclude(estado__isnull=True)
+            .exclude(estado='')
+            .values_list('estado', flat=True)
+            .distinct()
+            .order_by('estado')
+        )
+        qs = qs_base.order_by('-fecha_creacion')
+
+        if numero_filter:
+            qs = qs.annotate(numero_recibo_text=Cast('numero_recibo', output_field=CharField())).filter(numero_recibo_text__icontains=numero_filter)
+
+        if contribuyente_filter:
+            qs = qs.filter(nombre__icontains=contribuyente_filter)
+
+        if estado_filter:
+            qs = qs.filter(estado__icontains=estado_filter)
+
+        paginator = Paginator(qs, 20)
+        page_number = request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+
+        referer = request.META.get('HTTP_REFERER', '')
+        volver_url = None
+        if referer:
+            try:
+                referer_parsed = urlparse(referer)
+            except ValueError:
+                referer_parsed = None
+            if referer_parsed and referer_parsed.path != request.path:
+                volver_url = referer
+
+        return render(request, 'sellos/administracion.html', {
+            'recibos': page_obj.object_list,
+            'page_obj': page_obj,
+            'paginator': paginator,
+            'numero_filter': numero_filter,
+            'contribuyente_filter': contribuyente_filter,
+            'estado_filter': estado_filter,
+            'estados_disponibles': estados_disponibles,
+            'volver_url': volver_url,
+        })
 
 
 class PanelConsultoriaView(LoginRequiredMixin, View):
