@@ -4,6 +4,8 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q, Count
+from django.db.models.functions import ExtractHour, ExtractWeekDay, TruncDate
+import calendar
 from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
@@ -368,6 +370,48 @@ def beneficiarios_estadisticas(request):
     visitas_por_tipo = Visita.objects.filter(filtros_visita).values('motivo')\
         .annotate(total=Count('id')).order_by('-total')
 
+    # --- Nuevas métricas: visitas por hora y por día (lunes a sábado) ---
+    hora_top = "S/D"
+    visitas_por_hora = 0
+    dia_top = "S/D"
+    visitas_por_dia = 0
+    try:
+        visitas_por_hora_qs = Visita.objects.filter(filtros_visita).annotate(hour=ExtractHour('fecha_registro'))\
+            .values('hour').annotate(total=Count('id')).order_by('-total')
+        if visitas_por_hora_qs:
+            top_h = visitas_por_hora_qs[0]
+            h = top_h.get('hour')
+            if h is not None:
+                hora_top = f"{int(h):02d}:00"
+            visitas_por_hora = top_h.get('total', 0)
+
+        # ExtractWeekDay: 1=Sunday, 2=Monday, ... 7=Saturday (DB dependent but standard)
+        visitas_por_dia_qs = Visita.objects.filter(filtros_visita)\
+            .annotate(weekday=ExtractWeekDay('fecha_registro'))\
+            .values('weekday').annotate(total=Count('id')).order_by('-total')
+        # Filtrar para lunes(2) .. sabado(7)
+        visitas_por_dia_qs = [d for d in visitas_por_dia_qs if d.get('weekday') in [2,3,4,5,6,7]]
+        if visitas_por_dia_qs:
+            top_d = visitas_por_dia_qs[0]
+            wd = top_d.get('weekday')
+            # Mapeo simple a nombres en español
+            dia_map = {1: 'Domingo', 2: 'Lunes', 3: 'Martes', 4: 'Miércoles', 5: 'Jueves', 6: 'Viernes', 7: 'Sábado'}
+            dia_top = dia_map.get(int(wd), 'S/D')
+            visitas_por_dia = top_d.get('total', 0)
+        # Fecha representativa para el día pico: buscar la fecha (dd/mm/yy) con más visitas cuyo weekday esté en Lunes..Sábado
+        dia_date_str = ''
+        top_date_qs = Visita.objects.filter(filtros_visita).annotate(day=TruncDate('fecha_registro')).values('day').annotate(total=Count('id')).order_by('-total')
+        for item in top_date_qs:
+            day_val = item.get('day')
+            if day_val and day_val.weekday() in [0,1,2,3,4,5]:  # 0=Mon .. 5=Sat
+                try:
+                    dia_date_str = day_val.strftime('%d/%m/%y')
+                except Exception:
+                    dia_date_str = ''
+                break
+    except Exception as e:
+        logger_beneficiarios.error(f"Error calculando métricas por hora/día: {e}")
+
     # Totales destacados
     estado_top = visitas_por_estado.first() if visitas_por_estado else None
     tipo_top = visitas_por_tipo.first() if visitas_por_tipo else None
@@ -392,6 +436,11 @@ def beneficiarios_estadisticas(request):
         'economico_activo_count': economico_activo_count,
         'f_inicio': f_inicio,
         'f_fin': f_fin,
+        'hora_top': hora_top,
+        'visitas_por_hora': visitas_por_hora,
+        'dia_top': dia_top,
+        'visitas_por_dia': visitas_por_dia,
+        'dia_date': dia_date_str,
     }
     return render(request, 'beneficiarios/estadisticas_beneficiarios.html', context)
 

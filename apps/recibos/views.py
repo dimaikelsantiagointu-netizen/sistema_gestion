@@ -468,7 +468,7 @@ def estadisticas_view(request):
             except User.DoesNotExist:
                 continue
 
-    estados_disponibles = Recibo.objects.exclude(estado__isnull=True).exclude(estado='').values_list('estado', flat=True).distinct().order_by('estado')
+    estados_disponibles = Recibo.objects.filter(anulado=False).exclude(estado__isnull=True).exclude(estado='').values_list('estado', flat=True).distinct().order_by('estado')
 
     return render(request, 'recibos/estadisticas.html', {
         'total_recibos': total_recibos,

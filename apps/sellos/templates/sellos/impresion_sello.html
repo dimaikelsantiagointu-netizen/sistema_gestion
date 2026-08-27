@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Impresión de Sello - {{ sello.codigo_sello }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #1f2937; margin: 24px; }
+        .header { border-bottom: 2px solid #d12d2d; padding-bottom: 12px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+        .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; background: #f9fafb; }
+        .label { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }
+        .value { font-size: 14px; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; font-size: 12px; }
+        th { background: #f3f4f6; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: 11px; font-weight: bold; }
+        @media print { body { margin: 0; } .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2 style="margin: 0; color: #1f4e79;">{{ sello.codigo_sello }}</h2>
+        <h3 style="margin: 4px 0 0; color: #d12d2d;">{{ sello.nombre }}</h3>
+        <p style="margin: 6px 0 0;">Documento de impresión para el sello dorado y sus recibos vinculados.</p>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="label">Región / Jurisdicción</div>
+            <div class="value">{{ sello.region|default:"No especificada" }}</div>
+        </div>
+        <div class="card">
+            <div class="label">Estado</div>
+            <div class="value"><span class="badge">{{ sello.get_estado_display }}</span></div>
+        </div>
+        <div class="card">
+            <div class="label">Fecha de generación</div>
+            <div class="value">{{ sello.fecha_creacion|date:"d/m/Y H:i" }}</div>
+        </div>
+        <div class="card">
+            <div class="label">Última actualización</div>
+            <div class="value">{{ sello.fecha_actualizacion|date:"d/m/Y H:i" }}</div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 18px;">
+        <div class="label">Observaciones</div>
+        <div class="value" style="font-weight: normal;">{{ sello.observaciones|default:"Sin observaciones registradas." }}</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Recibos asociados</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nº Recibo</th>
+                    <th>Contribuyente</th>
+                    <th>Estado</th>
+                    <th>Estatus Sello</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for recibo in recibos %}
+                <tr>
+                    <td>{{ recibo.numero_recibo|stringformat:"09d" }}</td>
+                    <td>{{ recibo.nombre }}</td>
+                    <td>{{ recibo.estado|default:"Sin estado" }}</td>
+                    <td>{{ recibo.get_estatus_sello_dorado_display }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">No hay recibos vinculados a este sello.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="no-print" style="margin-top: 24px;">
+        <button onclick="window.print()" style="padding: 10px 16px; border: none; background: #d12d2d; color: white; border-radius: 8px; cursor: pointer;">Imprimir</button>
+    </div>
+</body>
+</html>

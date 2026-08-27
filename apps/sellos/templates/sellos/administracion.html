@@ -2,7 +2,7 @@
 {% load custom_filters %}
 {% load static %}
 
-{% block title %}Dashboard | Administración de Sellos Dorados{% endblock %}
+{% block title %}Dashboard | Administración de Autenticaciones de Protocolización{% endblock %}
 
 {% block content %}
 <style>
@@ -13,15 +13,22 @@
 {# --- ENCABEZADO DE LA PÁGINA --- #}
 <div class="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
     <div class="flex items-start gap-4 md:gap-6">
-        <a href="{% url 'home' %}" 
+        {% if volver_url %}
+        <a href="{{ volver_url }}"
            class="h-12 w-12 md:h-14 md:w-14 shrink-0 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
             <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
         </a>
+        {% else %}
+        <a href="{% url 'sellos:lista' %}"
+           class="h-12 w-12 md:h-14 md:w-14 shrink-0 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
+            <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
+        </a>
+        {% endif %}
 
         <div>
             <span class="text-[9px] md:text-[10px] font-black text-intu-red uppercase tracking-[0.3em]">Módulo de Protocolización</span>
-            <h1 class="text-2xl md:text-3xl font-black text-intu-blue uppercase tracking-tighter leading-none">Administración de <span class="text-intu-red italic">Sellos Dorados</span></h1>
-            <p class="text-gray-500 font-medium italic text-xs md:text-sm mt-1">Verificación, aprobación y control de recibos para asignación de sellos.</p>
+            <h1 class="text-2xl md:text-3xl font-black text-intu-blue uppercase tracking-tighter leading-none">Administración de <span class="text-intu-red italic">Autenticaciones de Protocolización</span></h1>
+            <p class="text-gray-500 font-medium italic text-xs md:text-sm mt-1">Verificación, aprobación y control de recibos para asignación de autenticaciones.</p>
         </div>
     </div>
     
@@ -55,7 +62,7 @@
                 <i class="fas fa-stamp mr-2 text-intu-red"></i> Acciones de Lote
             </h2>
             <p class="text-[11px] text-gray-400 font-medium leading-relaxed mb-4">
-                Selecciona los recibos pendientes en la tabla principal y utiliza el botón inferior para procesar la aprobación masiva del Sello Dorado.
+                Selecciona los recibos pendientes en la tabla principal y utiliza el botón inferior para procesar la aprobación masiva de la autenticación.
             </p>
             
             {% if recibos %}
@@ -74,25 +81,41 @@
 
     {# --- SECCIÓN PRINCIPAL (TABLA DE PENDIENTES) --- #}
     <section class="flex-grow space-y-6 order-1 lg:order-2">
-        <form method="post" action="{% url 'sellos:aprobar_recibos' %}" id="batch-approval-form">
-            {% csrf_token %}
-            
-            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="p-6 md:p-8 border-b border-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest flex items-center">
-                            <i class="fas fa-clock mr-2 text-intu-red"></i> Recibos pendientes de aprobación
-                        </h2>
-                    </div>
-                    
-                    {% if recibos %}
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="select-all-toggle" class="w-4 h-4 text-intu-red border-gray-300 rounded focus:ring-intu-red cursor-pointer">
-                        <label for="select-all-toggle" class="text-[10px] font-black text-gray-400 uppercase tracking-widest cursor-pointer">Seleccionar Todos</label>
-                    </div>
-                    {% endif %}
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 md:p-8 border-b border-gray-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <div>
+                    <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest flex items-center">
+                        <i class="fas fa-clock mr-2 text-intu-red"></i> Recibos pendientes de aprobación
+                    </h2>
                 </div>
 
+                <form method="get" class="w-full lg:w-auto grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input type="text" name="numero_recibo" value="{{ numero_filter|default:'' }}" placeholder="Nº Recibo" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-intu-red/20">
+                    <input type="text" name="contribuyente" value="{{ contribuyente_filter|default:'' }}" placeholder="Contribuyente" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-intu-red/20">
+                    <select name="estado" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-intu-red/20">
+                        <option value="">Todos los estados</option>
+                        {% for estado in estados_disponibles %}
+                        <option value="{{ estado }}" {% if estado_filter == estado %}selected{% endif %}>{{ estado }}</option>
+                        {% empty %}
+                        <option value="" disabled>No hay estados disponibles</option>
+                        {% endfor %}
+                    </select>
+                    <div class="sm:col-span-3 flex gap-2">
+                        <button type="submit" class="flex-1 py-2 bg-intu-blue text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-intu-dark transition">Filtrar</button>
+                        <a href="{% url 'sellos:administracion' %}" class="flex-1 py-2 bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-gray-200 transition text-center">Limpiar</a>
+                    </div>
+                </form>
+                
+                {% if page_obj.object_list %}
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="select-all-toggle" class="w-4 h-4 text-intu-red border-gray-300 rounded focus:ring-intu-red cursor-pointer">
+                    <label for="select-all-toggle" class="text-[10px] font-black text-gray-400 uppercase tracking-widest cursor-pointer">Seleccionar Todos</label>
+                </div>
+                {% endif %}
+            </div>
+
+            <form method="post" action="{% url 'sellos:aprobar_recibos' %}" id="batch-approval-form">
+                {% csrf_token %}
                 <div class="overflow-x-auto table-responsive">
                     <table class="w-full text-left border-collapse min-w-[600px]">
                         <thead class="bg-gray-50/50">
@@ -104,7 +127,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-50">
-                            {% for recibo in recibos %}
+                            {% for recibo in page_obj.object_list %}
                             <tr class="hover:bg-gray-50/50 transition duration-150">
                                 <td class="px-6 py-4 text-center">
                                     <input type="checkbox" name="recibo_ids" value="{{ recibo.pk }}" class="recibo-checkbox w-4 h-4 text-intu-red border-gray-300 rounded focus:ring-intu-red cursor-pointer">
@@ -133,7 +156,7 @@
                                             <i class="fas fa-check text-emerald-500 text-2xl"></i>
                                         </div>
                                         <p class="text-[10px] font-black uppercase tracking-widest text-intu-blue">Al día</p>
-                                        <p class="text-[10px] text-gray-400 font-medium mt-1">No hay recibos pendientes por aprobar sellos dorados.</p>
+                                        <p class="text-[10px] text-gray-400 font-medium mt-1">No hay recibos pendientes por aprobar autenticaciones de protocolización.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -141,8 +164,29 @@
                         </tbody>
                     </table>
                 </div>
+            </form>
+
+            {% if page_obj.paginator.num_pages > 1 %}
+            <div class="px-6 py-4 border-t border-gray-50 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm text-gray-500">
+                <div class="text-[11px] font-medium">
+                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }} · Mostrando {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ page_obj.paginator.count }} recibos
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if numero_filter %}&numero_recibo={{ numero_filter }}{% endif %}{% if contribuyente_filter %}&contribuyente={{ contribuyente_filter }}{% endif %}{% if estado_filter %}&estado={{ estado_filter }}{% endif %}" class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">Anterior</a>
+                    {% endif %}
+                    {% for page_num in page_obj.paginator.page_range %}
+                        {% if page_num >= page_obj.number|add:'-2' and page_num <= page_obj.number|add:'2' %}
+                        <a href="?page={{ page_num }}{% if numero_filter %}&numero_recibo={{ numero_filter }}{% endif %}{% if contribuyente_filter %}&contribuyente={{ contribuyente_filter }}{% endif %}{% if estado_filter %}&estado={{ estado_filter }}{% endif %}" class="px-3 py-1.5 rounded-lg {% if page_num == page_obj.number %}bg-intu-blue text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition">{{ page_num }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if numero_filter %}&numero_recibo={{ numero_filter }}{% endif %}{% if contribuyente_filter %}&contribuyente={{ contribuyente_filter }}{% endif %}{% if estado_filter %}&estado={{ estado_filter }}{% endif %}" class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">Siguiente</a>
+                    {% endif %}
+                </div>
             </div>
-        </form>
+            {% endif %}
+        </div>
     </section>
 </div>
 

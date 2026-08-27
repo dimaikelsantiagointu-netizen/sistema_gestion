@@ -3,265 +3,260 @@
 {% block title %}Inteligencia de Datos | SISI-INTU{% endblock %}
 
 {% block content %}
-<div class="max-w-[1600px] mx-auto animate-fade-in pb-16 px-4 sm:px-6">
+<div class="w-full max-w-[1500px] mx-auto animate-fade-in pb-4 px-2 sm:px-4">
 
     {# --- ENCABEZADO --- #}
-    <div class="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div class="flex items-start gap-6">
+    <div class="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm">
+        <div class="flex items-center gap-4">
             <a href="{% url 'beneficiarios:lista' %}" 
-               class="h-16 w-16 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-md transition-all duration-300 active:scale-90 group mt-1">
-                <i class="fas fa-arrow-left text-xl group-hover:-translate-x-1 transition-transform"></i>
+               class="h-10 w-10 flex items-center justify-center bg-slate-50 text-gray-500 rounded-xl border border-gray-200 hover:text-intu-red hover:border-intu-red/30 transition-all duration-200 shrink-0">
+                <i class="fas fa-arrow-left text-sm"></i>
             </a>
 
             <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em] italic">Panel de Control</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] italic">Panel de Control</span>
                 </div>
-                <h1 class="text-4xl font-black text-intu-blue uppercase tracking-tighter leading-none">
+                <h1 class="text-xl font-black text-intu-blue uppercase tracking-tight leading-tight">
                     Reporte <span class="text-intu-red italic">Analítico</span> de Gestión
                 </h1>
-                <p class="text-[13px] font-bold text-slate-500 mt-2">
+                <p class="text-xs font-semibold text-slate-500">
                     Monitoreo en tiempo real de <span class="text-slate-900">Territorio y Operaciones</span>
                 </p>
             </div>
         </div>
     </div>
+
     {# --- FILTRO DE RANGOS DE FECHA --- #}
-    <div class="mb-8 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-        <form method="GET" class="flex flex-col md:flex-row items-end gap-6">
+    <div class="mb-3 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+        <form method="GET" class="flex flex-col sm:flex-row items-center gap-3">
             
             {# Fecha Inicio #}
             <div class="flex-1 w-full">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Fecha Inicial (Desde)</label>
+                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block ml-1">Fecha Inicial (Desde)</label>
                 <div class="relative">
-                    <i class="fas fa-calendar-alt absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <i class="fas fa-calendar-alt absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                     <input type="date" name="fecha_inicio" value="{{ f_inicio|default:'' }}"
-                           class="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-intu-blue/20 transition-all">
+                        class="w-full pl-9 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-intu-blue/20 transition-all">
                 </div>
             </div>
 
             {# Fecha Fin #}
             <div class="flex-1 w-full">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Fecha Final (Hasta)</label>
+                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block ml-1">Fecha Final (Hasta)</label>
                 <div class="relative">
-                    <i class="fas fa-calendar-check absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <i class="fas fa-calendar-check absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                     <input type="date" name="fecha_fin" value="{{ f_fin|default:'' }}"
-                           class="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-intu-blue/20 transition-all">
+                        class="w-full pl-9 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-intu-blue/20 transition-all">
                 </div>
             </div>
 
             {# Botones de Acción #}
-            <div class="flex gap-2 w-full md:w-auto">
+            <div class="flex gap-2 w-full sm:w-auto sm:self-end">
                 <button type="submit" 
-                        class="flex-1 md:flex-none px-8 py-3 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-intu-blue transition-all shadow-lg shadow-slate-200 active:scale-95">
-                    Filtrar <i class="fas fa-filter ml-2"></i>
+                        class="flex-1 sm:flex-none px-5 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-intu-blue transition-all shadow-sm active:scale-95">
+                    Filtrar <i class="fas fa-filter ml-1"></i>
                 </button>
                 
                 <a href="{% url 'beneficiarios:estadisticas' %}" 
-                   class="px-4 py-3 bg-slate-100 text-slate-400 rounded-2xl hover:bg-intu-red hover:text-white transition-all active:scale-95"
+                   class="px-3 py-2 bg-slate-100 text-slate-500 rounded-xl hover:bg-intu-red hover:text-white transition-all active:scale-95 flex items-center justify-center"
                    title="Limpiar Filtros">
-                    <i class="fas fa-undo-alt"></i>
+                    <i class="fas fa-undo-alt text-xs"></i>
                 </a>
             </div>
         </form>
     </div>
 
-    {# --- FILA 1: KPIs COMPACTOS Y MINIMALISTAS --- #}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+    {# --- FILA 1: KPIs GENERALES --- #}
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-2.5">
         
         {# Total Ciudadanos #}
-        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-blue-50 text-intu-blue flex items-center justify-center shrink-0">
-                <i class="fas fa-users text-lg"></i>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 text-intu-blue flex items-center justify-center shrink-0">
+                <i class="fas fa-users text-xs"></i>
             </div>
             <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ciudadanos</p>
-                <h3 class="text-2xl font-black text-slate-900 leading-none">{{ total_beneficiarios }}</h3>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ciudadanos</p>
+                <h3 class="text-base font-black text-slate-900 leading-none">{{ total_beneficiarios }}</h3>
             </div>
         </div>
 
         {# Estado Líder #}
-        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-red-50 text-intu-red flex items-center justify-center shrink-0">
-                <i class="fas fa-map-marker-alt text-lg"></i>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+            <div class="w-8 h-8 rounded-lg bg-red-50 text-intu-red flex items-center justify-center shrink-0">
+                <i class="fas fa-map-marker-alt text-xs"></i>
             </div>
             <div class="overflow-hidden">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carga Máxima</p>
-                <h3 class="text-[15px] font-black text-slate-900 truncate uppercase">{{ estado_top.estado__nombre|default:"N/A" }}</h3>
-                <p class="text-[11px] font-bold text-intu-red leading-none">{{ estado_top.total|default:"0" }} <span class="text-[9px] uppercase">Expedientes</span></p>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Carga Máxima</p>
+                <h3 class="text-xs font-black text-slate-900 truncate uppercase leading-tight">{{ estado_top.estado__nombre|default:"N/A" }}</h3>
+                <p class="text-[9px] font-bold text-intu-red leading-none">{{ estado_top.total|default:"0" }} <span class="text-[7px] uppercase">Exp.</span></p>
             </div>
         </div>
 
         {# Motivo #}
-        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center shrink-0">
-                <i class="fas fa-clipboard-list text-lg"></i>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+            <div class="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-clipboard-list text-xs"></i>
             </div>
             <div class="overflow-hidden">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tendencia</p>
-                <h3 class="text-[14px] font-black text-slate-800 truncate uppercase leading-tight">{{ visitas_por_tipo.0.motivo|default:"S/D" }}</h3>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tendencia</p>
+                <h3 class="text-xs font-black text-slate-800 truncate uppercase leading-tight">{{ visitas_por_tipo.0.motivo|default:"S/D" }}</h3>
             </div>
         </div>
 
         {# Gestiones #}
-        <div class="bg-slate-900 p-5 rounded-2xl flex items-center gap-4 shadow-lg shadow-slate-200/50">
-            <div class="w-12 h-12 rounded-xl bg-white/10 text-emerald-400 flex items-center justify-center shrink-0">
-                <i class="fas fa-bolt text-lg"></i>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-bolt text-xs"></i>
             </div>
             <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gestiones</p>
-                <h3 class="text-2xl font-black text-white leading-none">{{ total_visitas|default:"0" }}</h3>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Gestiones</p>
+                <h3 class="text-base font-black text-slate-900 leading-none">{{ total_visitas|default:"0" }}</h3>
+            </div>
+        </div>
+
+        {# Hora Pico #}
+        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 text-intu-blue flex items-center justify-center shrink-0">
+                <i class="fas fa-clock text-xs"></i>
+            </div>
+            <div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Hora Pico</p>
+                <h3 class="text-sm font-black text-slate-900 leading-none">{{ hora_top|default:"S/D" }}</h3>
+                <p class="text-[8px] text-slate-500 font-semibold mt-0.5">{{ visitas_por_hora|default:"0" }} visitas</p>
+            </div>
+        </div>
+
+        {# Día Pico #}
+        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-calendar-day text-xs"></i>
+            </div>
+            <div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Día Pico</p>
+                <h3 class="text-sm font-black text-slate-900 leading-none inline-block">{{ dia_top|default:"S/D" }}</h3>
+                {% if dia_date %}
+                <div class="text-[8px] text-slate-400">{{ dia_date }}</div>
+                {% endif %}
+                <p class="text-[8px] text-slate-500 font-semibold mt-0.5">{{ visitas_por_dia|default:"0" }} visitas</p>
             </div>
         </div>
 
     </div>
 
-    {# --- FILA 1B: NUEVOS INDICADORES SOCIALES --- #}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <i class="fas fa-user-check text-lg"></i>
+    {# --- FILA 1B: INDICADORES SOCIALES --- #}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
+        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-user-check text-xs"></i>
             </div>
             <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adultos (18+)</p>
-                <h3 class="text-2xl font-black text-slate-900 leading-none">{{ adultos_count|default:"0" }}</h3>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Adultos (18+)</p>
+                <h3 class="text-base font-black text-slate-900 leading-none">{{ adultos_count|default:"0" }}</h3>
             </div>
         </div>
-        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-blue-50 text-intu-blue flex items-center justify-center shrink-0">
-                <i class="fas fa-user-clock text-lg"></i>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 text-intu-blue flex items-center justify-center shrink-0">
+                <i class="fas fa-user-clock text-xs"></i>
             </div>
             <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adultos mayores</p>
-                <h3 class="text-2xl font-black text-slate-900 leading-none">{{ mayores_count|default:"0" }}</h3>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Adultos mayores</p>
+                <h3 class="text-base font-black text-slate-900 leading-none">{{ mayores_count|default:"0" }}</h3>
             </div>
         </div>
-        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                <i class="fas fa-wheelchair text-lg"></i>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-wheelchair text-xs"></i>
             </div>
             <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Con discapacidad</p>
-                <h3 class="text-2xl font-black text-slate-900 leading-none">{{ discapacidad_count|default:"0" }}</h3>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Con discapacidad</p>
+                <h3 class="text-base font-black text-slate-900 leading-none">{{ discapacidad_count|default:"0" }}</h3>
             </div>
         </div>
-        <div class="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-slate-50 text-slate-800 flex items-center justify-center shrink-0">
-                <i class="fas fa-briefcase text-lg"></i>
+        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+            <div class="w-8 h-8 rounded-lg bg-slate-50 text-slate-800 flex items-center justify-center shrink-0">
+                <i class="fas fa-briefcase text-xs"></i>
             </div>
             <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Económicamente Activos</p>
-                <h3 class="text-2xl font-black text-slate-900 leading-none">{{ economico_activo_count|default:"0" }}</h3>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Econ. Activos</p>
+                <h3 class="text-base font-black text-slate-900 leading-none">{{ economico_activo_count|default:"0" }}</h3>
             </div>
         </div>
     </div>
 
-    {# --- FILA 2: DISTRIBUCIÓN TERRITORIAL Y PRODUCTIVIDAD --- #}
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+    {# --- FILA 2 & 3: BLOQUES PRINCIPALES DE DATOS (MÁXIMA EXTENSIÓN: 480PX) --- #}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-3">
         
         {# Densidad por Estado #}
-        <div class="lg:col-span-7 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm">
-            <div class="flex items-center justify-between mb-10">
-                <div class="flex items-center gap-3">
-                    <div class="w-2 h-6 bg-intu-red rounded-full"></div>
-                    <h3 class="text-[13px] font-black uppercase text-slate-800 tracking-widest">Densidad por Estado</h3>
+        <div class="lg:col-span-7 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-4 bg-intu-red rounded-full"></div>
+                    <h3 class="text-xs font-black uppercase text-slate-800 tracking-wider">Densidad por Estado</h3>
                 </div>
             </div>
             
-            <div class="space-y-8">
+            <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
                 {% for est in visitas_por_estado %}
                 <div class="group">
-                    <div class="flex justify-between items-end mb-3">
-                        <span class="text-[13px] font-black text-slate-700 uppercase tracking-tight">{{ est.estado__nombre|default:"No Especificado" }}</span>
-                        <span class="text-[14px] font-black text-intu-blue">{{ est.total }}</span>
+                    <div class="flex justify-between items-end mb-1">
+                        <span class="text-xs font-black text-slate-700 uppercase tracking-tight">{{ est.estado__nombre|default:"No Especificado" }}</span>
+                        <span class="text-xs font-black text-intu-blue">{{ est.total }}</span>
                     </div>
-                    <div class="h-3 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-[2px]">
-                        <div class="bg-gradient-to-r from-slate-700 to-slate-900 group-hover:from-intu-red group-hover:to-red-700 transition-all duration-1000 h-full rounded-full" 
+                    <div class="h-2.5 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100 p-[1px]">
+                        <div class="bg-gradient-to-r from-slate-700 to-slate-900 group-hover:from-intu-red group-hover:to-red-700 transition-all duration-500 h-full rounded-full" 
                              style="width: {% if total_beneficiarios > 0 %}{% widthratio est.total total_beneficiarios 100 %}{% else %}0{% endif %}%"></div>
                     </div>
                 </div>
                 {% empty %}
-                <div class="py-20 text-center"><p class="text-sm font-bold text-slate-300 uppercase italic">Esperando datos geográficos...</p></div>
+                <div class="py-16 text-center"><p class="text-xs font-bold text-slate-300 uppercase italic">Esperando datos geográficos...</p></div>
                 {% endfor %}
             </div>
         </div>
 
-        {# Productividad #}
-        <div class="lg:col-span-5 bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm">
-            <div class="flex items-center gap-3 mb-10">
-                <div class="w-2 h-6 bg-intu-blue rounded-full"></div>
-                <h3 class="text-[13px] font-black uppercase text-slate-800 tracking-widest">Productividad de Analistas</h3>
+        {# Motivos #}
+        <div class="lg:col-span-5 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center gap-2 mb-3">
+                <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
+                <h3 class="text-xs font-black uppercase text-slate-800 tracking-wider">Frecuencia por Motivo</h3>
             </div>
-            <div class="space-y-4">
-                {% for op in gestion_por_operador %}
-                <div class="flex items-center justify-between p-5 bg-slate-50 rounded-[1.5rem] border border-transparent hover:border-intu-blue/20 hover:bg-white transition-all group">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center font-black text-[14px] text-intu-blue shadow-sm group-hover:bg-intu-blue group-hover:text-white transition-all">
-                            {{ op.registrado_por__username|slice:":2"|upper }}
-                        </div>
-                        <div>
-                            <p class="text-[14px] font-black text-slate-800 uppercase leading-none mb-1">
-                                {{ op.registrado_por__username }}
-                            </p>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">Analista de Datos</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-2xl font-black text-slate-900 leading-none block">{{ op.total }}</span>
-                        <span class="text-[10px] font-black text-intu-blue uppercase italic">Acciones</span>
-                    </div>
+            <div class="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
+                {% for m in visitas_por_tipo %}
+                <div class="flex items-center justify-between p-2.5 bg-white border border-slate-100 rounded-xl group hover:border-intu-red transition-all">
+                    <span class="text-xs font-black text-slate-700 uppercase tracking-tight truncate mr-2">{{ m.motivo|default:"No especificado" }}</span>
+                    <span class="text-xs font-black text-white bg-slate-900 px-3 py-1 rounded-lg group-hover:bg-intu-red transition-colors shrink-0">{{ m.total }}</span>
                 </div>
+                {% empty %}
+                <div class="py-16 text-center"><p class="text-xs font-bold text-slate-300 uppercase italic">Sin registros de motivos...</p></div>
                 {% endfor %}
             </div>
         </div>
     </div>
 
-    {# --- FILA 3: MOTIVOS Y GÉNERO --- #}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {# Motivos #}
-        <div class="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm">
-            <div class="flex items-center gap-3 mb-10">
-                <div class="w-2 h-6 bg-slate-900 rounded-full"></div>
-                <h3 class="text-[13px] font-black uppercase text-slate-800 tracking-widest">Frecuencia por Motivo</h3>
+    {# --- FILA 4: PRODUCTIVIDAD DE ANALISTAS --- #}
+    <div class="grid grid-cols-1 gap-3">
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-2 mb-3">
+                <div class="w-1.5 h-4 bg-intu-blue rounded-full"></div>
+                <h3 class="text-xs font-black uppercase text-slate-800 tracking-wider">Productividad de Analistas</h3>
             </div>
-            <div class="grid grid-cols-1 gap-4">
-                {% for m in visitas_por_tipo %}
-                <div class="flex items-center justify-between p-5 bg-white border border-slate-100 rounded-2xl group hover:border-intu-red transition-all shadow-sm hover:shadow-md">
-                    <span class="text-[12px] font-black text-slate-700 uppercase tracking-tight">{{ m.motivo|default:"No especificado" }}</span>
-                    <span class="text-[14px] font-black text-white bg-slate-900 px-4 py-1.5 rounded-xl group-hover:bg-intu-red transition-colors">{{ m.total }}</span>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        {# Género #}
-        <div class="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm">
-            <div class="flex items-center gap-3 mb-10">
-                <div class="w-2 h-6 bg-emerald-500 rounded-full"></div>
-                <h3 class="text-[13px] font-black uppercase text-slate-800 tracking-widest">Demografía de Género</h3>
-            </div>
-            <div class="space-y-10 py-4">
-                {% for g in genero_data %}
-                <div>
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="text-[13px] font-black text-slate-700 uppercase">
-                            {% if g.genero == 'M' or g.genero == 'MASCULINO' %} 
-                                <i class="fas fa-mars mr-2 text-intu-blue"></i> Masculino
-                            {% elif g.genero == 'F' or g.genero == 'FEMENINO' %} 
-                                <i class="fas fa-venus mr-2 text-pink-500"></i> Femenino
-                            {% else %} 
-                                <i class="fas fa-genderless mr-2 text-slate-400"></i> Otro / No definido
-                            {% endif %}
-                        </span>
-                        <span class="text-xl font-black text-slate-900">{{ g.total }}</span>
-                    </div>
-                    <div class="h-5 w-full bg-slate-50 rounded-xl overflow-hidden border border-slate-100 shadow-inner">
-                        <div class="h-full transition-all duration-1000 shadow-lg
-                            {% if g.genero == 'M' or g.genero == 'MASCULINO' %} bg-intu-blue 
-                            {% elif g.genero == 'F' or g.genero == 'FEMENINO' %} bg-pink-500 
-                            {% else %} bg-slate-300 {% endif %}" 
-                             style="width: {% if total_beneficiarios > 0 %}{% widthratio g.total total_beneficiarios 100 %}{% else %}0{% endif %}%">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[220px] overflow-y-auto pr-2 custom-scroll">
+                {% for op in gestion_por_operador %}
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-transparent hover:border-intu-blue/20 hover:bg-white transition-all group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center font-black text-xs text-intu-blue shadow-xs group-hover:bg-intu-blue group-hover:text-white transition-all">
+                            {{ op.registrado_por__username|slice:":2"|upper }}
                         </div>
+                        <div class="overflow-hidden">
+                            <p class="text-xs font-black text-slate-800 uppercase leading-none mb-0.5 truncate">
+                                {{ op.registrado_por__username }}
+                            </p>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Analista de Datos</p>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="text-sm font-black text-slate-900 leading-none block">{{ op.total }}</span>
+                        <span class="text-[8px] font-black text-intu-blue uppercase italic">Acciones</span>
                     </div>
                 </div>
                 {% endfor %}
@@ -271,7 +266,22 @@
 </div>
 
 <style>
-    @keyframes fade-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .animate-fade-in { animation: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+    .custom-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
 </style>
 {% endblock %}

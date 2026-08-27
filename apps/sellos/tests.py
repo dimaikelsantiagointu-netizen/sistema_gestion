@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
 
 from apps.recibos.models import Recibo
 from apps.sellos.models import SelloDorado
@@ -168,3 +169,32 @@ class SellosCoreTests(TestCase):
         r_no.refresh_from_db()
         self.assertEqual(r_ok.sello_dorado, self.sello_b)
         self.assertIsNone(r_no.sello_dorado)
+
+    def test_admin_paginacion_y_filtros(self):
+        self.client.force_login(self.admin)
+        for index in range(21):
+            Recibo.objects.create(
+                numero_recibo=900010 + index,
+                estado='Caracas',
+                nombre=f'Usuario {index}',
+                rif_cedula_identidad=f'V{index:08d}',
+                direccion_inmueble='Dir',
+                ente_liquidado='INTU',
+                gastos_administrativos=1,
+                tasa_dia=1,
+                total_monto_bs=1,
+                fecha='2026-01-01',
+                concepto='Prueba',
+                aprobado_sello_dorado=False,
+                estatus_sello_dorado='borrador',
+            )
+
+        response = self.client.get(reverse('sellos:administracion'), {'numero_recibo': '90001', 'contribuyente': 'Usuario', 'estado': 'Caracas'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Página')
+        self.assertEqual(response.context['page_obj'].paginator.per_page, 20)
+        self.assertEqual(len(response.context['page_obj'].object_list), 20)
+        self.assertEqual(response.context['numero_filter'], '90001')
+        self.assertEqual(response.context['contribuyente_filter'], 'Usuario')
+        self.assertEqual(response.context['estado_filter'], 'Caracas')
+        self.assertIn('Caracas', response.context['estados_disponibles'])

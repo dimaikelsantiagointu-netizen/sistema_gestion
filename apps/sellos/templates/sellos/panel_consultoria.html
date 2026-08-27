@@ -2,7 +2,7 @@
 {% load custom_filters %}
 {% load static %}
 
-{% block title %}Panel de Consultoría | Sellos Dorados{% endblock %}
+{% block title %}Panel de Consultoría | Autenticaciones de Protocolización{% endblock %}
 
 {% block content %}
 <style>
@@ -13,10 +13,17 @@
 {# --- ENCABEZADO DE LA PÁGINA --- #}
 <div class="mb-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
     <div class="flex items-start gap-4 md:gap-6">
-        <a href="{% url 'sellos:lista' %}" 
+        {% if request.META.HTTP_REFERER %}
+        <a href="{{ request.META.HTTP_REFERER }}"
            class="h-12 w-12 md:h-14 md:w-14 shrink-0 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
             <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
         </a>
+        {% else %}
+        <a href="{% url 'sellos:lista' %}"
+           class="h-12 w-12 md:h-14 md:w-14 shrink-0 flex items-center justify-center bg-white text-gray-400 rounded-2xl shadow-sm border border-gray-100 hover:text-intu-red hover:border-intu-red/30 hover:shadow-lg transition-all duration-300 active:scale-90 group mt-1">
+            <i class="fas fa-arrow-left text-lg group-hover:-translate-x-1 transition-transform"></i>
+        </a>
+        {% endif %}
 
         <div>
             <span class="text-[9px] md:text-[10px] font-black text-intu-red uppercase tracking-[0.3em]">Auditoría e Informes</span>
@@ -141,7 +148,7 @@
         <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="p-6 md:p-8 border-b border-gray-50">
                 <h2 class="text-xs font-black text-intu-blue uppercase tracking-widest flex items-center">
-                    <i class="fas fa-stamp mr-2 text-intu-red"></i> Protocolos / Sellos Activos
+                    <i class="fas fa-stamp mr-2 text-intu-red"></i> Protocolos / Autenticaciones Activas
                 </h2>
             </div>
 
@@ -183,7 +190,7 @@
                         <tr>
                             <td colspan="4" class="p-12 text-center opacity-40">
                                 <p class="text-[10px] font-black uppercase tracking-widest text-intu-blue">Sin Protocolos</p>
-                                <p class="text-[10px] text-gray-400 font-medium mt-1">No hay sellos dorados disponibles bajo los parámetros de consulta.</p>
+                                <p class="text-[10px] text-gray-400 font-medium mt-1">No hay autenticaciones de protocolización disponibles bajo los parámetros de consulta.</p>
                             </td>
                         </tr>
                         {% endfor %}
