@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import IntegrityError
-from datetime import date
+from datetime import date, timedelta
 
 # Importación de modelos locales
 from .models import Beneficiario, DocumentoExpediente, Visita
@@ -332,6 +332,14 @@ def beneficiarios_estadisticas(request):
     f_inicio = request.GET.get('fecha_inicio')
     f_fin = request.GET.get('fecha_fin')
 
+    # Por defecto, mostrar la evolución de las últimas 12 semanas para que
+    # las métricas se actualicen automáticamente semana con semana.
+    if not f_inicio and not f_fin:
+        end_date = timezone.localdate()
+        start_date = end_date - timedelta(weeks=12)
+        f_inicio = start_date.isoformat()
+        f_fin = end_date.isoformat()
+
     # 2. Preparar objetos Q para filtrado dinámico
     filtros_beneficiario = Q()
     filtros_visita = Q()
@@ -443,6 +451,95 @@ def beneficiarios_estadisticas(request):
         'dia_date': dia_date_str,
     }
     return render(request, 'beneficiarios/estadisticas_beneficiarios.html', context)
+
+
+@login_required
+def estadisticas_tiempo(request):
+    """Vista dedicada a métricas temporales: visitas por hora, por día y por semana."""
+    f_inicio = request.GET.get('fecha_inicio')
+    f_fin = request.GET.get('fecha_fin')
+
+    # Por defecto, mostrar las últimas 12 semanas para que las métricas se
+    # actualicen automáticamente semana con semana.
+    if not f_inicio and not f_fin:
+        end_date = timezone.localdate()
+        start_date = end_date - timedelta(weeks=12)
+        f_inicio = start_date.isoformat()
+        f_fin = end_date.isoformat()
+
+    filtros_visita = Q()
+    if f_inicio:
+        filtros_visita &= Q(fecha_registro__date__gte=f_inicio)
+    if f_fin:
+        filtros_visita &= Q(fecha_registro__date__lte=f_fin)
+
+    # Inicializar arrays
+    visitas_by_hour = [0] * 24
+    visitas_by_weekday = [0] * 6  # Lunes..Sábado
+
+    # Por hora
+    qs_hour = Visita.objects.filter(filtros_visita).annotate(hour=ExtractHour('fecha_registro'))\
+        .values('hour').annotate(total=Count('id'))
+    for item in qs_hour:
+        h = item.get('hour')
+        if h is not None and 0 <= int(h) < 24:
+            visitas_by_hour[int(h)] = item.get('total', 0)
+
+    # Por día (ExtractWeekDay: 1=Sunday .. 7=Saturday)
+    qs_wd = Visita.objects.filter(filtros_visita).annotate(weekday=ExtractWeekDay('fecha_registro'))\
+        .values('weekday').annotate(total=Count('id'))
+    for item in qs_wd:
+        wd = item.get('weekday')
+        if wd and int(wd) in [2,3,4,5,6,7]:
+            idx = int(wd) - 2
+            if 0 <= idx < 6:
+                visitas_by_weekday[idx] = item.get('total', 0)
+
+    # Series semanales para el seguimiento semana con semana.
+    weekly_labels = []
+    visitas_by_week = []
+    if f_inicio and f_fin:
+        start_dt = timezone.datetime.strptime(f_inicio, '%Y-%m-%d').date()
+        end_dt = timezone.datetime.strptime(f_fin, '%Y-%m-%d').date()
+        week_cursor = start_dt - timedelta(days=start_dt.weekday())
+        final_week_start = end_dt - timedelta(days=end_dt.weekday())
+        while week_cursor <= final_week_start:
+            week_end = week_cursor + timedelta(days=6)
+            label = f"Sem {week_cursor.isocalendar()[1]}"
+            weekly_labels.append(label)
+            count = Visita.objects.filter(
+                filtros_visita,
+                fecha_registro__date__gte=week_cursor.isoformat(),
+                fecha_registro__date__lte=week_end.isoformat(),
+            ).count()
+            visitas_by_week.append(count)
+            week_cursor += timedelta(weeks=1)
+
+    # Identificar picos
+    max_hour = max(range(24), key=lambda i: visitas_by_hour[i]) if any(visitas_by_hour) else None
+    max_hour_label = f"{max_hour:02d}:00" if max_hour is not None else 'S/D'
+    max_hour_value = visitas_by_hour[max_hour] if max_hour is not None else 0
+
+    weekday_labels = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
+    max_wd_idx = max(range(6), key=lambda i: visitas_by_weekday[i]) if any(visitas_by_weekday) else None
+    max_wd_label = weekday_labels[max_wd_idx] if max_wd_idx is not None else 'S/D'
+    max_wd_value = visitas_by_weekday[max_wd_idx] if max_wd_idx is not None else 0
+
+    context = {
+        'visitas_by_hour': visitas_by_hour,
+        'visitas_by_weekday': visitas_by_weekday,
+        'hour_labels': [f"{i:02d}:00" for i in range(24)],
+        'weekday_labels': weekday_labels,
+        'weekly_labels': weekly_labels,
+        'visitas_by_week': visitas_by_week,
+        'max_hour_label': max_hour_label,
+        'max_hour_value': max_hour_value,
+        'max_wd_label': max_wd_label,
+        'max_wd_value': max_wd_value,
+        'f_inicio': f_inicio,
+        'f_fin': f_fin,
+    }
+    return render(request, 'beneficiarios/estadisticas_tiempo.html', context)
 
 from django.db.models import Q
 from django.utils.timezone import now

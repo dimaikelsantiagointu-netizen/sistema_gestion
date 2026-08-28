@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+
+{% block title %}Métricas Avanzadas de Tiempo | SISI-INTU{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-[1500px] mx-auto animate-fade-in pb-4 px-2 sm:px-4">
+
+    {# --- ENCABEZADO Y FILTRO DE FECHAS --- #}
+    <div class="mb-3 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'beneficiarios:estadisticas' %}" 
+               class="h-10 w-10 flex items-center justify-center bg-slate-50 text-gray-500 rounded-xl border border-gray-200 hover:text-intu-red hover:border-intu-red/30 transition-all duration-200 shrink-0"
+               title="Volver a Estadísticas">
+                <i class="fas fa-arrow-left text-sm"></i>
+            </a>
+
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] italic">Análisis Temporal Avanzado</span>
+                </div>
+                <h1 class="text-xl font-black text-intu-blue uppercase tracking-tight leading-tight">
+                    Desglose <span class="text-intu-red italic">Analítico</span> de Afluencia
+                </h1>
+                <p class="text-xs font-semibold text-slate-500">
+                    Métricas dinámicas con <span class="text-slate-900">Fechas Exactas</span>
+                </p>
+            </div>
+        </div>
+
+        {# Formulario para actualizar rango de fechas #}
+        <form method="GET" class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 text-xs">
+            <div class="flex flex-col">
+                <label class="text-[8px] font-black uppercase text-slate-400 px-1">Desde</label>
+                <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}" class="bg-white border border-slate-200 rounded-lg px-2 py-1 font-bold text-slate-700 outline-none focus:border-intu-blue">
+            </div>
+            <div class="flex flex-col">
+                <label class="text-[8px] font-black uppercase text-slate-400 px-1">Hasta</label>
+                <input type="date" name="fecha_fin" value="{{ fecha_fin }}" class="bg-white border border-slate-200 rounded-lg px-2 py-1 font-bold text-slate-700 outline-none focus:border-intu-blue">
+            </div>
+            <button type="submit" class="self-end h-8 px-3 bg-intu-blue text-white font-black rounded-lg hover:bg-blue-900 transition-colors flex items-center gap-1">
+                <i class="fas fa-filter text-[10px]"></i> Filtrar
+            </button>
+        </form>
+    </div>
+
+    {# --- KPIS ANALÍTICOS --- #}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
+        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-blue-50 text-intu-blue flex items-center justify-center shrink-0">
+                <i class="fas fa-clock text-xs"></i>
+            </div>
+            <div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Hora Máxima</p>
+                <h3 class="text-sm font-black text-slate-900 leading-none mb-0.5">{{ max_hour_label|default:"N/A" }}</h3>
+                <p class="text-[9px] font-bold text-intu-blue leading-none">{{ max_hour_value|default:"0" }} <span class="text-[7px] uppercase">Visitas</span></p>
+            </div>
+        </div>
+
+        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i class="fas fa-calendar-day text-xs"></i>
+            </div>
+            <div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Día Máximo</p>
+                <h3 class="text-sm font-black text-slate-900 leading-none mb-0.5">{{ max_wd_label|default:"N/A" }}</h3>
+                <p class="text-[9px] font-bold text-emerald-600 leading-none">{{ max_wd_value|default:"0" }} <span class="text-[7px] uppercase">Visitas</span></p>
+            </div>
+        </div>
+
+        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center shrink-0">
+                <i class="fas fa-chart-line text-xs"></i>
+            </div>
+            <div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Promedio / Hora</p>
+                <h3 class="text-sm font-black text-slate-900 leading-none mb-0.5" id="kpiAvgHour">0</h3>
+                <p class="text-[8px] font-bold text-slate-400 leading-none uppercase">Visitas activas</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-red-50 text-intu-red flex items-center justify-center shrink-0">
+                <i class="fas fa-percentage text-xs"></i>
+            </div>
+            <div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Concentración Pico</p>
+                <h3 class="text-sm font-black text-intu-red leading-none mb-0.5" id="kpiPeakShare">0%</h3>
+                <p class="text-[8px] font-bold text-slate-400 leading-none uppercase">Del flujo diario</p>
+            </div>
+        </div>
+    </div>
+
+    {# --- GRÁFICOS Y TABLAS DETALLADAS --- #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        
+        {# Horas #}
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-4 bg-intu-blue rounded-full"></div>
+                    <h3 class="text-xs font-black uppercase text-slate-800 tracking-wider">Curva de Flujo por Intervalo</h3>
+                </div>
+                <span class="text-[9px] font-black bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md uppercase">Curva Continuada</span>
+            </div>
+            
+            <div class="h-48 relative w-full mb-3">
+                <canvas id="chartHours"></canvas>
+            </div>
+
+            <div class="border-t border-slate-100 pt-3">
+                <div class="max-h-[220px] overflow-y-auto pr-1 custom-scroll">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                <th class="py-1">Intervalo</th>
+                                <th class="py-1 text-center">Registros</th>
+                                <th class="py-1 text-right">% Del Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableHoursBody" class="text-xs font-bold text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {# Días con Fechas Exactas #}
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-4 bg-emerald-500 rounded-full"></div>
+                    <h3 class="text-xs font-black uppercase text-slate-800 tracking-wider">Flujo por Día (Fechas Exactas)</h3>
+                </div>
+                <span class="text-[9px] font-black bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md uppercase">Detalle Diario</span>
+            </div>
+
+            <div class="h-48 relative w-full mb-3">
+                <canvas id="chartDays"></canvas>
+            </div>
+
+            <div class="border-t border-slate-100 pt-3">
+                <div class="max-h-[220px] overflow-y-auto pr-1 custom-scroll">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                <th class="py-1">Día y Fecha</th>
+                                <th class="py-1 text-center">Registros</th>
+                                <th class="py-1 text-right">% Del Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableDaysBody" class="text-xs font-bold text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const hourLabels = {{ hour_labels|safe }};
+    const hourData = {{ visitas_by_hour|safe }};
+    const rawDayLabels = {{ weekday_labels|safe }};
+    const rawDayData = {{ visitas_by_weekday|safe }};
+
+    // Excluir fines de semana de las etiquetas
+    const dayLabels = [];
+    const dayData = [];
+
+    rawDayLabels.forEach((label, i) => {
+        const cleanLabel = label.toString().trim().toLowerCase();
+        if (!cleanLabel.includes('sáb') && !cleanLabel.includes('sab') && !cleanLabel.includes('dom')) {
+            dayLabels.push(label);
+            dayData.push(rawDayData[i]);
+        }
+    });
+
+    const totalHoursVisits = hourData.reduce((a, b) => a + b, 0);
+    const totalDaysVisits = dayData.reduce((a, b) => a + b, 0);
+    const maxHourValue = Math.max(...hourData, 0);
+    const peakHourIndex = hourData.indexOf(maxHourValue);
+    const peakDayIndex = dayData.indexOf(Math.max(...dayData, 0));
+
+    // KPIs
+    const activeHours = hourData.filter(v => v > 0).length || 1;
+    document.getElementById('kpiAvgHour').innerText = (totalHoursVisits / activeHours).toFixed(1);
+    document.getElementById('kpiPeakShare').innerText = totalHoursVisits > 0 
+        ? ((maxHourValue / totalHoursVisits) * 100).toFixed(1) + '%' 
+        : '0%';
+
+    // Tabla de Horas
+    const tableHoursBody = document.getElementById('tableHoursBody');
+    hourLabels.forEach((label, idx) => {
+        const count = hourData[idx];
+        const pct = totalHoursVisits > 0 ? ((count / totalHoursVisits) * 100).toFixed(1) : '0.0';
+        const isPeak = idx === peakHourIndex && count > 0;
+        
+        tableHoursBody.innerHTML += `
+            <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors ${isPeak ? 'bg-red-50/40' : ''}">
+                <td class="py-1.5 flex items-center gap-1.5 font-black ${isPeak ? 'text-intu-red' : 'text-slate-800'}">
+                    ${isPeak ? '<i class="fas fa-fire text-[10px]"></i>' : ''} ${label}
+                </td>
+                <td class="py-1.5 text-center font-black">${count}</td>
+                <td class="py-1.5 text-right font-bold text-slate-500">${pct}%</td>
+            </tr>
+        `;
+    });
+
+    // Tabla de Días (Con Fechas Exactas)
+    const tableDaysBody = document.getElementById('tableDaysBody');
+    dayLabels.forEach((label, idx) => {
+        const count = dayData[idx];
+        const pct = totalDaysVisits > 0 ? ((count / totalDaysVisits) * 100).toFixed(1) : '0.0';
+        const isPeak = idx === peakDayIndex && count > 0;
+
+        tableDaysBody.innerHTML += `
+            <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors ${isPeak ? 'bg-emerald-50/40' : ''}">
+                <td class="py-1.5 flex items-center gap-1.5 font-black ${isPeak ? 'text-emerald-600' : 'text-slate-800'}">
+                    ${isPeak ? '<i class="fas fa-star text-[10px]"></i>' : ''} ${label}
+                </td>
+                <td class="py-1.5 text-center font-black">${count}</td>
+                <td class="py-1.5 text-right font-bold text-slate-500">${pct}%</td>
+            </tr>
+        `;
+    });
+
+    Chart.defaults.font.family = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    Chart.defaults.font.size = 10;
+
+    // Gráfico de Horas (Línea Suave)
+    const ctxH = document.getElementById('chartHours').getContext('2d');
+    const gradient = ctxH.createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, 'rgba(30, 58, 138, 0.15)');
+    gradient.addColorStop(1, 'rgba(30, 58, 138, 0.0)');
+
+    new Chart(ctxH, {
+        type: 'line',
+        data: {
+            labels: hourLabels,
+            datasets: [{
+                label: 'Total',
+                data: hourData,
+                borderColor: '#1e3a8a',
+                borderWidth: 2.5,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: '#dc2626',
+                fill: true,
+                backgroundColor: gradient
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { weight: 'bold' }, color: '#64748b' } },
+                y: { grid: { color: '#f1f5f9' }, ticks: { font: { weight: 'bold' }, color: '#64748b' }, beginAtZero: true }
+            }
+        }
+    });
+
+    // Gráfico de Días con Fechas Exactas
+    const ctxD = document.getElementById('chartDays').getContext('2d');
+    new Chart(ctxD, {
+        type: 'bar',
+        data: {
+            labels: dayLabels,
+            datasets: [{
+                label: 'Visitas',
+                data: dayData,
+                backgroundColor: dayLabels.map((_, i) => i === peakDayIndex ? '#dc2626' : '#059669'),
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { weight: 'bold' }, color: '#64748b' } },
+                y: { grid: { color: '#f1f5f9' }, ticks: { font: { weight: 'bold' }, color: '#64748b' }, beginAtZero: true }
+            }
+        }
+    });
+</script>
+
+<style>
+    @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+{% endblock %}

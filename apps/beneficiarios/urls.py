@@ -38,5 +38,6 @@ urlpatterns = [
     path('expediente/<int:pk>/', views.expediente_detalle, name='expediente'),
 
     path('estadisticas/', views.beneficiarios_estadisticas, name='estadisticas'),
+        path('estadisticas/tiempo/', views.estadisticas_tiempo, name='estadisticas_tiempo'),
 
 ]
