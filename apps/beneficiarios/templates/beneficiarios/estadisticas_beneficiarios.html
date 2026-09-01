@@ -115,23 +115,33 @@
             </div>
         </div>
 
-        {# Hora Pico #}
-        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+        {# Hora Pico: todo el cuadro es clicable #}
+        {% url 'beneficiarios:estadisticas_tiempo' as tiempo_url %}
+          <a href="{% if f_inicio or f_fin %}{{ tiempo_url }}?{% if f_inicio %}fecha_inicio={{ f_inicio|urlencode }}{% endif %}{% if f_fin %}{% if f_inicio %}&{% endif %}fecha_fin={{ f_fin|urlencode }}{% endif %}{% else %}{{ tiempo_url }}{% endif %}"
+           class="relative block bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow no-underline">
             <div class="w-8 h-8 rounded-lg bg-blue-50 text-intu-blue flex items-center justify-center shrink-0">
                 <i class="fas fa-clock text-xs"></i>
             </div>
+            <span class="absolute top-2 right-2 w-5 h-5 flex items-center justify-center text-slate-400 hover:text-intu-blue transition-colors" title="Ver detalle en la misma vista">
+                <i class="fas fa-external-link-alt text-[10px]"></i>
+            </span>
             <div>
                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Hora Pico</p>
                 <h3 class="text-sm font-black text-slate-900 leading-none">{{ hora_top|default:"S/D" }}</h3>
                 <p class="text-[8px] text-slate-500 font-semibold mt-0.5">{{ visitas_por_hora|default:"0" }} visitas</p>
             </div>
-        </div>
+        </a>
 
-        {# Día Pico #}
-        <div class="bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm">
+        {# Día Pico: todo el cuadro es clicable #}
+        {% url 'beneficiarios:estadisticas_tiempo' as tiempo_url %}
+          <a href="{% if f_inicio or f_fin %}{{ tiempo_url }}?{% if f_inicio %}fecha_inicio={{ f_inicio|urlencode }}{% endif %}{% if f_fin %}{% if f_inicio %}&{% endif %}fecha_fin={{ f_fin|urlencode }}{% endif %}{% else %}{{ tiempo_url }}{% endif %}"
+           class="relative block bg-white p-2.5 rounded-xl border border-slate-100 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow no-underline">
             <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                 <i class="fas fa-calendar-day text-xs"></i>
             </div>
+            <span class="absolute top-2 right-2 w-5 h-5 flex items-center justify-center text-slate-400 hover:text-emerald-600 transition-colors" title="Ver detalle en la misma vista">
+                <i class="fas fa-external-link-alt text-[10px]"></i>
+            </span>
             <div>
                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Día Pico</p>
                 <h3 class="text-sm font-black text-slate-900 leading-none inline-block">{{ dia_top|default:"S/D" }}</h3>
@@ -140,7 +150,7 @@
                 {% endif %}
                 <p class="text-[8px] text-slate-500 font-semibold mt-0.5">{{ visitas_por_dia|default:"0" }} visitas</p>
             </div>
-        </div>
+        </a>
 
     </div>
 
