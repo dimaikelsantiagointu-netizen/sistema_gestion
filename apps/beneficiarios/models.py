@@ -80,14 +80,21 @@ class Beneficiario(models.Model):
 class Visita(models.Model):
     MOTIVO_CHOICES = [
         ('ASESORIA', 'Asesoría'),
+        ('ASESORIA_AVV', 'Asesoría AVV'),
         ('RECAUDOS', 'Entrega de Recaudos'),
         ('RETIRO', 'Retiros de Documentos'),
         ('SOLICITUD', 'Nueva Solicitud'),
+        ('SOL_INAVI', 'Solicitud Regularización INAVI'),
+        ('SOL_LINDEROS', 'Solicitud de Linderos'),
+        ('ACL_LINDEROS', 'Aclaratorias de Linderos INAVI'),
+        ('RESP_TRIB_SUP', 'Respuesta a Tribunales - Títulos Supletorios'),
+        ('LIB_TERR', 'Liberaciones de Terrenos'),
+        ('TRF_TERR', 'Transferencia de Terrenos'),
+        ('SOL_INSPECCION', 'Solicitud de Inspección'),
         ('REG_COMERCIAL', 'Regularización Comercial'),
         ('CTU', 'Registro O Actualización de CTU'),
         ('REG_TIERRAS', 'Regularización de Tierras o Vivienda'),
         ('TECNICO', 'Servicios Técnicos'),
-        ('OTRO', 'Otros'),
     ]
 
     beneficiario = models.ForeignKey(

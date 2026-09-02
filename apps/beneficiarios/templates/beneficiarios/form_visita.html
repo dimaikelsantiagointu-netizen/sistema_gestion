@@ -139,17 +139,10 @@
     const selectUnidad = document.getElementById('select_unidad_adscrita');
 
     function verificarMotivo() {
-        if (selectMotivo.value === 'ASESORIA') {
-            camposAsesoria.classList.remove('hidden');
-            inputFuncionario.disabled = false;
-            selectUnidad.disabled = false;
-        } else {
-            camposAsesoria.classList.add('hidden');
-            // IMPORTANTE: Deshabilitamos para que no envíen valores vacíos
-            inputFuncionario.disabled = true;
-            selectUnidad.disabled = true;
-            selectUnidad.value = ""; // Limpiamos selección
-        }
+        // Mostrar y habilitar los campos de asesoría independientemente del motivo
+        camposAsesoria.classList.remove('hidden');
+        inputFuncionario.disabled = false;
+        selectUnidad.disabled = false;
     }
 
     selectMotivo.addEventListener('change', verificarMotivo);

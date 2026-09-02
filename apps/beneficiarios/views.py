@@ -586,17 +586,25 @@ def exportar_excel(request):
 
         # --- HOJA 2: VISITAS (EL DETALLE QUE NECESITAS) ---
         ws_vis = wb.create_sheet(title="Detalle de Visitas")
-        ws_vis.append(['FECHA REGISTRO', 'CEDULA/RIF', 'NOMBRE COMPLETO', 'TRÁMITE / MOTIVO', 'ESTADO', 'MUNICIPIO', 'PARROQUIA'])
-        
+        # Agregamos FUNCIONARIO ATIENDE y UNIDAD ADMINISTRATIVA como columnas extras
+        ws_vis.append([
+            'FECHA REGISTRO', 'CEDULA/RIF', 'NOMBRE COMPLETO', 'TRÁMITE / MOTIVO',
+            'FUNCIONARIO ATIENDE', 'UNIDAD ADMINISTRATIVA', 'ESTADO', 'MUNICIPIO', 'PARROQUIA'
+        ])
+
         # Filtramos visitas con la lógica de Q
-        visitas_qs = Visita.objects.filter(filtros_visita).select_related('beneficiario__estado', 'beneficiario__municipio', 'beneficiario__parroquia').order_by('-fecha_registro')
-        
+        visitas_qs = Visita.objects.filter(filtros_visita).select_related(
+            'beneficiario__estado', 'beneficiario__municipio', 'beneficiario__parroquia', 'unidad_administrativa'
+        ).order_by('-fecha_registro')
+
         for v in visitas_qs:
             ws_vis.append([
                 v.fecha_registro.strftime('%d/%m/%Y %H:%M'),
                 f"{v.beneficiario.tipo_documento}-{v.beneficiario.documento_identidad}",
                 v.beneficiario.nombre_completo.upper(),
                 v.motivo.upper() if v.motivo else "N/A",
+                v.funcionario_atiende or 'N/A',
+                v.unidad_administrativa.nombre if getattr(v, 'unidad_administrativa', None) else 'N/A',
                 v.beneficiario.estado.nombre if getattr(v.beneficiario, 'estado', None) else 'N/A',
                 v.beneficiario.municipio.nombre if getattr(v.beneficiario, 'municipio', None) else 'N/A',
                 v.beneficiario.parroquia.nombre if getattr(v.beneficiario, 'parroquia', None) else 'N/A'
