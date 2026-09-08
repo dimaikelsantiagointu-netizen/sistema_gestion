@@ -81,20 +81,42 @@ def _parsear_fecha(value):
     if pd.isna(value) or value is None:
         return pd.NaT
 
+    # Si ya es un tipo fecha/datetime
+    if isinstance(value, (pd.Timestamp, datetime, date)):
+        try:
+            return pd.to_datetime(value).date()
+        except Exception:
+            return pd.NaT
+
     text_value = str(value).strip()
     if not text_value or text_value.lower() in ['nan', 'none', 'n/a', 'no aplica', '-']:
         return pd.NaT
 
-    for fmt in ('%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d', '%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y'):
+    # Detectar serial numérico típico de Excel (p. ej. '44205' o '44205.0')
+    s_clean = re.sub(r"\.0+$", "", text_value)
+    if re.fullmatch(r"\d{4,6}", s_clean):
+        try:
+            ts = pd.to_datetime(int(s_clean), unit='d', origin='1899-12-30')
+            return ts.date()
+        except Exception:
+            pass
+
+    # Intentar con pandas (dayfirst=True para dd/mm/yyyy preferente)
+    try:
+        ts = pd.to_datetime(text_value, dayfirst=True, errors='coerce', infer_datetime_format=True)
+        if not pd.isna(ts):
+            return ts.date()
+    except Exception:
+        pass
+
+    # Último recurso: probar formatos explícitos
+    for fmt in ('%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d', '%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', '%d/%m/%y', '%m/%d/%y'):
         try:
             return datetime.strptime(text_value, fmt).date()
         except ValueError:
             continue
 
-    try:
-        return pd.to_datetime(text_value, dayfirst=True, errors='coerce').date()
-    except Exception:
-        return pd.NaT
+    return pd.NaT
 
 # II. FUNCIÓN CLAVE: IMPORTACIÓN DE EXCEL
 def _normalizar_nombre_columna(nombre):
@@ -160,11 +182,11 @@ def importar_recibos_desde_excel(archivo_excel, usuario):
         if hasattr(archivo_excel, 'seek'):
             archivo_excel.seek(0)
 
+        # No forzamos `dtype=str` para permitir que pandas detecte objetos fecha nativos
         df = pd.read_excel(
             archivo_excel,
             sheet_name=sheet_name,
-            header=header_row_idx,
-            dtype=str
+            header=header_row_idx
         )
 
         df = df.fillna('')
