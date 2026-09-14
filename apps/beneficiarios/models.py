@@ -79,22 +79,27 @@ class Beneficiario(models.Model):
 
 class Visita(models.Model):
     MOTIVO_CHOICES = [
-        ('ASESORIA', 'Asesoría'),
-        ('ASESORIA_AVV', 'Asesoría AVV'),
-        ('RECAUDOS', 'Entrega de Recaudos'),
-        ('RETIRO', 'Retiros de Documentos'),
-        ('SOLICITUD', 'Nueva Solicitud'),
-        ('SOL_INAVI', 'Solicitud Regularización INAVI'),
-        ('SOL_LINDEROS', 'Solicitud de Linderos'),
-        ('ACL_LINDEROS', 'Aclaratorias de Linderos INAVI'),
-        ('RESP_TRIB_SUP', 'Respuesta a Tribunales - Títulos Supletorios'),
-        ('LIB_TERR', 'Liberaciones de Terrenos'),
+        ('ATENCIONES_AVV', 'Atenciones AVV Técnicas y Jurídicas'),
+        ('INFORMES_PREF', 'Informes de Prefactibilidad'),
+        ('INSPECCION_TERRENO', 'Inspección del Terreno'),
+        ('TOPOGRAFIA', 'Topografía'),
+        ('ESTUDIOS_SUELO', 'Estudios de Suelo'),
+        ('CTU_REGISTRO', 'CTU: Registro de CTU'),
+        ('CTU_ACTUALIZACION', 'CTU: Actualización de CTU'),
+        ('CTU_CORRECCION', 'CTU: Corrección y asistencia jurídica al CTU'),
+        ('REG_COMERCIAL_CONSIGNACION', 'Regularización Comercial: Consignación de recaudos'),
+        ('REG_COMERCIAL_INSPECCION', 'Regularización Comercial: Inspección del local comercial'),
+        ('REG_COMERCIAL_REGULARIZACION', 'Regularización Comercial: Regularización comercial'),
+        ('REG_EXT_INAVI', 'Regularización Extinto INAVI'),
+        ('SOLICITUD', 'Solicitud'),
+        ('EXPEDIENTE_CONSIGNACION', 'Expediente (Consignación)'),
+        ('INSP_LINDEROS', 'Inspección para Linderos'),
+        ('AUT_PAGO', 'Autorización de Pago'),
+        ('LIB_TIT_SUP', 'Liberaciones de Título Supletorio'),
+        ('ACLARATORIA', 'Aclaratoria'),
+        ('AUT_TIT_SUP', 'Autorización para Título Supletorio'),
         ('TRF_TERR', 'Transferencia de Terrenos'),
-        ('SOL_INSPECCION', 'Solicitud de Inspección'),
-        ('REG_COMERCIAL', 'Regularización Comercial'),
-        ('CTU', 'Registro O Actualización de CTU'),
-        ('REG_TIERRAS', 'Regularización de Tierras o Vivienda'),
-        ('TECNICO', 'Servicios Técnicos'),
+        ('SOL_LINDEROS', 'Solicitud de Linderos'),
     ]
 
     beneficiario = models.ForeignKey(
@@ -111,7 +116,7 @@ class Visita(models.Model):
     )
 
     fecha_registro = models.DateTimeField(default=timezone.now)
-    motivo = models.CharField(max_length=20, choices=MOTIVO_CHOICES)
+    motivo = models.CharField(max_length=80, choices=MOTIVO_CHOICES)
 
     # --- CAMPOS CONDICIONALES (ASESORÍA) ---
     funcionario_atiende = models.CharField(
