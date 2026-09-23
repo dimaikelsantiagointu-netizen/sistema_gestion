@@ -21,6 +21,10 @@ class VisitaMotivoChoicesTest(SimpleTestCase):
             'Regularización Comercial: Regularización comercial',
             'Regularización Extinto INAVI',
             'Solicitud',
+            'Status de solicitudes',
+            'Reunión',
+            'Asesorías',
+            'Otros',
             'Expediente (Consignación)',
             'Inspección para Linderos',
             'Autorización de Pago',
@@ -39,3 +43,16 @@ class VisitaMotivoChoicesTest(SimpleTestCase):
         self.assertIn('Regularización Comercial: Consignación de recaudos', displayed_names)
         self.assertIn('Regularización Comercial: Inspección del local comercial', displayed_names)
         self.assertIn('Regularización Comercial: Regularización comercial', displayed_names)
+
+    def test_motivo_choices_include_additional_visit_categories(self):
+        displayed_names = [name for _, name in Visita.MOTIVO_CHOICES]
+
+        self.assertEqual(
+            [
+                'Status de solicitudes',
+                'Reunión',
+                'Asesorías',
+                'Otros',
+            ],
+            displayed_names[13:17],
+        )
