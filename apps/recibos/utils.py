@@ -213,6 +213,12 @@ def importar_recibos_desde_excel(archivo_excel, usuario):
 
         for i in range(1, 14):
             column_aliases[f'categoria{i}'] = [f'categoria{i}']
+        column_aliases['categoria14'] = ['categoria14', '10.-_venta']
+
+        tiene_categoria_ventas = any(
+            alias in df.columns for alias in column_aliases['categoria14']
+        )
+        desplazamiento_columnas = 1 if tiene_categoria_ventas else 0
 
         with transaction.atomic():
             ultimo_recibo = Recibo.objects.aggregate(Max('numero_recibo'))['numero_recibo__max']
@@ -226,13 +232,13 @@ def importar_recibos_desde_excel(archivo_excel, usuario):
                 rif_cedula_raw = str(_buscar_valor_columna(fila_datos, column_aliases['rif_cedula_identidad'], fallback_index=2)).strip()
                 direccion_raw = str(_buscar_valor_columna(fila_datos, column_aliases['direccion_inmueble'], fallback_index=3)).strip()
                 ente_raw = str(_buscar_valor_columna(fila_datos, column_aliases['ente_liquidado'], fallback_index=4)).strip()
-                gastos_admin_raw = _buscar_valor_columna(fila_datos, column_aliases['gastos_administrativos'], fallback_index=18)
-                tasa_dia_raw = _buscar_valor_columna(fila_datos, column_aliases['tasa_dia'], fallback_index=19)
-                total_monto_raw = _buscar_valor_columna(fila_datos, column_aliases['total_monto_bs'], fallback_index=20)
-                num_transf_raw = str(_buscar_valor_columna(fila_datos, column_aliases['numero_transferencia'], fallback_index=21)).strip().upper()
-                conciliado_raw = _buscar_valor_columna(fila_datos, column_aliases['conciliado'], fallback_index=22)
-                fecha_raw = _buscar_valor_columna(fila_datos, column_aliases['fecha'], fallback_index=23)
-                concepto_raw = str(_buscar_valor_columna(fila_datos, column_aliases['concepto'], fallback_index=24)).strip()
+                gastos_admin_raw = _buscar_valor_columna(fila_datos, column_aliases['gastos_administrativos'], fallback_index=18 + desplazamiento_columnas)
+                tasa_dia_raw = _buscar_valor_columna(fila_datos, column_aliases['tasa_dia'], fallback_index=19 + desplazamiento_columnas)
+                total_monto_raw = _buscar_valor_columna(fila_datos, column_aliases['total_monto_bs'], fallback_index=20 + desplazamiento_columnas)
+                num_transf_raw = str(_buscar_valor_columna(fila_datos, column_aliases['numero_transferencia'], fallback_index=21 + desplazamiento_columnas)).strip().upper()
+                conciliado_raw = _buscar_valor_columna(fila_datos, column_aliases['conciliado'], fallback_index=22 + desplazamiento_columnas)
+                fecha_raw = _buscar_valor_columna(fila_datos, column_aliases['fecha'], fallback_index=23 + desplazamiento_columnas)
+                concepto_raw = str(_buscar_valor_columna(fila_datos, column_aliases['concepto'], fallback_index=24 + desplazamiento_columnas)).strip()
 
                 if not rif_cedula_raw and not nombre_raw and not num_transf_raw:
                     continue
@@ -265,8 +271,9 @@ def importar_recibos_desde_excel(archivo_excel, usuario):
                     'usuario': usuario
                 }
 
-                for i in range(1, 14):
-                    valor_cat = _buscar_valor_columna(fila_datos, column_aliases[f'categoria{i}'], fallback_index=4 + i)
+                for i in range(1, 15):
+                    fallback_index = 4 + i if i <= 13 else None
+                    valor_cat = _buscar_valor_columna(fila_datos, column_aliases[f'categoria{i}'], fallback_index=fallback_index)
                     data_a_insertar[f'categoria{i}'] = to_boolean(valor_cat)
 
                 recibo_creado = Recibo.objects.create(**data_a_insertar)
@@ -300,7 +307,7 @@ def generar_reporte_excel(request_filters, queryset, filtros_aplicados):
     for recibo in queryset:
         categoria_detalle_nombres = [
             CATEGORY_CHOICES_MAP.get(f'categoria{i}', f'Categoría {i}')
-            for i in range(1, 14) if getattr(recibo, f'categoria{i}')
+            for i in range(1, 15) if getattr(recibo, f'categoria{i}')
         ]
         categorias_concatenadas = ','.join(categoria_detalle_nombres)
 
@@ -475,7 +482,7 @@ def _draw_categorias_section(c, recibo_obj, y_start, X1_TITLE):
     style_titulo_cat = ParagraphStyle('CatTitulo', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, leading=9)
     style_detalle_cat = ParagraphStyle('CatDetalle', parent=styles['Normal'], fontName='Helvetica', fontSize=7, leading=9, leftIndent=10)
 
-    categorias = {f'categoria{i}': getattr(recibo_obj, f'categoria{i}') for i in range(1, 14)}
+    categorias = {f'categoria{i}': getattr(recibo_obj, f'categoria{i}') for i in range(1, 15)}
     current_y = y_start
 
     if any(categorias.values()):
@@ -497,6 +504,7 @@ def _draw_categorias_section(c, recibo_obj, y_start, X1_TITLE):
             'categoria11': ("ACLARATORIA DE DOCUMENTOS INAVI", "Trámite de aclaratoria documental asociado a INAVI."),
             'categoria12': ("ACLARATORIA DE DOCUMENTOS DE TÍTULOS DE TIERRA URBANA (TTU)", "Trámite de aclaratoria documental asociado a títulos de tierra urbana."),
             'categoria13': ("LIBERACIONES RELACIONADAS CON INAVI Y TTU", "Trámite de liberación relacionado con INAVI y títulos de tierra urbana."),
+            'categoria14': ("VENTAS Y OPERACIONES COMERCIALES", "Registro del pago asociado a una operación de venta."),
         }
         
         ancho_disponible = 450 

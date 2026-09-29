@@ -180,7 +180,7 @@ class Command(BaseCommand):
                             'fecha_anulacion': dt_anulacion,
                         }
 
-                        for i in range(1, 14):
+                        for i in range(1, 15):
                             defaults[f'categoria{i}'] = self.parse_boolean(get_col(f'categoria{i}'))
 
                         obj, created = Recibo.objects.update_or_create(

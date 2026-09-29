@@ -75,7 +75,7 @@ class ReciboForm(forms.ModelForm):
             'direccion_inmueble', 'ente_liquidado', 'categoria1', 'categoria2',
             'categoria3', 'categoria4', 'categoria5', 'categoria6',
             'categoria7', 'categoria8', 'categoria9', 'categoria10',
-            'categoria11', 'categoria12', 'categoria13', 'gastos_administrativos',
+            'categoria11', 'categoria12', 'categoria13', 'categoria14', 'gastos_administrativos',
             'tasa_dia', 'total_monto_bs',
             'numero_transferencia', 'conciliado', 'fecha', 'concepto',
         ]
@@ -94,6 +94,7 @@ class ReciboForm(forms.ModelForm):
             'categoria11': '11.Aclaratoria de Documentos INAVI',
             'categoria12': '12.Aclaratorias de Documentos de Títulos de Tierra Urbana (TTU)',
             'categoria13': '13.Liberaciones Relacionadas con INAVI y con Títulos de Tierra Urbana (Ley Especial)',
+            'categoria14': '14. Ventas y Operaciones Comerciales',
             'conciliado': 'Confirmar Conciliación',
             'gastos_administrativos': 'Gastos Administrativos (Bs)',
             'tasa_dia': 'Tasa BCV',
@@ -138,5 +139,6 @@ class ReciboForm(forms.ModelForm):
             'categoria11': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
             'categoria12': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
             'categoria13': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
+            'categoria14': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-intu-blue border-gray-300 rounded focus:ring-intu-blue'}),
             'conciliado': forms.CheckboxInput(attrs={'class': 'w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500'}),
         }
