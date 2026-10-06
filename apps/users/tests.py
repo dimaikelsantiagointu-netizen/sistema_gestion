@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 
@@ -54,3 +55,21 @@ class UserRoleViewTests(TestCase):
         self.assertEqual('superadmin', user.rol)
         self.assertTrue(user.is_superuser)
         self.assertTrue(user.is_staff)
+
+    def test_contracts_permission_shows_dashboard_link(self):
+        user = get_user_model().objects.create_user(
+            username='contracts-user',
+            email='contracts@example.com',
+            password='test-password',
+        )
+        permission = Permission.objects.get(
+            content_type__app_label='users',
+            codename='ver_gestor_contratos',
+        )
+        user.user_permissions.add(permission)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('home'))
+
+        self.assertEqual(200, response.status_code)
+        self.assertContains(response, reverse('contratos:lista'))
