@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 animate-fade-in">
+    <div class="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <a href="{% url 'beneficiarios:lista' %}" class="inline-flex items-center text-xs font-bold text-slate-500 hover:text-intu-blue">
+                <i class="fas fa-arrow-left mr-2"></i>ATC / Beneficiarios
+            </a>
+            <h1 class="mt-3 text-3xl font-black uppercase text-intu-blue">Categorías de visitas</h1>
+        </div>
+        <a href="{% url 'beneficiarios:categoria_visita_crear' %}" class="inline-flex items-center justify-center rounded-lg bg-intu-blue px-5 py-3 text-sm font-bold text-white hover:bg-blue-900">
+            <i class="fas fa-plus mr-2"></i>Nueva categoría
+        </a>
+    </div>
+
+    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                    <tr>
+                        <th class="px-5 py-4">Orden</th>
+                        <th class="px-5 py-4">Categoría</th>
+                        <th class="px-5 py-4">Estado</th>
+                        <th class="px-5 py-4">Visitas asociadas</th>
+                        <th class="px-5 py-4 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for categoria in categorias %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-5 py-4 font-mono text-sm text-slate-500">{{ categoria.orden }}</td>
+                        <td class="px-5 py-4 font-semibold text-slate-800">{{ categoria.nombre }}</td>
+                        <td class="px-5 py-4">
+                            {% if categoria.activa %}
+                            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Activa</span>
+                            {% else %}
+                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Archivada</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4 text-sm text-slate-600">{{ categoria.total_visitas }}</td>
+                        <td class="px-5 py-4">
+                            <div class="flex items-center justify-end gap-3">
+                                <a href="{% url 'beneficiarios:categoria_visita_editar' categoria.pk %}" class="text-sm font-bold text-intu-blue hover:underline">Editar</a>
+                                {% if categoria.total_visitas == 0 %}
+                                <form method="post" action="{% url 'beneficiarios:categoria_visita_eliminar' categoria.pk %}" onsubmit="return confirm('¿Eliminar esta categoría?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-sm font-bold text-red-600 hover:underline">Eliminar</button>
+                                </form>
+                                {% else %}
+                                <span class="text-xs text-slate-400" title="Tiene visitas asociadas">En uso</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="px-5 py-12 text-center text-sm text-slate-500">No hay categorías registradas.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

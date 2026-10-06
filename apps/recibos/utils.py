@@ -47,7 +47,7 @@ def limpiar_y_convertir_decimal(value):
     
     s_limpio = s.replace(' ', '').replace('$', '').replace('€', '')
     if ',' in s_limpio and '.' in s_limpio:
-        s_limpio = s_limpio.replace('.', '').replace(',', '.')
+        s_final = s_limpio.replace('.', '').replace(',', '.')
     elif ',' in s_limpio:
         s_final = s_limpio.replace(',', '.')
     else:
@@ -103,7 +103,7 @@ def _parsear_fecha(value):
 
     # Intentar con pandas (dayfirst=True para dd/mm/yyyy preferente)
     try:
-        ts = pd.to_datetime(text_value, dayfirst=True, errors='coerce', infer_datetime_format=True)
+        ts = pd.to_datetime(text_value, dayfirst=True, errors='coerce')
         if not pd.isna(ts):
             return ts.date()
     except Exception:

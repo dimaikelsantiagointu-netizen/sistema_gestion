@@ -12,7 +12,7 @@ from django.contrib import messages
 from django.urls import reverse
 from django.conf import settings
 from django.utils import timezone
-from django.views.generic import ListView, TemplateView
+from django.views.generic import ListView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
 from django.core.paginator import Paginator              
 from django.db.models.functions import TruncDay        
@@ -21,7 +21,7 @@ User = get_user_model()
 
 from .models import Recibo
 from .forms import ReciboForm
-from .constants import CATEGORY_CHOICES, ESTADO_CHOICES_MAP
+from .constants import CATEGORY_CHOICES
 from .utils import (
     importar_recibos_desde_excel, generar_reporte_excel, 
     generar_pdf_reporte, generar_pdf_recibo_unitario
@@ -32,9 +32,6 @@ try:
     HEADER_IMAGE = os.path.join(settings.BASE_DIR, 'apps', 'recibos', 'static', 'recibos', 'images', 'encabezado.png')
 except AttributeError:
     HEADER_IMAGE = os.path.join(os.path.dirname(__file__), '..', 'static', 'recibos', 'images', 'encabezado.png')
-
-class PaginaBaseView(TemplateView):
-    template_name = 'base.html'
 
 @login_required
 def generar_pdf_recibo(request, pk):
@@ -60,7 +57,7 @@ def generar_zip_recibos(request):
     try:
         pks = [int(pk) for pk in pks_str.split(',') if pk] 
         recibos = Recibo.objects.filter(pk__in=pks)
-    except (ValueError, Exception) as e:
+    except Exception as e:
         log_rec.error(f"Error al procesar PKS para ZIP: {e}")
         messages.error(request, "Error en el formato de los IDs o al buscar registros.")
         return redirect('recibos:dashboard')

@@ -13,12 +13,19 @@ from django.test import TestCase
 from apps.recibos.constants import CATEGORY_CHOICES
 from apps.recibos.forms import ReciboForm
 from apps.recibos.models import Recibo
-from apps.recibos.utils import generar_pdf_recibo_unitario, importar_recibos_desde_excel
+from apps.recibos.utils import (
+    generar_pdf_recibo_unitario,
+    importar_recibos_desde_excel,
+    limpiar_y_convertir_decimal,
+)
 
 
 class ReciboCategoryImportTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username='tester', password='testpass123')
+
+    def test_decimal_conversion_handles_european_thousands_and_decimal_separators(self):
+        self.assertEqual(Decimal('1234.56'), limpiar_y_convertir_decimal('1.234,56'))
 
     def test_editing_recibo_preserves_existing_receipt_number_when_not_submitted(self):
         recibo = Recibo.objects.create(

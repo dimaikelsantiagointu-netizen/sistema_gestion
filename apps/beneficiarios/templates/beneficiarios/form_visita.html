@@ -62,9 +62,10 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div class="group">
                         <label class="text-[12px] font-bold text-slate-500 ml-1 mb-2 block">Motivo de la visita</label>
-                        <select name="motivo" id="select_motivo" class="block w-full bg-gray-50 border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-intu-blue/5 p-5 cursor-pointer appearance-none">
-                            {% for code, name in motivos %}
-                                <option value="{{ code }}" {% if visita and visita.motivo == code %}selected{% endif %}>{{ name }}</option>
+                        <select name="categoria" id="select_motivo" required class="block w-full bg-gray-50 border-none rounded-2xl text-base font-bold focus:ring-4 focus:ring-intu-blue/5 p-5 cursor-pointer appearance-none">
+                            <option value="">Selecciona una categoría</option>
+                            {% for categoria in categorias %}
+                                <option value="{{ categoria.pk }}" {% if visita and visita.categoria_id == categoria.pk %}selected{% endif %}>{{ categoria.nombre }}</option>
                             {% endfor %}
                         </select>
                     </div>

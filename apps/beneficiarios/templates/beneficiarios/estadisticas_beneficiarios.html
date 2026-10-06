@@ -100,7 +100,7 @@
             </div>
             <div class="overflow-hidden">
                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tendencia</p>
-                <h3 class="text-xs font-black text-slate-800 truncate uppercase leading-tight">{{ visitas_por_tipo.0.motivo|default:"S/D" }}</h3>
+                <h3 class="text-xs font-black text-slate-800 truncate uppercase leading-tight">{{ visitas_por_tipo.0.categoria__nombre|default:"S/D" }}</h3>
             </div>
         </div>
 
@@ -233,7 +233,7 @@
             <div class="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
                 {% for m in visitas_por_tipo %}
                 <div class="flex items-center justify-between p-2.5 bg-white border border-slate-100 rounded-xl group hover:border-intu-red transition-all">
-                    <span class="text-xs font-black text-slate-700 uppercase tracking-tight truncate mr-2">{{ m.motivo|default:"No especificado" }}</span>
+                    <span class="text-xs font-black text-slate-700 uppercase tracking-tight truncate mr-2">{{ m.categoria__nombre|default:"No especificado" }}</span>
                     <span class="text-xs font-black text-white bg-slate-900 px-3 py-1 rounded-lg group-hover:bg-intu-red transition-colors shrink-0">{{ m.total }}</span>
                 </div>
                 {% empty %}

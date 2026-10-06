@@ -6,14 +6,14 @@ from django.db.models import CharField
 from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
+from django.views.decorators.http import require_POST
 import re
 
 from apps.recibos.models import Recibo
 from .models import SelloDorado
 from .services import aprobar_recibos_para_sello, asignar_recibos_a_sello, registrar_auditoria, registrar_historial
-from django.http import JsonResponse
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -303,6 +303,7 @@ def export_recibos_csv(request):
 
 
 @login_required
+@require_POST
 def aprobar_recibos_view(request):
     if not _es_admin(request.user):
         return redirect('home')
@@ -319,6 +320,7 @@ def aprobar_recibos_view(request):
 
 
 @login_required
+@require_POST
 def asignar_recibos_view(request):
     if not _es_consultoria(request.user):
         return redirect('home')
@@ -368,6 +370,7 @@ def asignar_recibos_view(request):
 
 
 @login_required
+@require_POST
 def marcar_recibos_leidos_view(request):
     """Marca recibos como notificados/leídos por Consultoría.
 
@@ -411,6 +414,7 @@ def marcar_recibos_leidos_view(request):
 
 
 @login_required
+@require_POST
 def cambiar_estatus_sello_view(request, pk):
     if not _es_consultoria(request.user):
         return redirect('home')
