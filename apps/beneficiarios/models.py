@@ -77,35 +77,38 @@ class Beneficiario(models.Model):
 # SECCIÓN 2: GESTIÓN DE ATENCIÓN Y VISITAS
 # ==============================================================================
 
-class Visita(models.Model):
-    MOTIVO_CHOICES = [
-        ('ATENCIONES_AVV', 'Atenciones AVV Técnicas y Jurídicas'),
-        ('INFORMES_PREF', 'Informes de Prefactibilidad'),
-        ('INSPECCION_TERRENO', 'Inspección del Terreno'),
-        ('TOPOGRAFIA', 'Topografía'),
-        ('ESTUDIOS_SUELO', 'Estudios de Suelo'),
-        ('CTU_REGISTRO', 'CTU: Registro de CTU'),
-        ('CTU_ACTUALIZACION', 'CTU: Actualización de CTU'),
-        ('CTU_CORRECCION', 'CTU: Corrección y asistencia jurídica al CTU'),
-        ('REG_COMERCIAL_CONSIGNACION', 'Regularización Comercial: Consignación de recaudos'),
-        ('REG_COMERCIAL_INSPECCION', 'Regularización Comercial: Inspección del local comercial'),
-        ('REG_COMERCIAL_REGULARIZACION', 'Regularización Comercial: Regularización comercial'),
-        ('REG_EXT_INAVI', 'Regularización Extinto INAVI'),
-        ('SOLICITUD', 'Solicitud'),
-        ('STATUS_SOLICITUDES', 'Status de solicitudes'),
-        ('REUNION', 'Reunión'),
-        ('ASESORIAS', 'Asesorías'),
-        ('OTROS', 'Otros'),
-        ('EXPEDIENTE_CONSIGNACION', 'Expediente (Consignación)'),
-        ('INSP_LINDEROS', 'Inspección para Linderos'),
-        ('AUT_PAGO', 'Autorización de Pago'),
-        ('LIB_TIT_SUP', 'Liberaciones de Título Supletorio'),
-        ('ACLARATORIA', 'Aclaratoria'),
-        ('AUT_TIT_SUP', 'Autorización para Título Supletorio'),
-        ('TRF_TERR', 'Transferencia de Terrenos'),
-        ('SOL_LINDEROS', 'Solicitud de Linderos'),
-    ]
+class CategoriaVisita(models.Model):
+    nombre = models.CharField(max_length=150, unique=True, verbose_name='Nombre')
+    codigo = models.SlugField(max_length=80, unique=True, editable=False)
+    orden = models.PositiveIntegerField(default=0, verbose_name='Orden')
+    activa = models.BooleanField(default=True, verbose_name='Activa')
 
+    class Meta:
+        db_table = 'beneficiarios_categorias'
+        ordering = ['orden', 'nombre']
+        verbose_name = 'Categoría de visita'
+        verbose_name_plural = 'Categorías de visitas'
+
+    def save(self, *args, **kwargs):
+        if not self.codigo:
+            from django.utils.text import slugify
+
+            base_codigo = slugify(self.nombre)[:70] or 'categoria'
+            codigo = base_codigo
+            consecutivo = 2
+            while type(self).objects.filter(codigo=codigo).exclude(pk=self.pk).exists():
+                sufijo = f'-{consecutivo}'
+                codigo = f'{base_codigo[:80 - len(sufijo)]}{sufijo}'
+                consecutivo += 1
+            self.codigo = codigo
+        self.nombre = self.nombre.strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.nombre
+
+
+class Visita(models.Model):
     beneficiario = models.ForeignKey(
         'Beneficiario', 
         on_delete=models.CASCADE, 
@@ -120,7 +123,12 @@ class Visita(models.Model):
     )
 
     fecha_registro = models.DateTimeField(default=timezone.now)
-    motivo = models.CharField(max_length=80, choices=MOTIVO_CHOICES)
+    categoria = models.ForeignKey(
+        CategoriaVisita,
+        on_delete=models.PROTECT,
+        related_name='visitas',
+        verbose_name='Motivo de la visita'
+    )
 
     # --- CAMPOS CONDICIONALES (ASESORÍA) ---
     funcionario_atiende = models.CharField(
@@ -147,7 +155,7 @@ class Visita(models.Model):
         verbose_name_plural = "Visitas"
 
     def __str__(self):
-        return f"{self.beneficiario.nombre_completo} - {self.get_motivo_display()}"
+        return f"{self.beneficiario.nombre_completo} - {self.categoria.nombre}"
 
 # ==============================================================================
 # SECCIÓN 3: MOTOR DE EXPEDIENTE DIGITAL

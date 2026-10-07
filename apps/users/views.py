@@ -35,10 +35,9 @@ class CrearUsuarioView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         else:
             usuario.is_superuser = False
             usuario.is_staff = False
-        usuario.save()
-        form.save_m2m()
+        response = super().form_valid(form)
         messages.success(self.request, f"El usuario '{usuario.username}' ha sido registrado exitosamente.")
-        return super().form_valid(form)
+        return response
 
 # --- VISTA PARA LISTAR (CORREGIDA LA INDENTACIÓN) ---
 class UsuarioListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -67,10 +66,9 @@ class UsuarioUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         else:
             usuario.is_superuser = False
             usuario.is_staff = False
-        usuario.save()
-        form.save_m2m()
+        response = super().form_valid(form)
         messages.success(self.request, "Usuario actualizado correctamente.")
-        return super().form_valid(form)
+        return response
 
 # --- VISTA PARA ELIMINAR ---
 class UsuarioDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):

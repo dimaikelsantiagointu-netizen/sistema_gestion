@@ -1,10 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from unittest.mock import patch
 
 from apps.recibos.models import Recibo
 from apps.sellos.models import SelloDorado
-from apps.sellos.services import asignar_recibos_a_sello
+from apps.sellos.services import aprobar_recibos_para_sello, asignar_recibos_a_sello
 from apps.sellos.views import asignar_recibos_view, marcar_recibos_leidos_view
 
 
@@ -61,6 +62,18 @@ class SellosCoreTests(TestCase):
         self.assertTrue(result['success'] or not result['success'])
         self.recibo.refresh_from_db()
         self.assertTrue(self.recibo.notificado_consultoria)
+
+    def test_approval_batch_rolls_back_if_audit_logging_fails(self):
+        self.recibo.notificado_consultoria = True
+        self.recibo.save(update_fields=['notificado_consultoria'])
+
+        with patch('apps.sellos.services.registrar_auditoria', side_effect=RuntimeError('audit unavailable')):
+            with self.assertRaises(RuntimeError):
+                aprobar_recibos_para_sello([self.recibo.pk], self.admin)
+
+        self.recibo.refresh_from_db()
+        self.assertTrue(self.recibo.notificado_consultoria)
+        self.assertIsNone(self.recibo.fecha_aprobacion_sello)
 
     def test_asignar_por_region(self):
         # crear un recibo adicional en la misma región y sin sello
@@ -189,12 +202,12 @@ class SellosCoreTests(TestCase):
                 estatus_sello_dorado='borrador',
             )
 
-        response = self.client.get(reverse('sellos:administracion'), {'numero_recibo': '90001', 'contribuyente': 'Usuario', 'estado': 'Caracas'})
+        response = self.client.get(reverse('sellos:administracion'), {'numero_recibo': '9000', 'contribuyente': 'Usuario', 'estado': 'Caracas'})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Página')
         self.assertEqual(response.context['page_obj'].paginator.per_page, 20)
         self.assertEqual(len(response.context['page_obj'].object_list), 20)
-        self.assertEqual(response.context['numero_filter'], '90001')
+        self.assertEqual(response.context['numero_filter'], '9000')
         self.assertEqual(response.context['contribuyente_filter'], 'Usuario')
         self.assertEqual(response.context['estado_filter'], 'Caracas')
         self.assertIn('Caracas', response.context['estados_disponibles'])

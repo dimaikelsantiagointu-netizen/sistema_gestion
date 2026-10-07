@@ -1,4 +1,3 @@
-from django.contrib import messages
 from django.utils import timezone
 
 from apps.auditoria.models import LogAuditoria
@@ -27,15 +26,20 @@ def registrar_auditoria(usuario, accion, descripcion, objeto_id=None):
 
 
 def aprobar_recibos_para_sello(recibo_ids, usuario):
-    recibos = Recibo.objects.filter(pk__in=recibo_ids, anulado=False)
-    for recibo in recibos:
-        recibo.aprobado_sello_dorado = True
-        recibo.estatus_sello_dorado = 'aprobado'
-        recibo.fecha_aprobacion_sello = timezone.now()
-        # Marcar como no notificado para que Consultoría lo detecte
-        recibo.notificado_consultoria = False
-        recibo.save(update_fields=['aprobado_sello_dorado', 'estatus_sello_dorado', 'fecha_aprobacion_sello', 'notificado_consultoria'])
-        registrar_auditoria(usuario, 'M', f'Aprobó el recibo N° {recibo.numero_recibo}', recibo.pk)
+    with transaction.atomic():
+        recibos = Recibo.objects.select_for_update().filter(pk__in=recibo_ids, anulado=False)
+        for recibo in recibos:
+            recibo.aprobado_sello_dorado = True
+            recibo.estatus_sello_dorado = 'aprobado'
+            recibo.fecha_aprobacion_sello = timezone.now()
+            recibo.notificado_consultoria = False
+            recibo.save(update_fields=[
+                'aprobado_sello_dorado',
+                'estatus_sello_dorado',
+                'fecha_aprobacion_sello',
+                'notificado_consultoria',
+            ])
+            registrar_auditoria(usuario, 'M', f'Aprobó el recibo N° {recibo.numero_recibo}', recibo.pk)
     return recibos
 
 

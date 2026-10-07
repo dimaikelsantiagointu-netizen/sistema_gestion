@@ -153,7 +153,7 @@
     {% endif %}
 
     {# 5. GESTIÓN DE CONTRATOS #}
-    {% if perms.users.veor_contratos or user.is_superuser %}
+    {% if perms.users.ver_gestor_contratos or user.is_superuser %}
     <a href="{% url 'contratos:lista' %}" class="group bg-white rounded-[2.5rem] p-8 shadow-sm hover:shadow-2xl hover:shadow-orange-100 hover:-translate-y-2 transition-all duration-500 border border-gray-100 flex flex-col relative overflow-hidden">
         <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50/50 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110 duration-700"></div>
 

@@ -5,6 +5,12 @@ from apps.territorio import views as territorio_views # <--- IMPORTANTE: Importa
 app_name = 'beneficiarios'
 
 urlpatterns = [
+    # --- Catálogo de categorías de visitas (solo superusuarios) ---
+    path('categorias-visitas/', views.categorias_visita, name='categorias_visita'),
+    path('categorias-visitas/nueva/', views.categoria_visita_crear, name='categoria_visita_crear'),
+    path('categorias-visitas/<int:pk>/editar/', views.categoria_visita_editar, name='categoria_visita_editar'),
+    path('categorias-visitas/<int:pk>/eliminar/', views.categoria_visita_eliminar, name='categoria_visita_eliminar'),
+
     # --- Gestión ---
     path('', views.lista_beneficiarios, name='lista'),
     path('nuevo/', views.crear_beneficiario, name='crear'),
@@ -35,7 +41,6 @@ urlpatterns = [
 
 
     path('gestion-documental/', views.gestion_documental, name='gestion_documental'),
-    path('expediente/<int:pk>/', views.expediente_detalle, name='expediente'),
 
     path('estadisticas/', views.beneficiarios_estadisticas, name='estadisticas'),
         path('estadisticas/tiempo/', views.estadisticas_tiempo, name='estadisticas_tiempo'),

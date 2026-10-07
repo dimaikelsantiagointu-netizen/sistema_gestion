@@ -179,10 +179,10 @@
                                 </div>
                                 <div>
                                     <span class="inline-block px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider mb-2 
-                                        {% if 'ASESORIA' in visita.motivo|upper %}bg-emerald-50 text-emerald-600
-                                        {% elif 'SOLICITUD' in visita.motivo|upper %}bg-amber-50 text-amber-600
+                                        {% if 'ASESOR' in visita.categoria.nombre|upper %}bg-emerald-50 text-emerald-600
+                                        {% elif 'SOLICITUD' in visita.categoria.nombre|upper %}bg-amber-50 text-amber-600
                                         {% else %}bg-blue-50 text-intu-blue{% endif %}">
-                                        {{ visita.get_motivo_display }}
+                                        {{ visita.categoria.nombre }}
                                     </span>
                                     <p class="text-[12px] text-slate-400 font-bold uppercase tracking-widest">{{ visita.fecha_registro|time:"H:i" }}</p>
                                 </div>
@@ -196,7 +196,7 @@
                             </p>
                             
                             {# SECCIÓN DE ATENCIÓN (Se muestra siempre que sea Asesoría o tenga un funcionario) #}
-                            {% if 'ASESORIA' in visita.motivo|upper or visita.funcionario_atiende %}
+                            {% if 'ASESOR' in visita.categoria.nombre|upper or visita.funcionario_atiende %}
                             <div class="flex flex-wrap gap-3 mt-2">
                                 {# Etiqueta Funcionario #}
                                 <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-xl border border-blue-100/50">
@@ -229,9 +229,12 @@
                                 <a href="{% url 'beneficiarios:editar_visita' visita.id %}" class="px-4 py-2 rounded-2xl bg-slate-50 text-slate-600 border border-slate-200 hover:bg-intu-blue hover:text-white transition-all text-[11px] font-black uppercase tracking-[0.2em]">
                                     <i class="fas fa-pen mr-2"></i> Editar
                                 </a>
-                                <a href="{% url 'beneficiarios:eliminar_visita' visita.id %}" onclick="return confirm('¿Eliminar esta visita? Esta acción no se puede deshacer.')" class="px-4 py-2 rounded-2xl bg-red-50 text-red-600 border border-red-100 hover:bg-red-600 hover:text-white transition-all text-[11px] font-black uppercase tracking-[0.2em]">
-                                    <i class="fas fa-trash-alt mr-2"></i> Eliminar
-                                </a>
+                                <form method="post" action="{% url 'beneficiarios:eliminar_visita' visita.id %}" onsubmit="return confirm('¿Eliminar esta visita? Esta acción no se puede deshacer.')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="px-4 py-2 rounded-2xl bg-red-50 text-red-600 border border-red-100 hover:bg-red-600 hover:text-white transition-all text-[11px] font-black uppercase tracking-[0.2em]">
+                                        <i class="fas fa-trash-alt mr-2"></i> Eliminar
+                                    </button>
+                                </form>
                             </div>
                             {% endif %}
 

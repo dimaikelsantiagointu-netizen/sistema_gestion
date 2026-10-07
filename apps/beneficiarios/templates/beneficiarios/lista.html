@@ -38,6 +38,12 @@
                class="flex-1 sm:flex-none px-6 py-4 text-[13px] font-black border-2 border-intu-blue text-intu-blue rounded-2xl hover:bg-intu-blue hover:text-white transition-all active:scale-95 tracking-wide flex items-center justify-center">
                 <i class="fas fa-walking mr-2 text-base"></i> Visita
             </a>
+            {% if user.is_superuser %}
+            <a href="{% url 'beneficiarios:categorias_visita' %}"
+               class="flex-1 sm:flex-none px-6 py-4 text-[13px] font-black border-2 border-slate-300 text-slate-600 rounded-2xl hover:bg-slate-700 hover:border-slate-700 hover:text-white transition-all active:scale-95 tracking-wide flex items-center justify-center">
+                <i class="fas fa-list-check mr-2 text-base"></i> Categorías de visitas
+            </a>
+            {% endif %}
             <a href="{% url 'beneficiarios:crear' %}" 
                class="w-full sm:w-auto px-6 py-4 text-[13px] font-black border-2 border-intu-red text-intu-red rounded-2xl hover:bg-intu-red hover:text-white transition-all active:scale-95 tracking-wide flex items-center justify-center">
                 <i class="fas fa-user-plus mr-2 text-base"></i> Nuevo registro

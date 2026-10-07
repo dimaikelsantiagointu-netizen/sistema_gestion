@@ -9,7 +9,6 @@ urlpatterns = [
     path('editar/<int:pk>/', views.PersonalUpdateView.as_view(), name='editar'),
     path('expediente/<int:pk>/', views.PersonalDetailView.as_view(), name='detalle'),
     
-    # Gestión de Documentos (Nombre sincronizado con el HTML)
+    # Gestión de Documentos
     path('expediente/<int:pk>/subir/', views.subir_archivo_personal, name='subir_documento'),
-    path('documento/eliminar/<int:doc_id>/', views.eliminar_documento_personal, name='eliminar_documento'),
 ]

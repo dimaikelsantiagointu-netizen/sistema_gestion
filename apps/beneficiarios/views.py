@@ -1,4 +1,5 @@
 import logging
+from functools import wraps
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -10,11 +11,16 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db import IntegrityError
+from django.core.exceptions import PermissionDenied
+from django.db import IntegrityError, transaction
+from django.db.models import Count, F, Q
+from django.db.models.deletion import ProtectedError
+from django.views.decorators.http import require_POST
 from datetime import date, timedelta
 
 # Importación de modelos locales
-from .models import Beneficiario, DocumentoExpediente, Visita
+from .forms import CategoriaVisitaForm
+from .models import Beneficiario, CategoriaVisita, DocumentoExpediente, Visita
 # Importación de modelos de territorio
 from apps.territorio.models import Estado, Municipio, Parroquia, Ciudad, Comuna, UnidadAdscrita
 
@@ -34,8 +40,90 @@ def _fecha_hace_anios(anios):
 def es_administrador(user):
     return user.is_authenticated and (user.is_superuser or getattr(user, 'rol', '') in ['admin', 'superadmin'])
 
+
+def solo_superusuario(view_func):
+    @wraps(view_func)
+    @login_required
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
 # ================================================================
-# 1. SECCIÓN: GESTIÓN INTEGRAL DE BENEFICIARIOS (CRUD Y LISTADOS)
+# 1. ADMINISTRACIÓN DEL CATÁLOGO DE CATEGORÍAS DE VISITAS
+# ================================================================
+
+@solo_superusuario
+def categorias_visita(request):
+    categorias = CategoriaVisita.objects.annotate(
+        total_visitas=Count('visitas')
+    ).order_by('orden', 'nombre')
+    return render(request, 'beneficiarios/categorias_visita_lista.html', {
+        'categorias': categorias,
+    })
+
+
+@solo_superusuario
+def categoria_visita_crear(request):
+    form = CategoriaVisitaForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        categoria = form.save(commit=False)
+        with transaction.atomic():
+            CategoriaVisita.objects.filter(orden__gte=categoria.orden).update(
+                orden=F('orden') + 1,
+            )
+            categoria.save()
+        messages.success(request, f'Categoría "{categoria.nombre}" creada.')
+        return redirect('beneficiarios:categorias_visita')
+    if request.method == 'GET':
+        ultimo_orden_activo = (
+            CategoriaVisita.objects.filter(activa=True)
+            .order_by('-orden')
+            .values_list('orden', flat=True)
+            .first()
+            or 0
+        )
+        form.fields['orden'].initial = ultimo_orden_activo + 1
+    return render(request, 'beneficiarios/categoria_visita_form.html', {
+        'form': form,
+        'titulo': 'Nueva categoría de visita',
+    })
+
+
+@solo_superusuario
+def categoria_visita_editar(request, pk):
+    categoria = get_object_or_404(CategoriaVisita, pk=pk)
+    form = CategoriaVisitaForm(request.POST or None, instance=categoria)
+    if request.method == 'POST' and form.is_valid():
+        categoria = form.save()
+        messages.success(request, f'Categoría "{categoria.nombre}" actualizada.')
+        return redirect('beneficiarios:categorias_visita')
+    return render(request, 'beneficiarios/categoria_visita_form.html', {
+        'form': form,
+        'titulo': 'Editar categoría de visita',
+        'categoria': categoria,
+    })
+
+
+@solo_superusuario
+@require_POST
+def categoria_visita_eliminar(request, pk):
+    categoria = get_object_or_404(CategoriaVisita, pk=pk)
+    nombre = categoria.nombre
+    try:
+        categoria.delete()
+        messages.success(request, f'Categoría "{nombre}" eliminada.')
+    except ProtectedError:
+        messages.error(
+            request,
+            'No se puede eliminar una categoría asociada a visitas. Puedes desactivarla para nuevas visitas.',
+        )
+    return redirect('beneficiarios:categorias_visita')
+
+
+# ================================================================
+# 2. SECCIÓN: GESTIÓN INTEGRAL DE BENEFICIARIOS (CRUD Y LISTADOS)
 # ================================================================
 
 @login_required
@@ -222,7 +310,8 @@ def editar_beneficiario(request, id):
         'GENERO_CHOICES': Beneficiario.GENERO_CHOICES,
     })
 
-@login_required
+@user_passes_test(es_administrador, login_url='beneficiarios:lista')
+@require_POST
 def eliminar_beneficiario(request, id):
     beneficiario = get_object_or_404(Beneficiario, id=id)
     nombre = beneficiario.nombre_completo
@@ -237,6 +326,15 @@ def registrar_visita(request):
         b_id = request.POST.get('beneficiario_id')
         if b_id:
             beneficiario = get_object_or_404(Beneficiario, id=b_id)
+            categoria_id = request.POST.get('categoria', '')
+            categoria = None
+            if categoria_id.isdigit():
+                categoria = CategoriaVisita.objects.filter(
+                    pk=int(categoria_id), activa=True
+                ).first()
+            if categoria is None:
+                messages.error(request, 'Selecciona una categoría de visita válida.')
+                return redirect('beneficiarios:registrar_visita')
             fecha_post = request.POST.get('fecha_registro')
             
             funcionario = request.POST.get('funcionario_atiende')
@@ -251,7 +349,7 @@ def registrar_visita(request):
             # Aquí es donde estaba el choque de nombres
             Visita.objects.create(
                 beneficiario=beneficiario,
-                motivo=request.POST.get('motivo'),
+                categoria=categoria,
                 descripcion=desc_original,
                 funcionario_atiende=funcionario,
                 # IZQUIERDA: Nombre en el Modelo (unidad_administrativa)
@@ -265,7 +363,7 @@ def registrar_visita(request):
             return redirect('beneficiarios:detalle', id=beneficiario.id)
     
     return render(request, 'beneficiarios/form_visita.html', {
-        'motivos': Visita.MOTIVO_CHOICES,
+        'categorias': CategoriaVisita.objects.filter(activa=True).order_by('orden', 'nombre'),
         'current_time': timezone.now(),
         'unidades': UnidadAdscrita.objects.all().order_by('nombre'),
         'visita': None,
@@ -293,7 +391,17 @@ def editar_visita(request, id):
     if request.method == 'POST':
         unidad_id = request.POST.get('unidad_adscrita')
         unidad_obj = UnidadAdscrita.objects.filter(id=unidad_id).first() if unidad_id and unidad_id.isdigit() else None
-        visita.motivo = request.POST.get('motivo')
+        categoria_id = request.POST.get('categoria', '')
+        categoria = None
+        if categoria_id.isdigit():
+            categoria = CategoriaVisita.objects.filter(
+                Q(activa=True) | Q(pk=visita.categoria_id),
+                pk=int(categoria_id),
+            ).first()
+        if categoria is None:
+            messages.error(request, 'Selecciona una categoría de visita válida.')
+            return redirect('beneficiarios:editar_visita', id=visita.id)
+        visita.categoria = categoria
         visita.descripcion = request.POST.get('descripcion')
         visita.funcionario_atiende = request.POST.get('funcionario_atiende')
         visita.unidad_administrativa = unidad_obj
@@ -307,13 +415,16 @@ def editar_visita(request, id):
         'titulo': 'Editar Visita',
         'boton': 'Guardar Cambios',
         'visita': visita,
-        'motivos': Visita.MOTIVO_CHOICES,
+        'categorias': CategoriaVisita.objects.filter(
+            Q(activa=True) | Q(pk=visita.categoria_id)
+        ).order_by('orden', 'nombre'),
         'current_time': visita.fecha_registro,
         'unidades': UnidadAdscrita.objects.all().order_by('nombre'),
         'is_editing': True,
     })
 
 @user_passes_test(es_administrador, login_url='beneficiarios:lista')
+@require_POST
 def eliminar_visita(request, id):
     visita = get_object_or_404(Visita, id=id)
     beneficiario_id = visita.beneficiario.id
@@ -375,7 +486,7 @@ def beneficiarios_estadisticas(request):
         'registrado_por__last_name'
     ).annotate(total=Count('id')).order_by('-total')
 
-    visitas_por_tipo = Visita.objects.filter(filtros_visita).values('motivo')\
+    visitas_por_tipo = Visita.objects.filter(filtros_visita).values('categoria__nombre')\
         .annotate(total=Count('id')).order_by('-total')
 
     # --- Nuevas métricas: visitas por hora y por día (lunes a sábado) ---
@@ -594,7 +705,8 @@ def exportar_excel(request):
 
         # Filtramos visitas con la lógica de Q
         visitas_qs = Visita.objects.filter(filtros_visita).select_related(
-            'beneficiario__estado', 'beneficiario__municipio', 'beneficiario__parroquia', 'unidad_administrativa'
+            'beneficiario__estado', 'beneficiario__municipio', 'beneficiario__parroquia',
+            'unidad_administrativa', 'categoria'
         ).order_by('-fecha_registro')
 
         for v in visitas_qs:
@@ -602,7 +714,7 @@ def exportar_excel(request):
                 v.fecha_registro.strftime('%d/%m/%Y %H:%M'),
                 f"{v.beneficiario.tipo_documento}-{v.beneficiario.documento_identidad}",
                 v.beneficiario.nombre_completo.upper(),
-                v.motivo.upper() if v.motivo else "N/A",
+                v.categoria.nombre.upper() if v.categoria_id else "N/A",
                 v.funcionario_atiende or 'N/A',
                 v.unidad_administrativa.nombre if getattr(v, 'unidad_administrativa', None) else 'N/A',
                 v.beneficiario.estado.nombre if getattr(v.beneficiario, 'estado', None) else 'N/A',
@@ -788,6 +900,7 @@ def expediente_beneficiario(request, id):
     })
 
 @login_required
+@require_POST
 def eliminar_documento(request, doc_id):
     documento = get_object_or_404(DocumentoExpediente, id=doc_id)
     b_id = documento.beneficiario.id  
@@ -796,7 +909,3 @@ def eliminar_documento(request, doc_id):
     documento.delete()
     messages.success(request, "Archivo eliminado del expediente.")
     return redirect('beneficiarios:expediente', id=b_id)
-
-def expediente_detalle(request, pk):
-    beneficiario = get_object_or_404(Beneficiario, pk=pk)
-    return render(request, 'beneficiarios/expediente_archivo.html', {'beneficiario': beneficiario})

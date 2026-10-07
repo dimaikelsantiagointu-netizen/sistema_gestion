@@ -124,10 +124,13 @@
                             <i class="fas fa-download text-xs"></i>
                             <span class="ml-2 text-[10px] font-black sm:hidden uppercase">Bajar</span>
                         </a>
-                        <a href="{% url 'beneficiarios:eliminar_documento' doc.id %}" onclick="return confirm('¿Eliminar definitivamente?')" class="flex-1 sm:flex-none h-10 px-4 sm:w-10 sm:px-0 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-intu-red hover:text-white transition-all shadow-sm" title="Eliminar">
-                            <i class="fas fa-trash-alt text-xs"></i>
-                            <span class="ml-2 text-[10px] font-black sm:hidden uppercase">Borrar</span>
-                        </a>
+                        <form method="post" action="{% url 'beneficiarios:eliminar_documento' doc.id %}" onsubmit="return confirm('¿Eliminar definitivamente?')">
+                            {% csrf_token %}
+                            <button type="submit" class="flex-1 sm:flex-none h-10 px-4 sm:w-10 sm:px-0 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-intu-red hover:text-white transition-all shadow-sm" title="Eliminar">
+                                <i class="fas fa-trash-alt text-xs"></i>
+                                <span class="ml-2 text-[10px] font-black sm:hidden uppercase">Borrar</span>
+                            </button>
+                        </form>
                     </div>
                 </div>
                 {% empty %}

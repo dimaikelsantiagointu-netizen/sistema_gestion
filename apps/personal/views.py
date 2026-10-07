@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import CreateView, ListView, DetailView, UpdateView
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.db.models import Q, Count
+from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin 
 
@@ -126,17 +126,3 @@ def subir_archivo_personal(request, pk):
         else:
             messages.error(request, "NO SE DETECTÓ NINGÚN ARCHIVO.")
     return redirect('personal:detalle', pk=pk)
-
-@login_required
-def eliminar_documento_personal(request, doc_id):
-    documento = get_object_or_404(DocumentoPersonal, id=doc_id)
-    persona_id = documento.personal.id
-    nombre = documento.nombre_documento
-    try:
-        documento.delete()
-        messages.warning(request, f"DOCUMENTO ELIMINADO: {nombre}")
-        logger_personal.info(f"FILE_DELETE | DOC: {nombre} | BY: {request.user}")
-    except Exception as e:
-        logger_personal.error(f"FILE_DELETE_ERROR: {str(e)}")
-        messages.error(request, "ERROR AL ELIMINAR EL DOCUMENTO.")
-    return redirect('personal:detalle', pk=persona_id)
