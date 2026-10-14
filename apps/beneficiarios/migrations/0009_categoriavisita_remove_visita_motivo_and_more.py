@@ -50,6 +50,10 @@ ETIQUETAS_HISTORICAS = {
     'OTRO': 'Otros',
 }
 
+ALIAS_CATEGORIAS = {
+    'OTRO': 'OTROS',
+}
+
 
 def migrar_motivos_a_categorias(apps, schema_editor):
     CategoriaVisita = apps.get_model('beneficiarios', 'CategoriaVisita')
@@ -66,7 +70,8 @@ def migrar_motivos_a_categorias(apps, schema_editor):
     alias_historico = 0
     visitas = Visita.objects.using(schema_editor.connection.alias).all().iterator()
     for visita in visitas:
-        categoria = categorias_por_codigo.get(visita.motivo)
+        codigo_categoria = ALIAS_CATEGORIAS.get(visita.motivo, visita.motivo)
+        categoria = categorias_por_codigo.get(codigo_categoria)
         if categoria is None:
             nombre = ETIQUETAS_HISTORICAS.get(
                 visita.motivo,

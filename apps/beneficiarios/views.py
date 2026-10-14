@@ -653,7 +653,6 @@ def estadisticas_tiempo(request):
     return render(request, 'beneficiarios/estadisticas_tiempo.html', context)
 
 from django.db.models import Q
-from django.utils.timezone import now
 
 @login_required
 def exportar_excel(request):
@@ -683,6 +682,7 @@ def exportar_excel(request):
         wb = openpyxl.Workbook()
         header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
         white_font = Font(color="FFFFFF", bold=True, size=11)
+        fecha_generacion = timezone.localtime(timezone.now())
 
         # --- HOJA 1: RESUMEN Y FILTROS ---
         ws_resumen = wb.active
@@ -693,7 +693,7 @@ def exportar_excel(request):
         ws_resumen.append(["RANGO DESDE:", f_inicio if f_inicio else "HISTÓRICO"])
         ws_resumen.append(["RANGO HASTA:", f_fin if f_fin else "HOY"])
         ws_resumen.append([])
-        ws_resumen.append(["FECHA DE GENERACIÓN:", now().strftime("%d/%m/%Y %H:%M")])
+        ws_resumen.append(["FECHA DE GENERACIÓN:", fecha_generacion.strftime("%d/%m/%Y %H:%M")])
 
         # --- HOJA 2: VISITAS (EL DETALLE QUE NECESITAS) ---
         ws_vis = wb.create_sheet(title="Detalle de Visitas")
@@ -711,7 +711,7 @@ def exportar_excel(request):
 
         for v in visitas_qs:
             ws_vis.append([
-                v.fecha_registro.strftime('%d/%m/%Y %H:%M'),
+                timezone.localtime(v.fecha_registro).strftime('%d/%m/%Y %H:%M'),
                 f"{v.beneficiario.tipo_documento}-{v.beneficiario.documento_identidad}",
                 v.beneficiario.nombre_completo.upper(),
                 v.categoria.nombre.upper() if v.categoria_id else "N/A",
@@ -737,7 +737,7 @@ def exportar_excel(request):
                     except Exception:
                         edad = ''
                 ws_ben.append([
-                    b.fecha_creacion.strftime('%d/%m/%Y') if b.fecha_creacion else "N/A",
+                        timezone.localtime(b.fecha_creacion).strftime('%d/%m/%Y') if b.fecha_creacion else "N/A",
                     f"{b.tipo_documento}-{b.documento_identidad}",
                     b.nombre_completo.upper(),
                     b.telefono or "N/A",
@@ -771,7 +771,7 @@ def exportar_excel(request):
         # 5. Envío de respuesta
         tipo_str = "COMPLETO" if tipo == "completo" else "PARCIAL"
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="Reporte_INTU_{tipo_str}_{now().strftime("%d%m%Y")}.xlsx"'
+        response['Content-Disposition'] = f'attachment; filename="Reporte_INTU_{tipo_str}_{fecha_generacion.strftime("%d%m%Y")}.xlsx"'
         wb.save(response)
         return response
 

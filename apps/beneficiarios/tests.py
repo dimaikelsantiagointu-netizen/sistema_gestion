@@ -1,3 +1,8 @@
+import io
+from datetime import datetime, timezone as datetime_timezone
+from unittest.mock import patch
+
+import openpyxl
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -149,6 +154,35 @@ class CategoriaVisitaTests(TestCase):
         self.assertRedirects(response, reverse('beneficiarios:detalle', args=[beneficiario.pk]))
         visita = Visita.objects.get(beneficiario=beneficiario)
         self.assertEqual(visita.categoria, categoria)
+
+    def test_export_report_formats_visit_and_generation_dates_in_caracas_time(self):
+        beneficiario = self.crear_beneficiario()
+        categoria = CategoriaVisita.objects.get(codigo='reunion')
+        Visita.objects.create(
+            beneficiario=beneficiario,
+            categoria=categoria,
+            descripcion='Atención cercana a medianoche UTC',
+            fecha_registro=datetime(2026, 10, 14, 1, 30, tzinfo=datetime_timezone.utc),
+        )
+        self.client.force_login(self.regular_user)
+        fecha_generacion_utc = datetime(
+            2026, 10, 14, 2, 30, tzinfo=datetime_timezone.utc
+        )
+
+        with patch('apps.beneficiarios.views.timezone.now', return_value=fecha_generacion_utc):
+            response = self.client.get(reverse('beneficiarios:exportar_excel'))
+
+        self.assertEqual(200, response.status_code)
+        workbook = openpyxl.load_workbook(io.BytesIO(response.content), data_only=True)
+        self.assertEqual(
+            '13/10/2026 22:30',
+            workbook['Control de Reporte']['B6'].value,
+        )
+        self.assertEqual(
+            '13/10/2026 21:30',
+            workbook['Detalle de Visitas']['A2'].value,
+        )
+        self.assertIn('Reporte_INTU_PARCIAL_13102026.xlsx', response['Content-Disposition'])
 
     def test_visit_delete_requires_post_and_preserves_history_on_get(self):
         beneficiario = self.crear_beneficiario()
