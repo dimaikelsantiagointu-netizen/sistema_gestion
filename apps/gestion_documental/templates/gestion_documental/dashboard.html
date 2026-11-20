@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión Documental | SICSI-INTU{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-[1600px] px-4 pb-12 sm:px-6">
+    {% include 'gestion_documental/_navigation.html' %}
+    {% include 'gestion_documental/_messages.html' %}
+
+    <div class="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+        <div class="flex items-start gap-5">
+            <a href="{% url 'home' %}" class="mt-1 flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-400 shadow-sm transition-all duration-300 hover:border-intu-red/30 hover:text-intu-red hover:shadow-md active:scale-90 group" aria-label="Regresar al centro de control">
+                <i class="fas fa-arrow-left text-xl transition-transform group-hover:-translate-x-1"></i>
+            </a>
+            <div>
+                <p class="mb-2 text-[11px] font-black uppercase tracking-[0.3em] text-gray-400">Títulos y documentos territoriales</p>
+                <h1 class="text-3xl font-black uppercase leading-none tracking-tighter text-intu-blue sm:text-4xl">Gestión <span class="italic text-intu-red">Documental</span></h1>
+                <p class="mt-3 text-sm font-medium text-slate-500">Consulta los expedientes por territorio, estatus, fecha y titular.</p>
+            </div>
+        </div>
+        <a href="{% url 'gestion_documental:crear' %}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-intu-red px-6 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-red-100 transition hover:bg-red-800">
+            <i class="fas fa-plus"></i> Registrar título
+        </a>
+    </div>
+
+    <form method="get" class="mb-8 rounded-[2rem] border border-gray-100 bg-white p-5 shadow-sm sm:p-7">
+        <div class="mb-5 flex items-center gap-3">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-intu-blue"><i class="fas fa-filter"></i></span>
+            <div>
+                <h2 class="text-xs font-black uppercase tracking-widest text-slate-800">Filtros del dashboard</h2>
+                <p class="text-[11px] text-slate-400">Aplica uno o varios criterios para actualizar los indicadores.</p>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            {% for field in filtros %}
+            <label class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                {{ field.label }}
+                {{ field }}
+                {% for error in field.errors %}<span class="mt-1 block normal-case text-red-600">{{ error }}</span>{% endfor %}
+            </label>
+            {% endfor %}
+        </div>
+        {% for error in filtros.non_field_errors %}<p class="mt-3 text-sm font-bold text-red-600">{{ error }}</p>{% endfor %}
+        <div class="mt-5 flex flex-wrap gap-3">
+            <button type="submit" class="rounded-xl bg-intu-blue px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-900">Aplicar filtros</button>
+            <a href="{% url 'gestion_documental:dashboard' %}" class="rounded-xl border border-slate-200 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50">Limpiar</a>
+        </div>
+    </form>
+
+    <div class="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="flex items-center gap-4 rounded-[1.7rem] border border-gray-100 bg-white p-6 shadow-sm">
+            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-50 text-2xl text-cyan-700"><i class="fas fa-folder-open"></i></div>
+            <div><p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Expedientes filtrados</p><p class="text-3xl font-black text-intu-blue">{{ total_expedientes }}</p></div>
+        </div>
+        <div class="flex items-center gap-4 rounded-[1.7rem] border border-gray-100 bg-white p-6 shadow-sm">
+            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-blue-700"><i class="fas fa-map"></i></div>
+            <div><p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Estados representados</p><p class="text-3xl font-black text-intu-blue">{{ por_estado|length }}</p></div>
+        </div>
+        <div class="flex items-center gap-4 rounded-[1.7rem] border border-gray-100 bg-white p-6 shadow-sm">
+            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-2xl text-emerald-700"><i class="fas fa-tags"></i></div>
+            <div><p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Estatus presentes</p><p class="text-3xl font-black text-intu-blue">{{ por_estatus|length }}</p></div>
+        </div>
+        <div class="flex items-center gap-4 rounded-[1.7rem] border border-gray-100 bg-white p-6 shadow-sm">
+            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-2xl text-rose-700"><i class="fas fa-user-tag"></i></div>
+            <div><p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Titulares presentes</p><p class="text-3xl font-black text-intu-blue">{{ por_titular|length }}</p></div>
+        </div>
+    </div>
+
+    <div class="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <section class="rounded-[2rem] border border-gray-100 bg-white p-6 shadow-sm">
+            <div class="mb-5 flex items-center gap-3"><i class="fas fa-map-marker-alt text-intu-red"></i><h2 class="text-xs font-black uppercase tracking-widest text-intu-blue">Expedientes por estado</h2></div>
+            <div class="space-y-4">
+                {% for item in por_estado %}
+                <div><div class="mb-1 flex justify-between gap-3 text-xs"><span class="truncate font-bold text-slate-600">{{ item.label }}</span><span class="font-black text-intu-blue">{{ item.total }}</span></div><div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-cyan-600" style="width: {{ item.porcentaje }}%"></div></div></div>
+                {% empty %}<p class="py-6 text-center text-xs font-medium text-slate-400">Sin datos para mostrar.</p>{% endfor %}
+            </div>
+        </section>
+        <section class="rounded-[2rem] border border-gray-100 bg-white p-6 shadow-sm">
+            <div class="mb-5 flex items-center gap-3"><i class="fas fa-tags text-intu-red"></i><h2 class="text-xs font-black uppercase tracking-widest text-intu-blue">Expedientes por estatus</h2></div>
+            <div class="space-y-4">
+                {% for item in por_estatus %}
+                <div><div class="mb-1 flex justify-between gap-3 text-xs"><span class="truncate font-bold text-slate-600">{{ item.label }}</span><span class="font-black text-intu-blue">{{ item.total }}</span></div><div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-emerald-500" style="width: {{ item.porcentaje }}%"></div></div></div>
+                {% empty %}<p class="py-6 text-center text-xs font-medium text-slate-400">Sin datos para mostrar.</p>{% endfor %}
+            </div>
+        </section>
+        <section class="rounded-[2rem] border border-gray-100 bg-white p-6 shadow-sm">
+            <div class="mb-5 flex items-center gap-3"><i class="fas fa-user-tag text-intu-red"></i><h2 class="text-xs font-black uppercase tracking-widest text-intu-blue">Principales titulares</h2></div>
+            <div class="space-y-4">
+                {% for item in por_titular %}
+                <div><div class="mb-1 flex justify-between gap-3 text-xs"><span class="truncate font-bold text-slate-600">{{ item.label }}</span><span class="font-black text-intu-blue">{{ item.total }}</span></div><div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-rose-500" style="width: {{ item.porcentaje }}%"></div></div></div>
+                {% empty %}<p class="py-6 text-center text-xs font-medium text-slate-400">Sin datos para mostrar.</p>{% endfor %}
+            </div>
+        </section>
+        <section class="rounded-[2rem] border border-gray-100 bg-white p-6 shadow-sm">
+            <div class="mb-5 flex items-center gap-3"><i class="fas fa-calendar-days text-intu-red"></i><h2 class="text-xs font-black uppercase tracking-widest text-intu-blue">Expedientes por fecha</h2></div>
+            <div class="space-y-4">
+                {% for item in por_fecha %}
+                <div><div class="mb-1 flex justify-between gap-3 text-xs"><span class="truncate font-bold text-slate-600">{{ item.label|date:'d/m/Y' }}</span><span class="font-black text-intu-blue">{{ item.total }}</span></div><div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-amber-500" style="width: {{ item.porcentaje }}%"></div></div></div>
+                {% empty %}<p class="py-6 text-center text-xs font-medium text-slate-400">Sin datos para mostrar.</p>{% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <section class="overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm">
+        <div class="flex flex-col justify-between gap-3 border-b border-slate-100 p-6 sm:flex-row sm:items-center">
+            <div><h2 class="text-xs font-black uppercase tracking-widest text-intu-blue">Registros recientes</h2><p class="mt-1 text-[11px] text-slate-400">Máximo 10 expedientes según los filtros seleccionados.</p></div>
+            <a href="{% url 'gestion_documental:lista' %}" class="text-[10px] font-black uppercase tracking-widest text-intu-red hover:text-red-800">Ver todos <i class="fas fa-arrow-right ml-1"></i></a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[720px] text-left">
+                <thead class="bg-slate-50 text-[10px] uppercase tracking-widest text-slate-400"><tr><th class="px-6 py-4">Código</th><th class="px-6 py-4">Titular</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4">Estatus</th><th class="px-6 py-4">Fecha</th><th class="px-6 py-4"></th></tr></thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for expediente in expedientes_recientes %}
+                    <tr class="text-xs hover:bg-slate-50/70"><td class="px-6 py-4 font-black text-intu-blue">{{ expediente.codigo }}</td><td class="px-6 py-4 font-bold text-slate-700">{{ expediente.titular.nombre }}</td><td class="px-6 py-4">{{ expediente.estado.nombre }}</td><td class="px-6 py-4">{{ expediente.estatus.nombre }}</td><td class="px-6 py-4">{{ expediente.fecha_registro|date:'d/m/Y' }}</td><td class="px-6 py-4 text-right"><a href="{% url 'gestion_documental:detalle' expediente.pk %}" class="font-black uppercase tracking-widest text-intu-red">Ver</a></td></tr>
+                    {% empty %}<tr><td colspan="6" class="px-6 py-12 text-center text-xs font-bold text-slate-400">Todavía no hay expedientes registrados.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

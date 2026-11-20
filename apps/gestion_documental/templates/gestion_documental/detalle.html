@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ expediente.codigo }} | Gestión Documental{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 pb-12 sm:px-6">
+    {% include 'gestion_documental/_navigation.html' %}
+    {% include 'gestion_documental/_messages.html' %}
+
+    <div class="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div class="flex items-start gap-5">
+            <a href="{% url 'home' %}" class="mt-1 flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-400 shadow-sm transition-all duration-300 hover:border-intu-red/30 hover:text-intu-red hover:shadow-md active:scale-90 group" aria-label="Regresar al centro de control">
+                <i class="fas fa-arrow-left text-xl transition-transform group-hover:-translate-x-1"></i>
+            </a>
+            <div><p class="mb-2 text-[11px] font-black uppercase tracking-[0.3em] text-gray-400">Expediente documental</p><h1 class="text-3xl font-black uppercase tracking-tighter text-intu-blue sm:text-4xl">{{ expediente.codigo }}</h1><p class="mt-2 text-sm font-semibold text-slate-500">{{ expediente.titular }}</p></div>
+        </div>
+        <a href="{% url 'gestion_documental:editar' expediente.pk %}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-intu-blue px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white"><i class="fas fa-pen"></i> Editar expediente</a>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <section class="space-y-6 lg:col-span-2">
+            <div class="rounded-[2rem] border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
+                <div class="mb-6 flex items-center justify-between gap-4"><h2 class="text-xs font-black uppercase tracking-widest text-intu-blue">Información del registro</h2><span class="rounded-xl bg-cyan-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-cyan-800">{{ expediente.estatus.nombre }}</span></div>
+                <dl class="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
+                    <div><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Titular</dt><dd class="mt-1 text-sm font-bold text-slate-700">{{ expediente.titular.nombre }}{% if expediente.titular.documento_identidad %}<span class="block text-xs font-medium text-slate-400">{{ expediente.titular.documento_identidad }}</span>{% endif %}</dd></div>
+                    <div><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha de registro</dt><dd class="mt-1 text-sm font-bold text-slate-700">{{ expediente.fecha_registro|date:'d/m/Y' }}</dd></div>
+                    <div><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Número de protocolo</dt><dd class="mt-1 text-sm font-bold text-slate-700">{{ expediente.numero_protocolo }}</dd></div>
+                    <div><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Número de tomo</dt><dd class="mt-1 text-sm font-bold text-slate-700">{{ expediente.numero_tomo }}</dd></div>
+                    <div><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Superficie</dt><dd class="mt-1 text-sm font-bold text-slate-700">{{ expediente.superficie_m2 }} m² <span class="font-medium text-slate-400">({{ expediente.superficie_hectareas }} ha)</span></dd></div>
+                    <div><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</dt><dd class="mt-1 text-sm font-bold text-slate-700">{{ expediente.estado.nombre }}</dd></div>
+                    <div><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Municipio</dt><dd class="mt-1 text-sm font-bold text-slate-700">{{ expediente.municipio.nombre }}</dd></div>
+                    <div><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Parroquia</dt><dd class="mt-1 text-sm font-bold text-slate-700">{{ expediente.parroquia.nombre }}</dd></div>
+                    <div><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Comuna</dt><dd class="mt-1 text-sm font-bold text-slate-700">{{ expediente.comuna.nombre|default:'No especificada' }}</dd></div>
+                    <div class="sm:col-span-2"><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Dirección</dt><dd class="mt-1 whitespace-pre-line text-sm font-semibold text-slate-700">{{ expediente.direccion }}</dd></div>
+                </dl>
+            </div>
+
+            <div class="rounded-[2rem] border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
+                <h2 class="mb-5 text-xs font-black uppercase tracking-widest text-intu-blue">Linderos y observaciones</h2>
+                <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div class="rounded-xl bg-slate-50 p-4"><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Norte</dt><dd class="mt-2 whitespace-pre-line text-sm font-semibold text-slate-700">{{ expediente.lindero_norte }}</dd></div>
+                    <div class="rounded-xl bg-slate-50 p-4"><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Sur</dt><dd class="mt-2 whitespace-pre-line text-sm font-semibold text-slate-700">{{ expediente.lindero_sur }}</dd></div>
+                    <div class="rounded-xl bg-slate-50 p-4"><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Este</dt><dd class="mt-2 whitespace-pre-line text-sm font-semibold text-slate-700">{{ expediente.lindero_este }}</dd></div>
+                    <div class="rounded-xl bg-slate-50 p-4"><dt class="text-[10px] font-black uppercase tracking-widest text-slate-400">Oeste</dt><dd class="mt-2 whitespace-pre-line text-sm font-semibold text-slate-700">{{ expediente.lindero_oeste }}</dd></div>
+                    {% if expediente.observaciones %}<div class="rounded-xl bg-amber-50/70 p-4 sm:col-span-2"><dt class="text-[10px] font-black uppercase tracking-widest text-amber-700">Observaciones</dt><dd class="mt-2 whitespace-pre-line text-sm font-medium text-slate-700">{{ expediente.observaciones }}</dd></div>{% endif %}
+                </dl>
+            </div>
+        </section>
+
+        <aside>
+            <section class="rounded-[2rem] border border-gray-100 bg-white p-6 shadow-sm">
+                <div class="mb-5 flex items-center justify-between"><h2 class="text-xs font-black uppercase tracking-widest text-intu-blue">Archivos PDF</h2><span class="rounded-lg bg-red-50 px-2 py-1 text-[10px] font-black text-red-600">{{ expediente.archivos.count }}</span></div>
+                <div class="space-y-3">
+                    {% for archivo in expediente.archivos.all %}
+                    <div class="rounded-2xl border border-slate-100 p-4">
+                        <div class="flex items-start gap-3"><i class="fas fa-file-pdf mt-1 text-xl text-red-500"></i><div class="min-w-0 flex-1"><p class="break-words text-xs font-bold text-slate-700">{{ archivo.nombre_original }}</p><p class="mt-1 text-[10px] text-slate-400">{{ archivo.fecha_subida|date:'d/m/Y H:i' }}</p></div></div>
+                        <div class="mt-3 flex items-center justify-between">
+                            <a href="{% url 'gestion_documental:descargar_archivo' expediente.pk archivo.pk %}" class="text-[10px] font-black uppercase tracking-widest text-intu-blue hover:text-intu-red"><i class="fas fa-download mr-1"></i> Descargar</a>
+                            <form method="post" action="{% url 'gestion_documental:eliminar_archivo' expediente.pk archivo.pk %}" onsubmit="return confirm('¿Eliminar este archivo PDF?');">
+                                {% csrf_token %}<button type="submit" class="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-800">Eliminar</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% empty %}<p class="py-6 text-center text-xs font-semibold text-slate-400">No hay archivos adjuntos.</p>{% endfor %}
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+{% endblock %}

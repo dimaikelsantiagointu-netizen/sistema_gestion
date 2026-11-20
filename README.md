@@ -207,7 +207,7 @@ apps/
 ├── 📁 contratos/                         # 📑 Gestión de Contratos
 ├── 📁 sellos/                            # 🏷️ Sellos Dorados
 ├── 📁 recibos/                           # 🧾 Generación de Recibos
-└── 📁 expedientes/                       # 📂 Gestión Documental
+└── 📁 expedientes/                       # 📂 Gestión de Expedientes
 ```
 
 ---
@@ -333,7 +333,7 @@ class NombreAppConfig(AppConfig):
 - **🔲 Contratos** - Creación y seguimiento de contratos
 - **🔲 Pagos** - Registro y control de pagos
 - **🔲 Recibos** - Generación de comprobantes
-- **🔲 Expedientes** - Gestión documental
+- **🔲 Gestión de Expedientes** - Expedientes digitales de ciudadanos y personal
 
 ### Crear Nuevo Módulo
 ```bash

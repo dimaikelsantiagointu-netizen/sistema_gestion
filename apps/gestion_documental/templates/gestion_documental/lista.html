@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Expedientes Documentales | SICSI-INTU{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-[1600px] px-4 pb-12 sm:px-6">
+    {% include 'gestion_documental/_navigation.html' %}
+    {% include 'gestion_documental/_messages.html' %}
+
+    <div class="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+        <div class="flex items-start gap-5">
+            <a href="{% url 'home' %}" class="mt-1 flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-400 shadow-sm transition-all duration-300 hover:border-intu-red/30 hover:text-intu-red hover:shadow-md active:scale-90 group" aria-label="Regresar al centro de control">
+                <i class="fas fa-arrow-left text-xl transition-transform group-hover:-translate-x-1"></i>
+            </a>
+            <div><p class="mb-2 text-[11px] font-black uppercase tracking-[0.3em] text-gray-400">Títulos y documentos</p><h1 class="text-3xl font-black uppercase tracking-tighter text-intu-blue sm:text-4xl">Expedientes <span class="italic text-intu-red">Registrados</span></h1></div>
+        </div>
+        <a href="{% url 'gestion_documental:crear' %}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-intu-red px-6 py-4 text-xs font-black uppercase tracking-widest text-white"><i class="fas fa-plus"></i> Nuevo expediente</a>
+    </div>
+
+    <form method="get" class="mb-6 grid grid-cols-1 gap-4 rounded-[2rem] border border-gray-100 bg-white p-5 shadow-sm sm:grid-cols-2 xl:grid-cols-7">
+        {% for field in filtros %}
+        <label class="text-[10px] font-black uppercase tracking-widest text-slate-500">{{ field.label }}{{ field }}{% for error in field.errors %}<span class="mt-1 block normal-case text-red-600">{{ error }}</span>{% endfor %}</label>
+        {% endfor %}
+        <label for="per-page" class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+            Registros por página
+            <select id="per-page" name="per_page" class="block w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-intu-blue focus:bg-white focus:ring-4 focus:ring-intu-blue/5">
+                {% for option in page_size_options %}
+                <option value="{{ option }}" {% if option == per_page %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="flex items-end gap-2"><button class="flex-1 rounded-xl bg-intu-blue px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white" type="submit">Filtrar</button><a class="rounded-xl border border-slate-200 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500" href="{% url 'gestion_documental:lista' %}">Limpiar</a></div>
+    </form>
+
+    <section class="overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5"><h2 class="text-xs font-black uppercase tracking-widest text-intu-blue">Resultados</h2><span class="text-[11px] font-bold text-slate-400">{{ pagina.paginator.count }} registros</span></div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[900px] text-left">
+                <thead class="bg-slate-50 text-[10px] uppercase tracking-widest text-slate-400"><tr><th class="px-5 py-4">Código</th><th class="px-5 py-4">Titular</th><th class="px-5 py-4">Ubicación</th><th class="px-5 py-4">Protocolo / tomo</th><th class="px-5 py-4">Área</th><th class="px-5 py-4">Estatus</th><th class="px-5 py-4">Fecha</th><th class="px-5 py-4"></th></tr></thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for expediente in pagina %}
+                    <tr class="text-xs hover:bg-slate-50/70">
+                        <td class="whitespace-nowrap px-5 py-4 font-black text-intu-blue">{{ expediente.codigo }}</td>
+                        <td class="px-5 py-4 font-bold text-slate-700">{{ expediente.titular.nombre }}</td>
+                        <td class="px-5 py-4">{{ expediente.municipio.nombre }}, {{ expediente.estado.nombre }}</td>
+                        <td class="px-5 py-4">{{ expediente.numero_protocolo }} / {{ expediente.numero_tomo }}</td>
+                        <td class="whitespace-nowrap px-5 py-4">{{ expediente.superficie_m2 }} m²</td>
+                        <td class="px-5 py-4"><span class="rounded-lg bg-cyan-50 px-2 py-1 font-bold text-cyan-800">{{ expediente.estatus.nombre }}</span></td>
+                        <td class="whitespace-nowrap px-5 py-4">{{ expediente.fecha_registro|date:'d/m/Y' }}</td>
+                        <td class="whitespace-nowrap px-5 py-4 text-right"><a href="{% url 'gestion_documental:detalle' expediente.pk %}" class="font-black uppercase tracking-widest text-intu-red">Abrir</a></td>
+                    </tr>
+                    {% empty %}<tr><td colspan="8" class="px-6 py-12 text-center text-xs font-bold text-slate-400">No se encontraron expedientes con esos criterios.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if pagina.has_other_pages %}
+        <div class="flex items-center justify-between border-t border-slate-100 px-6 py-4 text-[11px] font-bold text-slate-500">
+            <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }} · {{ pagina.paginator.count }} registros · {{ per_page }} por página</span>
+            <div class="flex gap-2">
+                {% if pagina.has_previous %}<a class="rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50" href="?{% if query_params %}{{ query_params.urlencode }}&amp;{% endif %}page={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+                {% if pagina.has_next %}<a class="rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50" href="?{% if query_params %}{{ query_params.urlencode }}&amp;{% endif %}page={{ pagina.next_page_number }}">Siguiente</a>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

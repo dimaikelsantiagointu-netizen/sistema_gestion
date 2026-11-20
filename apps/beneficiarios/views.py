@@ -835,7 +835,7 @@ def check_documento(request):
     return JsonResponse({'exists': exists})
 
 # ================================================================
-# 3. SECCIÓN: ARCHIVO CENTRAL Y EXPEDIENTES DIGITALES
+# 3. SECCIÓN: GESTIÓN DE EXPEDIENTES DIGITALES
 # ================================================================
 
 def gestion_documental(request):

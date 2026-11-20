@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'apps.personal',
     'apps.contratos', 
     'apps.territorio',
+    'apps.gestion_documental.apps.GestionDocumentalConfig',
     'apps.auditoria', 
 ]
 
@@ -96,6 +97,9 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+PRIVATE_MEDIA_ROOT = Path(
+    os.getenv('PRIVATE_MEDIA_ROOT', BASE_DIR / 'private_media'),
+)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

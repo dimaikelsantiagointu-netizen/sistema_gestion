@@ -1,0 +1,8 @@
+<div class="{{ wrapper_class|default:'' }}">
+    <label for="{{ field.id_for_label }}" class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-600">
+        {{ field.label }}{% if field.field.required %}<span class="text-intu-red"> *</span>{% endif %}
+    </label>
+    {{ field }}
+    {% if field.help_text %}<p class="mt-1 text-[10px] font-medium text-slate-400">{{ field.help_text }}</p>{% endif %}
+    {% for error in field.errors %}<p class="mt-1 text-[11px] font-bold text-red-600">{{ error }}</p>{% endfor %}
+</div>
