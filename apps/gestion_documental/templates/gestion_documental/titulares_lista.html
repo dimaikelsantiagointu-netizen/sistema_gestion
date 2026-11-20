@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Titulares | Gestión Documental{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
+    {% include 'gestion_documental/_navigation.html' %}
+    {% include 'gestion_documental/_messages.html' %}
+    <div class="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div class="flex items-start gap-5">
+            <a href="{% url 'home' %}" class="mt-1 flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-400 shadow-sm transition-all duration-300 hover:border-intu-red/30 hover:text-intu-red hover:shadow-md active:scale-90 group" aria-label="Regresar al centro de control">
+                <i class="fas fa-arrow-left text-xl transition-transform group-hover:-translate-x-1"></i>
+            </a>
+            <div><p class="mb-2 text-[11px] font-black uppercase tracking-[0.3em] text-gray-400">Catálogo documental</p><h1 class="text-3xl font-black uppercase tracking-tighter text-intu-blue">Titulares</h1></div>
+        </div>
+        <a href="{% url 'gestion_documental:crear_titular' %}" class="inline-flex items-center gap-2 rounded-xl bg-intu-red px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white"><i class="fas fa-plus"></i> Agregar titular</a>
+    </div>
+    <section class="overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[600px] text-left">
+                <thead class="bg-slate-50 text-[10px] uppercase tracking-widest text-slate-400"><tr><th class="px-6 py-4">Nombre</th><th class="px-6 py-4">Cédula / RIF</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4"></th></tr></thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for titular in titulares %}
+                    <tr class="text-xs"><td class="px-6 py-4 font-bold text-slate-700">{{ titular.nombre }}</td><td class="px-6 py-4 text-slate-500">{{ titular.documento_identidad|default:'—' }}</td><td class="px-6 py-4"><span class="{% if titular.activo %}bg-emerald-50 text-emerald-700{% else %}bg-slate-100 text-slate-500{% endif %} rounded-lg px-2 py-1 font-bold">{% if titular.activo %}Activo{% else %}Inactivo{% endif %}</span></td><td class="px-6 py-4 text-right"><a href="{% url 'gestion_documental:editar_titular' titular.pk %}" class="font-black uppercase tracking-widest text-intu-red">Editar</a></td></tr>
+                    {% empty %}<tr><td colspan="4" class="px-6 py-12 text-center text-xs font-bold text-slate-400">No hay titulares registrados.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -27,5 +27,6 @@ DATABASES = {
         # Host y Puerto
         'HOST': os.environ.get('DB_HOST', 'localhost'), # Si no está en .env, usa 'localhost'
         'PORT': os.environ.get('DB_PORT', '5432'),     # Si no está en .env, usa '5432'
+        'DISABLE_SERVER_SIDE_CURSORS': True,
     }
 }

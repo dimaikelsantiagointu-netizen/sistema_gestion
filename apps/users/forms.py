@@ -15,7 +15,9 @@ MODULO_PERMISSIONS = [
     "ver_gestor_pagos",
     "ver_gestor_contratos", 
     "ver_gestor_sellos", 
+    "ver_gestor_expedientes",
     "ver_gestor_documental",
+    "gestionar_catalogos_documentales",
     "ver_gestor_bienes",
     "ver_gestion_geografica",
     "ver_gestor_personal"

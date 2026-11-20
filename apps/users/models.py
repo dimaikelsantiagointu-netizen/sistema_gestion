@@ -34,7 +34,12 @@ class Usuario(AbstractUser):
             ("ver_gestor_pagos", "Acceso al Sistema de Pagos"),
             ("ver_gestor_contratos", "Acceso al Gestor de Contratos"),
             ("ver_gestor_sellos", "Acceso al Gestor de Sellos"),
-            ("ver_gestor_documental", "Acceso a la Gestión de Expedientes"),
+            ("ver_gestor_expedientes", "Acceso a la Gestión de Expedientes"),
+            ("ver_gestor_documental", "Acceso al Módulo de Gestión Documental"),
+            (
+                "gestionar_catalogos_documentales",
+                "Administrar catálogos de Gestión Documental",
+            ),
             ("ver_gestor_bienes", "Acceso al Gestor de Bienes"),
             ("ver_gestion_geografica", "Acceso a la Gestión Geográfica"),
             ("ver_gestor_personal", "Acceso al Gestor de Personal"),

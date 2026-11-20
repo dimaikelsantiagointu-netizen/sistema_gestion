@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} | Gestión Documental{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl px-4 pb-12 sm:px-6">
+    {% include 'gestion_documental/_navigation.html' %}
+    {% include 'gestion_documental/_messages.html' %}
+    <div class="mb-7 flex items-start gap-5">
+        <a href="{% url 'home' %}" class="mt-1 flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-400 shadow-sm transition-all duration-300 hover:border-intu-red/30 hover:text-intu-red hover:shadow-md active:scale-90 group" aria-label="Regresar al centro de control">
+            <i class="fas fa-arrow-left text-xl transition-transform group-hover:-translate-x-1"></i>
+        </a>
+        <div><p class="mb-2 text-[11px] font-black uppercase tracking-[0.3em] text-gray-400">Catálogo documental</p><h1 class="text-3xl font-black uppercase tracking-tighter text-intu-blue">{{ titulo }}</h1></div>
+    </div>
+    <form method="post" class="space-y-5 rounded-[2rem] border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="rounded-xl bg-red-50 p-4 text-sm font-bold text-red-700">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form %}
+        {% if field.field.widget.input_type == 'checkbox' %}
+        <label class="flex items-center gap-3 rounded-xl bg-slate-50 p-4 text-xs font-black uppercase tracking-widest text-slate-600">{{ field }} {{ field.label }}{% for error in field.errors %}<span class="text-red-600">{{ error }}</span>{% endfor %}</label>
+        {% else %}
+        {% include 'gestion_documental/_field.html' with field=field %}
+        {% endif %}
+        {% endfor %}
+        <div class="flex flex-col-reverse justify-end gap-3 pt-3 sm:flex-row">
+            <a href="{{ volver_url }}" class="rounded-xl border border-slate-200 px-6 py-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Cancelar</a>
+            <button type="submit" class="rounded-xl bg-intu-red px-7 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-red-800">Guardar</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
